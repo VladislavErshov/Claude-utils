@@ -1,0 +1,65 @@
+{
+  "model": "opus[1m]",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "rtk hook claude"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "codex@openai-codex": true
+  },
+  "extraKnownMarketplaces": {
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
+      }
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(rtk *)",
+      "Bash(./gradlew *)",
+      "Bash(./mvnw *)",
+      "Bash(javap *)",
+      "Bash(jar *)",
+      "Bash(unzip *)",
+      "Bash(xmllint *)",
+      "Bash(tee *)",
+      "Bash(awk *)",
+      "Bash(perl *)",
+      "Bash(mkdir *)",
+      "Bash(pkill *)",
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(python3 *)",
+      "Bash(npm *)",
+      "Bash(yarn *)",
+      "Bash(brew *)",
+      "Bash(git *)",
+      "Bash(grep *)",
+      "Bash(xargs *)",
+      "Bash(echo *)",
+      "Bash(chmod *)",
+      "Bash(/opt/homebrew/opt/libpq/bin/psql *)",
+      "Bash(/usr/bin/find *)",
+      "Bash(curl *)",
+      "Bash(./localrun*)",
+      "Bash(break)",
+      "Bash(jq)",
+      "WebSearch",
+      "WebFetch(*)",
+      "Skill(*)",
+      "Read(*)",
+      "Read(//Users/vl.ershov/Documents/Git/mdb-processing/**)"
+    ]
+  }
+}
