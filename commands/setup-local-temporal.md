@@ -7,12 +7,7 @@ description: Подключи Backstage к локальному Temporal чер�
 
 ## Шаги
 
-1. Запустить инфраструктуру Processing:
-```bash
-cd /Users/vl.ershov/Documents/Git/mdb-processing/localrun && docker-compose up -d
-```
-
-2. Инициализация Vault и Temporal search attributes:
+1. Запустить инфраструктуру Processing
 ```bash
 cd /Users/vl.ershov/Documents/Git/mdb-processing/localrun && ./localrun.sh
 ```
@@ -25,7 +20,7 @@ docker run --rm --network localrun_local-dev-network temporalio/admin-tools:late
     --name ClusterId --type Keyword
 ```
 
-3. Запустить Processing-сервис:
+2. Запустить Processing-сервис:
 ```bash
 BOOT_RUN_JVM_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED" \
 /Users/vl.ershov/Documents/Git/mdb-processing/gradlew \
@@ -34,7 +29,7 @@ BOOT_RUN_JVM_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED" \
 ```
 Проверка: `curl -s http://<host-ip>:8080/actuator/health`
 
-4. Переключить Backstage на локальный Processing. В `app-config.mdb.local.yaml` заменить:
+3. Переключить Backstage на локальный Processing. В `app-config.mdb.local.yaml` заменить:
 ```yaml
     mdb-processing:
       host: 'host'
@@ -42,17 +37,17 @@ BOOT_RUN_JVM_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED" \
 на:
 ```yaml
     mdb-processing:
-      host: 'http://<host-ip>:8080'
+      host: 'http://127.0.0.1:8080'
 ```
+**Важно**: не использовать `localhost` — Node.js на macOS резолвит его в `::1` (IPv6), а Processing слушает только IPv4.
 
-5. Перезапустить Backstage.
+4. Запустить или перезапустить Backstage, если он был запущен.
 
 ## Откат
 
 1. Остановить Processing: `pkill -f "MdbProcessingApplication"`
 2. Вернуть `mdb-processing.host: 'host'` в `app-config.mdb.local.yaml`
-3. Перезапустить Backstage
-4. Остановить инфраструктуру: `cd /Users/vl.ershov/Documents/Git/mdb-processing/localrun && docker-compose down`
+3. Остановить инфраструктуру: `cd /Users/vl.ershov/Documents/Git/mdb-processing/localrun && docker-compose down`
 
 ## Подводные камни
 

@@ -55,11 +55,15 @@
       "Bash(./localrun*)",
       "Bash(break)",
       "Bash(jq)",
+      "Bash(./gradlew bootRun --args='--spring.profiles.active=local --server.port=8081')",
+      "Bash(BOOT_RUN_JVM_ARGS=\"--add-opens java.base/java.lang=ALL-UNNAMED\" /Users/vl.ershov/Documents/Git/mdb-processing/gradlew bootRun *)",
+      "Bash(ipconfig getifaddr *)",
       "WebSearch",
       "WebFetch(*)",
       "Skill(*)",
       "Read(*)",
-      "Read(//Users/vl.ershov/Documents/Git/mdb-processing/**)"
+      "Read(//Users/vl.ershov/Documents/Git/mdb-processing/**)",
+      "Read(//Users/vl.ershov/Documents/Git/mdb-data/**)"
     ]
   }
 }
