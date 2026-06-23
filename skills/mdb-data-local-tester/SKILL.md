@@ -87,3 +87,28 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
 3. **Логи**: mdb-data — `/tmp/mdb-data.log`, mdb-processing — `/tmp/mdb-processing.log`.
 4. **Health**: mdb-data на 8081 возвращает `DOWN` на агрегированный `/actuator/health`, но `liveness`/`readiness` — `UP`. Это нормально, можно работать.
 5. **Сохраняй историю** — каждый успешный сценарий сохраняй в `history/` с SQL, JSON и описанием workflow.
+
+## Остановка (teardown)
+
+Чтобы полностью остановить локальную инфраструктуру:
+
+```bash
+# 1. Java-процессы mdb-data (8081) и mdb-processing (8080)
+lsof -ti:8080,8081 | xargs -r kill -9
+
+# 2. Docker-инфраструктура mdb-data (pg + redis)
+docker compose -f /Users/vl.ershov/Documents/Git/mdb-data/docker-compose.yml down
+
+# 3. Docker-инфраструктура mdb-processing (temporal + vault + kafka + wiremock)
+cd /Users/vl.ershov/Documents/Git/mdb-processing/localrun && docker compose down
+```
+
+Проверка:
+```bash
+docker ps --format '{{.Names}} {{.Status}}'   # должно быть пусто
+lsof -iTCP:8080,8081,8233,6434,26379 -sTCP:LISTEN -P   # должно быть пусто
+```
+
+⚠️ У `pg_backstage_plugin_mdb` нет volume — после `down` данные стираются. При следующем запуске нужно заново:
+- применять миграции V2–V4 (`shedlock`, `in_processing`) вручную, либо перезапустить mdb-data (flyway применит сам);
+- применять seed SQL.
