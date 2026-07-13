@@ -33,7 +33,7 @@ Docker: postgres (postgres:14-alpine, порт 6432:5432)
 
 1. **Получение задачи** — пользователь говорит: «скопируй таблицу X с удалённого хоста» или «для теста эндпоинта /api/y нужны данные».
 2. **Анализ зависимостей** — по графу связей определить, какие родительские таблицы тоже нужно заполнить (FK-ограничения).
-3. **Генерация SQL для удалённой БД** — написать SELECT-запросы, которые пользователь выполнит на удалённом хосте через `mcc ssh/psql`.
+3. **Генерация SQL для удалённой БД** — написать SELECT-запросы, которые пользователь выполнит на удалённом хосте через `mcc ssh/psql`. **Всегда одним запросом** через `jsonb_build_object` (см. шаблон ниже), чтобы пользователь получил единый JSON — не несколько копий вывода.
 4. **Получение данных** — пользователь передаёт результат запросов.
 5. **Вставка в локальную БД** — сгенерировать и выполнить INSERT-запросы через `docker exec`, соблюдая порядок (сначала родительские таблицы, потом дочерние).
 6. **Верификация** — выполнить SELECT, чтобы подтвердить что данные на месте.
@@ -74,7 +74,46 @@ kafka_config, db_params, criticality_level, datacenters, hardware_presets, log_t
 1. **Порядок вставки** — сначала родительские, потом дочерние. При удалении — наоборот.
 2. **Конфликты PK** — перед вставкой проверяй, нет ли уже данных. Используй `ON CONFLICT DO UPDATE` для обновления.
 3. **Минимальный набор** — копируй только те строки, которые реально нужны для теста. Не тащи всю таблицу без необходимости.
-4. **Формат выдачи SQL для удалённой БД** — каждый запрос в отдельном блоке, с указанием таблицы и комментария зачем он нужен.
+4. **Единая команда для удалённой БД** — ВСЕГДА собирай данные с удалённого хоста одним SQL-запросом через `jsonb_build_object` (или `jsonb_agg`), чтобы пользователь получил один JSON, а не несколько выводов. Это касается:
+   - сбора схемы таблиц (`information_schema.columns`) — одним запросом;
+   - исследовательских SELECT-ов (distinct values, sample rows) — одним запросом;
+   - аналитических запросов (средние, перцентили, сравнение до/после) — одним запросом;
+   - сбора seed-данных по кластеру — одним запросом по шаблону ниже.
+   Никаких нескольких `;`-разделённых запросов в одном блоке — только один `SELECT jsonb_build_object(...)`. Если нужно собрать разнородные данные, вкладывай каждый подзапрос как отдельный ключ в `jsonb_build_object`.
 5. **Экранирование** — при вставке данных экранируй одинарные кавычки в строках (`'` → `''`).
 6. **Sequences** — после вставки с явными id сбрасывай sequence: `SELECT setval('<table>_id_seq', (SELECT MAX(id) FROM <table>));`
 7. **Русский язык** — все пояснения на русском, лаконично.
+
+## Названия timestamp-колонок (частая ошибка!)
+
+В разных таблицах разные имена — не путай:
+
+| Таблица | Колонка создания | Колонка обновления |
+|---|---|---|
+| `db_cluster` | `create_ts` | `update_ts` |
+| `db_cluster_version` | `create_ts` | `update_ts` |
+| `host_state` | — | `update_ts` |
+| `operations` | **`created_ts`** | — |
+| `tasks` | `created_ts` | — |
+| `projects` | — | — |
+| `one_cloud_meta` | — | — |
+
+⚠️ `operations.created_ts` (с `d`), `db_cluster_version.create_ts` (без `d`). Перед написанием `ORDER BY` проверяй имя колонки через `\d <table>` или `\d+ <table>` на удалённой БД.
+
+## Шаблон: один запрос на все данные
+
+Всегда запрашивай данные одним SQL через `jsonb_build_object` — пользователь получает один JSON, не несколько выводов:
+
+```sql
+SELECT jsonb_build_object(
+  'db_cluster', (SELECT json_agg(t) FROM (SELECT * FROM db_cluster WHERE id='<CLUSTER_ID>') t),
+  'db_cluster_version', (SELECT json_agg(t ORDER BY create_ts DESC) FROM (SELECT * FROM db_cluster_version WHERE cluster_id='<CLUSTER_ID>' ORDER BY create_ts DESC LIMIT 5) t),
+  'host_state', (SELECT json_agg(t) FROM (SELECT * FROM host_state WHERE cluster_id='<CLUSTER_ID>') t),
+  'one_cloud_meta', (SELECT json_agg(t) FROM (SELECT * FROM one_cloud_meta WHERE cluster_id='<CLUSTER_ID>') t),
+  'operations', (SELECT json_agg(t ORDER BY created_ts DESC) FROM (SELECT * FROM operations WHERE cluster_id='<CLUSTER_ID>' ORDER BY created_ts DESC LIMIT 10) t),
+  'projects', (SELECT json_agg(t) FROM (SELECT p.* FROM projects p JOIN db_cluster c ON c.project_id=p.id WHERE c.id='<CLUSTER_ID>') t),
+  'namespaces', (SELECT json_agg(t) FROM (SELECT n.* FROM namespaces n JOIN db_cluster c ON c.namespace_id=n.id WHERE c.id='<CLUSTER_ID>') t),
+  'hardware_presets', (SELECT json_agg(t) FROM (SELECT hp.* FROM hardware_presets hp WHERE hp.id IN (SELECT DISTINCT hardware_preset_id FROM db_cluster_version WHERE cluster_id='<CLUSTER_ID>')) t),
+  'settings', (SELECT json_agg(t) FROM (SELECT * FROM settings WHERE type IN ('kafkaResizeProcessingEnabledProjects','kafkaModifyProcessingEnabledProjects')) t)
+);
+```
