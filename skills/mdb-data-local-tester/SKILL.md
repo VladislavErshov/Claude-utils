@@ -80,6 +80,19 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
 
 Используй `/db-seed`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их через `mcc ssh/psql`, результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
 
+## Проверка PMS-переменных (modify-флоу в mdb-processing)
+
+После modify-операции проверить, что флоу реально записал PMS-переменные (`kafka.soc.audit.*`, `kafka.sysconfig`, `kafka.cruisecontrol.*` и т.д.) — используй скилл **`kafka-config-inspector`**. Там же — сверка PMS с отрендеренными конфиг-файлами на хостах.
+
+⚠️ **ВНИМАНИЕ: local-профиль mdb-processing пишет в РЕАЛЬНЫЙ `pms.cloud.vk.team`, не в
+wiremock!** Bean `pmsRestClient` (`PmsAutoConfiguration.java:36`) берёт `baseUrl` из
+`backend.mdb.baseUrl=https://pms.cloud.vk.team`, а не из `external.api.namespaces.infra.pms.base-url`.
+mTLS-сертификат из `~/.mccloud/` работает — modify-флоу реально модифицирует прод-PMS.
+
+**Следствие**: тестируй только на dev-кластерах (`test-resize`, `test-update-resize1`,
+`test-sel-1` и т.п. — project 160, mdbdev). Никогда не запускай modify-флоу локально
+против прода. Снапшот PMS до modify помогает отличить изменения от нашего флоу vs. фоновых прод-операций.
+
 ## Правила
 
 1. **PSQL через `-f`** — `docker exec ... <<'SQL'` (heredoc в stdin) тихо не применяет UPDATE. Копируй файл через `docker cp` и запускай `psql -f /tmp/file.sql`.

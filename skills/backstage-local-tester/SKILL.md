@@ -161,6 +161,16 @@ WHERE id=<pms_task_id>;
 
 После обхода Backstage подхватывает следующую задачу (`modify_kafka_cluster` и т.п.) в течение ~10 секунд (cadence воркера PT10S).
 
+## Проверка PMS-переменных в реальном PMS (`pms.cloud.vk.team`)
+
+Проверить что modify-флоу реально записал PMS-переменные — используй скилл **`kafka-config-inspector`** (там же сверка с отрендеренными конфиг-файлами на хостах).
+
+⚠️ **ВНИМАНИЕ: local-профиль mdb-processing пишет в РЕАЛЬНЫЙ `pms.cloud.vk.team`, не в
+wiremock!** Bean `pmsRestClient` берёт `baseUrl` из `backend.mdb.baseUrl`. Несмотря на
+обход PMS-таски в Backstage (см. выше), если modify-флоу доходит до `KafkaPmsActivityImpl`
+в mdb-processing — он модифицирует прод-PMS. Тестируй только на dev-кластерах (project 160,
+mdbdev). Снапшот до modify помогает отличить наши изменения от фоновых прод-операций.
+
 ## Сброс операции для повторного теста
 
 ```sql

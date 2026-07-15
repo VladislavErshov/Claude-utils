@@ -1,0 +1,320 @@
+---
+name: kafka-config-inspector
+description: Инспекция конфиг-файлов Kafka-хостов — сверка PMS-переменных (pms.cloud.vk.team API) с отрендеренными конфиг-файлами на хостах (broker.properties, controller.properties, cruisecontrol.properties, capacity.json, sysconfig, jaas.conf, log4j.properties, tools-log4j.properties). Список хостов берётся из БД pg_backstage_plugin_mdb, файлы читаются через mcc scp. Используй когда нужно проверить, что PMS-API значения физически применились в /opt/kafka/config/ после modify-флоу. Скилл проверяет только property-файлы — он НЕ проверяет здоровье кластера (ISR, replication, partition balance и т.п.).
+allowed-tools: [bash, read_file, write_file, edit_file]
+---
+
+# Скилл инспекции конфиг-файлов Kafka-хостов
+
+Скилл сверяет property-файлы Kafka-хостов с двух сторон:
+1. **PMS-API** (`pms.cloud.vk.team`) — что записано в PMS-переменные (`kafka.broker.properties`,
+   `kafka.controller.properties`, `kafka.cruisecontrol.*`, `kafka.sysconfig`, `kafka.soc.audit.*` и т.д.)
+2. **Конфиг-файлы на хостах** — что физически лежит в `/opt/kafka/config/` и `/opt/cruise-control/config/`,
+   отрендеренное из PMS-шаблонов modify-флоу mdb-processing.
+
+⚠️ Скилл проверяет **только конфиг-файлы**. Он НЕ инспектирует состояние кластера как целого:
+брокеры в ISR, replication factor, partition balance, leader election, consumer lag — всё это
+за пределами области действия. Только сверка «PMS-API ↔ отрендеренный файл на хосте».
+
+Список хостов берётся из локальной БД `pg_backstage_plugin_mdb` (`host_state` по
+`cluster_id`). Файлы скачиваются через `mcc scp -n infra`.
+
+## Когда применять
+
+- После modify-флоу — убедиться что PMS-API получил значения **и** что они
+  отрендерились в файлы на хостах (например, `KAFKA_HEAP_OPTS` в `/opt/kafka/config/sysconfig`
+  совпадает с `kafka.sysconfig` в PMS-API).
+- При разборе «почему broker игнорирует новую конфигурацию» — PMS-API может быть
+  обновлён, а файлы на хосте не перерисованы (или наоборот — файлы есть, PMS пустой).
+- Для инспекции любого состояния Kafka-кластера без запуска modify.
+
+## Что нужно
+
+- **mTLS-сертификаты** в `~/.mccloud/` (`client.cert`, `client.key`, `ca.crt`) — для
+  PMS-API.
+- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`) — для доступа к хостам. Используем
+  **только `mcc scp`** — `mcc sshexec` не работает из-за TLS handshake timeout к
+  cloud-ops узлам, и `mcc ssh` не принимает аргументы с пробелами.
+- **Локальная БД** `pg_backstage_plugin_mdb` в docker-контейнере `pg_backstage_plugin_mdb`
+  (порт 6434) — для списка хостов.
+
+## Шаг 1: получить хосты кластера
+
+```bash
+docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -tA -c \
+  "SELECT host, params->>'dc' AS dc FROM host_state
+   WHERE cluster_id='<CLUSTER_ID>' ORDER BY host;"
+```
+
+Хосты имеют вид (числовой префикс — порядковый номер компонента в DC **может быть любым**):
+- `<N>.broker.<cluster-name>.<dc>.one-infra.ru` — broker. Брокеров в кластере может быть
+  **произвольное количество** (1, 2, 3, …) — число определяется конфигурацией кластера.
+- `<N>.controller.<cluster-name>.<dc>.one-infra.ru` — controller (KRaft)
+- `1.cruise.<cluster-name>.<dc>.one-infra.ru` — cruise-control
+
+При выборке хостов из БД фильтруй по префиксу `LIKE '%.broker.%'` / `'%.controller.%'` /
+`'%.cruise.%'`, а не по конкретной цифре — иначе пропустишь 3-й, 4-й и т.д. брокеров.
+
+## Шаг 2: PMS-API значения
+
+Используй готовый скрипт `pms-read.sh` или напрямую:
+
+```bash
+# Все 23 известных Kafka PMS-переменных для хоста:
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host>
+
+# Одна переменная:
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.sysconfig
+
+# Несколько ключевых для modify-флоу:
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.soc.audit.enabled
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.soc.audit.topic
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.broker.properties
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.controller.properties
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.cruisecontrol.properties
+```
+
+⚠️ PMS-API — **read-only**. Менять PMS-файлы через `POST /api/conf/update.do` /
+`DELETE /api/conf/delete.do` запрещено. PMS модифицируется только modify-флоу
+mdb-processing.
+
+## Шаг 3: файлы на хостах (через mcc scp)
+
+⚠️ **Обязательно `-n infra`** — без флага namespace `mcc scp` падает с
+`NamespaceMissingException`. Это kafka-хосты в namespace `infra`.
+
+### Скачать конфиги broker/controller (файлы в `/opt/kafka/config/` + `/etc/sysconfig/kafka`)
+
+⚠️ `sysconfig` рендерится в **`/etc/sysconfig/kafka`**, НЕ в `/opt/kafka/config/sysconfig`
+(см. `docker-images/ubuntu20-kafka-base/rootfs/etc/confp/resources.d/kafka.yml:38-39`).
+Качать отдельно, потому что вне `/opt/kafka/config/`.
+
+```bash
+HOST=1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru
+mkdir -p /tmp/kafka-inspect/$HOST
+
+# Вся директория /opt/kafka/config/ — одним tarball (обходит баг mcc с файлами без расширения)
+mcc scp -n infra "$HOST:/opt/kafka/config/" /tmp/kafka-inspect/$HOST/ 2>&1 | tail -5
+
+# sysconfig — отдельно, он вне /opt/kafka/config/
+mcc scp -n infra "$HOST:/etc/sysconfig/kafka" /tmp/kafka-inspect/$HOST/sysconfig.kafka 2>&1 | tail -3
+```
+
+### Скачать конфиги cruise-control (файлы в `/opt/cruise-control/config/` + `/etc/sysconfig/cruise-control`)
+
+⚠️ Cruise-control файлы лежат в **`/opt/cruise-control/config/`**, НЕ в `/opt/kafka/config/`
+(см. `docker-images/ubuntu20-mdb-cruisecontrol/rootfs/etc/confp/resources.d/cruise-control.yml`).
+`cruisecontrol-sysconfig` рендерится в **`/etc/sysconfig/cruise-control`**.
+
+```bash
+HOST=1.cruise.test-resize-mdbdev-kafka.dc.one-infra.ru
+mkdir -p /tmp/kafka-inspect/$HOST
+
+mcc scp -n infra "$HOST:/opt/cruise-control/config/" /tmp/kafka-inspect/$HOST/ 2>&1 | tail -5
+mcc scp -n infra "$HOST:/etc/sysconfig/cruise-control" /tmp/kafka-inspect/$HOST/sysconfig.cruise 2>&1 | tail -3
+```
+
+⚠️ `mcc scp` одиночного файла иногда падает с `failed to read downloaded archive
+header: EOF` — это баг mcc для файлов без расширения (например `sysconfig`,
+`jaas.conf`). Если упало — качай всю директорию целиком (там mcc отдаёт tarball и
+распаковывает сам). Для `sysconfig` принципиально качать с правильного пути
+(`/etc/sysconfig/kafka`), не из `/opt/kafka/config/`.
+
+### Структура путей по типу хоста
+
+Пути подтверждены по `docker-images/ubuntu20-kafka-base/rootfs/etc/confp/resources.d/kafka.yml`
+и `docker-images/ubuntu20-mdb-cruisecontrol/rootfs/etc/confp/resources.d/cruise-control.yml`.
+
+| Тип хоста (по FQDN)                                | Директория для свойств | sysconfig-путь | Какие файлы проверять |
+|----------------------------------------------------|---|---|---|
+| `<N>.broker.*` (N — любой, брокеров может быть ≥1) | `/opt/kafka/config/` | `/etc/sysconfig/kafka` | `broker.properties`, `log4j.properties`, `tools-log4j.properties`, `jaas.conf`, `client.properties` |
+| `<N>.controller.*`                                 | `/opt/kafka/config/` | `/etc/sysconfig/kafka` | `controller.properties`, `log4j.properties`, `tools-log4j.properties`, `jaas.conf`, `client.properties` |
+| `1.cruise.*`                                       | `/opt/cruise-control/config/` | `/etc/sysconfig/cruise-control` | `cruisecontrol.properties`, `capacity.json`, `log4j.properties`, `cruise_control_jaas.conf` |
+
+### Файлы для проверки по типу хоста
+
+Хосты в `host_state` имеют префикс `<N>.broker.<name>...` / `<N>.controller.<name>...` /
+`<N>.cruise.<name>...` — это определяет какие файлы на нём надо смотреть. `N` — порядковый
+номер компонента, может быть любым (1, 2, 3, …); брокеров в кластере может быть больше двух.
+
+**Broker-хост** (`<N>.broker.*`, N — любой) — директория `/opt/kafka/config/` + `/etc/sysconfig/kafka`:
+
+| Файл | PMS-переменная | Что проверять |
+|---|---|---|
+| `/opt/kafka/config/broker.properties` | `kafka.broker.properties` | `num.io.threads`, `compression.type`, `num.network.threads`, и т.п. из `brokerConfig.config` modify-запроса |
+| `/opt/kafka/config/log4j.properties` | `kafka.log4j.properties` | log4j appender config |
+| `/opt/kafka/config/tools-log4j.properties` | `kafka.tools.log4j.properties` | log4j для CLI-утилит |
+| `/opt/kafka/config/jaas.conf` | `kafka.users`, `kafka.soc.audit.user`, `kafka.soc.audit.password.vault.path` (j2-шаблон `jaas.conf.j2`) | SASL auth: блок `KafkaServer` (users + vault-пароли) + блок `KafkaClient` (soc-robot credentials) |
+| `/opt/kafka/config/client.properties` | (j2-шаблон, не PMS) | client config для admin-утилит |
+| `/etc/sysconfig/kafka` | `kafka.sysconfig` | `KAFKA_HEAP_OPTS` (broker heap size), `KAFKA_OPTS` (tosAgent javaagent если `tosAgent=true`) |
+
+**Controller-хост** (`<N>.controller.*`) — те же пути, что у broker, но `controller.properties` вместо `broker.properties`:
+
+| Файл | PMS-переменная | Что проверять |
+|---|---|---|
+| `/opt/kafka/config/controller.properties` | `kafka.controller.properties` | параметры из `controllerConfig.config` modify-запроса (`num.io.threads` и т.п.) |
+| `/opt/kafka/config/log4j.properties` | `kafka.log4j.properties` | — |
+| `/opt/kafka/config/tools-log4j.properties` | `kafka.tools.log4j.properties` | — |
+| `/opt/kafka/config/jaas.conf` | `kafka.users`, `kafka.soc.audit.user`, `kafka.soc.audit.password.vault.path` (j2-шаблон `jaas.conf.j2`) | SASL auth (как у broker) |
+| `/opt/kafka/config/client.properties` | (j2-шаблон) | — |
+| `/etc/sysconfig/kafka` | `kafka.sysconfig` | `KAFKA_HEAP_OPTS` (controller heap = `controllerJvmHeapSizeMb` из modify) |
+
+**Cruise-control хост** (`1.cruise.*`) — директория `/opt/cruise-control/config/` + `/etc/sysconfig/cruise-control`:
+
+| Файл | PMS-переменная | Что проверять |
+|---|---|---|
+| `/opt/cruise-control/config/cruisecontrol.properties` | `kafka.cruisecontrol.properties` | `bootstrap.servers`, `security.protocol`, auto-rebalance, replication.throttle |
+| `/opt/cruise-control/config/capacity.json` | `kafka.cruisecontrol.capacity.json` | disk/nw capacity |
+| `/opt/cruise-control/config/log4j.properties` | `kafka.cruisecontrol.log4j.properties` | log4j для cruise |
+| `/opt/cruise-control/config/cruise_control_jaas.conf` | `kafka.cruisecontrol.jaas.conf` | SASL auth для cruise-control |
+| `/etc/sysconfig/cruise-control` | `kafka.cruisecontrol.sysconfig` | `KAFKA_HEAP_OPTS` для cruise (должен быть `cruiseControl.jvmHeapSizeMb` из modify) |
+
+### SOC audit appender (socLogger / socKafkaAppender) в `log4j.properties`
+
+В `log4j.properties` на broker/controller-хостах рендерится **SOC audit appender** —
+`log4j.appender.socKafkaAppender` (KafkaLog4jAppender), который шлёт SOC-события аудита
+(request logger, authorizer logger, network Selector) в отдельный Kafka-топик. Этот appender
+в народе называется «socLogger».
+
+Шаблон `log4j.properties` лежит в соседнем проекте **backstage**:
+`plugins/mdb-backend/src/task/manifest/templates/kafka-log-config` (j2-шаблон с `pms(...)`
+вызовами). Для cruise-control есть отдельный шаблон `kafka-cruise-control-log-config` —
+в нём SOC appender-а **нет**, только обычные log4j-loggers.
+
+Шаблон `kafka-log-config` рендерит в `log4j.properties` значения из трёх PMS-переменных:
+
+| PMS-переменная | Куда рендерится | Default в шаблоне |
+|---|---|---|
+| `kafka.soc.audit.enabled` | Включает блок `socKafkaAppender` и SOC-loggers (`{% if pms('kafka.soc.audit.enabled', "false") == "true" %}`). Если `false` — весь блок отсутствует. | `"false"` |
+| `kafka.soc.audit.endpoint` | `log4j.appender.socKafkaAppender.brokerList` | `1.broker.kafka-queries-soc-mdb-kafka.uc.one-infra.ru:9092,...` (3 DC) |
+| `kafka.soc.audit.topic` | `log4j.appender.socKafkaAppender.topic` | `soc-audit-log` |
+
+Что проверять в `/opt/kafka/config/log4j.properties` на broker/controller:
+- Если PMS `kafka.soc.audit.enabled=true` → в файле **должен быть** блок
+  `log4j.appender.socKafkaAppender=org.apache.kafka.log4jappender.KafkaLog4jAppender`,
+  `brokerList` совпадает с `kafka.soc.audit.endpoint`, `topic` — с `kafka.soc.audit.topic`.
+- Должны быть SOC-loggers: `log4j.logger.kafka.request.logger=TRACE, socKafkaAppender`,
+  `log4j.logger.kafka.authorizer.logger=DEBUG, socKafkaAppender`,
+  `log4j.logger.org.apache.kafka.common.network.Selector=INFO, stdout, socKafkaAppender`.
+- Если PMS `kafka.soc.audit.enabled=false` (или `<NOT_SET>`) → блока `socKafkaAppender`
+  в файле быть **не должно**, `Selector` без `socKafkaAppender` в appenderRefs.
+
+⚠️ Шаблон `kafka-log-config` также вставляет `cluster_id:{{ env('MDB_CLUSTER_ID') }}` в
+ConversionPattern SOC-appender-а — можно сверять что cluster_id в log4j совпадает с
+фактическим cluster_id кластера.
+
+### SOC audit credentials в `jaas.conf`
+
+Ещё две SOC-переменные рендерятся в **`/opt/kafka/config/jaas.conf`** (на broker/controller),
+в блок `KafkaClient` — это credentials, под которыми Kafka-брокер подключается к
+SOC-топику для отправки аудит-событий (того самого `socKafkaAppender` из `log4j.properties`).
+
+Шаблон лежит в проекте **docker-images**:
+`ubuntu20-kafka-base/rootfs/etc/confp/templates.d/jaas.conf.j2`.
+
+| PMS-переменная | Куда рендерится в `jaas.conf` | Default в шаблоне |
+|---|---|---|
+| `kafka.soc.audit.user` | `KafkaClient { ... username="<value>" }` | `soc-logs-robot` |
+| `kafka.soc.audit.password.vault.path` | `KafkaClient { ... password="{{ vault(<value>) }}" }` (vault-секрет читается по этому пути) | `/zkv/dbs/logs-broker/kafka:soc-logs-password` |
+
+Что проверять в `/opt/kafka/config/jaas.conf`:
+- Блок `KafkaClient { org.apache.kafka.common.security.scram.ScramLoginModule required
+  username="<...>" password="<...>"; }` — `username` совпадает с PMS `kafka.soc.audit.user`
+  (или default `soc-logs-robot`, если PMS `<NOT_SET>`).
+- `password` в файле — это **vault-значение** по пути из `kafka.soc.audit.password.vault.path`,
+  поэтому напрямую со значением PMS-переменной не сравнивается (в PMS лежит путь, в файле —
+  секрет). Сверять только путь: если PMS отдаёт кастомный путь, пароль в файле должен
+  соответствовать секрету из этого пути, а не дефолтному.
+- Заодно в блоке `KafkaServer` проверяется `kafka.users` — список юзеров через `;`
+  рендерится в `user_<name>="<vault-password>"` строки. Если PMS `kafka.users` обновлён,
+  в `jaas.conf` должны быть соответствующие `user_<name>` записи.
+
+### Файлы, которые НЕ рендерятся через confp
+
+- `kafka.layout`, `kafka.controller.quorum`, `kafka.isWanCluster`,
+  `kafka.ssl.enabled`, `kafka.hostInfo.pushUrl`, `zen.kafka.vaultRoot`,
+  `kafka.keystore/truststore.password.vault.path` — также потребляются скриптами
+  pre-start, не рендерятся в статические файлы. Только скрипт `pms-read.sh`.
+
+### Дополнительные файлы (могут быть на хостах)
+
+- `/opt/kafka/config/keystore` / `truststore` — SSL артефакты (если `kafka.ssl.enabled=true`), генерируются `create_keystore.sh`
+- `/opt/kafka/scripts/pre-start-kafka-broker.sh` / `pre-start-kafka-controller.sh` — сами скрипты pre-start
+- `/etc/rscheck/kafka.conf` — rscheck config (мониторинг)
+
+### Что сравнивать PMS-API ↔ файл
+
+| PMS-API | Файл | Совпадение |
+|---|---|---|
+| `kafka.sysconfig` (KAFKA_HEAP_OPTS) | `/etc/sysconfig/kafka` (KAFKA_HEAP_OPTS) | heap size точно совпадает |
+| `kafka.sysconfig` (KAFKA_OPTS) | `/etc/sysconfig/kafka` (KAFKA_OPTS) | tos-agent javaagent присутствует ⇔ `tosAgent=true` |
+| `kafka.broker.properties` | `/opt/kafka/config/broker.properties` | параметры из modify request (num.io.threads, compression.type, num.network.threads) |
+| `kafka.controller.properties` | `/opt/kafka/config/controller.properties` | параметры из controllerConfig.config |
+| `kafka.cruisecontrol.properties` | `/opt/cruise-control/config/cruisecontrol.properties` | auto.rebalance, replication.throttle, bootstrap.servers |
+| `kafka.cruisecontrol.capacity.json` | `/opt/cruise-control/config/capacity.json` | disk/nw значения |
+| `kafka.cruisecontrol.sysconfig` | `/etc/sysconfig/cruise-control` | heap size для cruise |
+| `kafka.log4j.properties` | `/opt/kafka/config/log4j.properties` | appender config |
+| `kafka.tools.log4j.properties` | `/opt/kafka/config/tools-log4j.properties` | tools appender |
+| `kafka.soc.audit.enabled` / `topic` / `endpoint` | `/opt/kafka/config/log4j.properties` (блок `socKafkaAppender`, рендерится из шаблона `kafka-log-config` в backstage) | `enabled=true` ⇔ блок `socKafkaAppender` присутствует; `brokerList` = `endpoint`; `topic` = `kafka.soc.audit.topic` |
+| `kafka.soc.audit.user` / `kafka.soc.audit.password.vault.path` | `/opt/kafka/config/jaas.conf` (блок `KafkaClient`, рендерится из шаблона `jaas.conf.j2` в docker-images) | `username` = `kafka.soc.audit.user` (default `soc-logs-robot`); `password` — vault-секрет по пути из `kafka.soc.audit.password.vault.path` (напрямую не сравнивается) |
+
+## Шаг 4: сравнить
+
+Если PMS-API показывает `KAFKA_HEAP_OPTS="-Xms2048m -Xmx2048m"`, а в файле на хосте
+`KAFKA_HEAP_OPTS="-Xms1027m -Xmx1027m"` — значит PMS обновлён, но **не отрендерился**
+на хост. Это либо broker не перезапущен, либо render-таска не отработала, либо хост
+в другом DC и PMS-распространение ещё не дошло.
+
+Если PMS-API `<NOT_SET>` а на хосте файл есть — кто-то положил файл вручную, или
+PMS-переменная была удалена, но файл остался.
+
+## Важно
+
+- **`mcc scp` обязательно с `-n infra`** — без флага падает с `NamespaceMissingException`.
+- **`mcc sshexec` / `mcc ssh` не использовать** — sshexec таймаутит к cloud-ops узлам
+  (TLS handshake timeout), ssh не принимает аргументы с пробелами. Только `mcc scp -n infra`.
+- **Файлы без расширения** (`/etc/sysconfig/kafka`, `/etc/sysconfig/cruise-control`,
+  `jaas.conf`) иногда падают с `failed to read downloaded archive header: EOF` при
+  одиночном scp. Решение — качать всю директорию `/opt/kafka/config/` (или
+  `/opt/cruise-control/config/`) разом через trailing `/`. Для sysconfig путь
+  принципиально `/etc/sysconfig/kafka`, не `/opt/kafka/config/sysconfig`.
+- Хосты в `host_state` — это **прод-FQDN**, локально не резолвятся. Доступ только
+  через `mcc`.
+- **Не модифицируй** файлы на хостах — только читаешь через `mcc scp`.
+- **Не пиши в PMS** — PMS-API только читаем. Меняется только modify-флоу mdb-processing.
+- Для `mcc scp` директорий — trailing `/` в source (`$HOST:/opt/kafka/config/`).
+
+## Пример: инспекция после modify broker heap
+
+```bash
+# 1. Хосты кластера 7569c837 (test-resize) — все broker-хосты (1.broker, 2.broker, 3.broker, …)
+docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -tA -c \
+  "SELECT host FROM host_state WHERE cluster_id='7569c837-37ba-4041-9046-92329683237e' AND host LIKE '%.broker.%';"
+
+# 2. PMS-API: что записано в kafka.sysconfig
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh 1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru kafka.sysconfig | grep KAFKA_HEAP_OPTS
+
+# 3. Скачать /opt/kafka/config/ целиком + /etc/sysconfig/kafka отдельно
+HOST=1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru
+mkdir -p /tmp/kafka-inspect/$HOST
+mcc scp -n infra "$HOST:/opt/kafka/config/"      /tmp/kafka-inspect/$HOST/ 2>&1 | tail -3
+mcc scp -n infra "$HOST:/etc/sysconfig/kafka"    /tmp/kafka-inspect/$HOST/sysconfig.kafka 2>&1 | tail -3
+
+# 4. Что физически на хосте
+grep KAFKA_HEAP_OPTS /tmp/kafka-inspect/$HOST/sysconfig.kafka
+grep -E "num.io.threads|compression.type" /tmp/kafka-inspect/$HOST/opt/kafka/config/broker.properties 2>/dev/null \
+  || grep -E "num.io.threads|compression.type" /tmp/kafka-inspect/$HOST/broker.properties
+
+# 5. Сравнить
+# PMS-API:           KAFKA_HEAP_OPTS="-Xms2048m -Xmx2048m"
+# Файл на хосте:      KAFKA_HEAP_OPTS="-Xms1024m -Xmx1024m"
+# Вывод: PMS обновлён, файл не отрендерен — broker не перезапущен после modify.
+```
+
+## История
+
+Каждый инспектируемый кластер сохраняй в `history/<cluster>-<date>.md` с:
+- cluster_id + список хостов
+- PMS-API snapshot (ключевые переменные)
+- Файлы скачаны в `/tmp/kafka-inspect/<host>/`
+- Расхождения найдены / не найдены
