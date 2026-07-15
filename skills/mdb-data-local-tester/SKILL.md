@@ -12,6 +12,7 @@ allowed-tools: [bash, read_file, edit_file, write_file]
 
 1. **Инфраструктура mdb-data** — команда `/setup-local-mdb-data` (postgres, redis, сам mdb-data).
 2. **mdb-processing + temporal** — обязателен для тестов, затрагивающих workflow (modify/resize/create кластеров). Команда `/setup-local-temporal` поднимает docker-compose (temporal, vault, kafka, wiremock) в `mdb-processing/localrun/`, затем запускает сам mdb-processing через `bootRun --args='--spring.profiles.active=local'`.
+3. **Backstage НЕ нужен** для базовых тестов modify-флоу. mdb-data сам стартует temporal workflow через processing. Backstage (`/setup-local-backstage`) поднимай только если тестируешь именно Backstage-слой (POST /version/, task chain generators, Redis-кеш проектов).
 
 ## Порты (важно!)
 
@@ -24,6 +25,70 @@ allowed-tools: [bash, read_file, edit_file, write_file]
 | wiremock (processing) | 8088 | docker-compose mdb-processing |
 
 mdb-data и mdb-processing оба по дефолту на 8080 — конфликт. Поэтому mdb-data запускать с `--server.port=8081`, а 8080 оставить под processing. В `application-local.yml` mdb-data уже есть `mdb-processing.base-url: http://localhost:8080` — это указывает на processing, не на сам mdb-data.
+
+## Auth отключён в local-профиле
+
+В `application-local.yml:59` стоит `mdb.auth.enabled: false`. **JWT/токен для запросов к mdb-data НЕ нужен** — шли прямые curl без `Authorization` заголовка. Проверено: `PATCH /api/v2/mdb/kafka/clusters/{id}/modify` без токена возвращает 202 и стартует temporal workflow.
+
+Таблица `services_auth` нужна только если включить auth (или для тестов Backstage, где JWT签ится с `serviceName` из этой таблицы). Для прямых запросов к mdb-data — не требуется.
+
+## Структура request body для PATCH /modify
+
+Эндпоинт: `PATCH http://localhost:8081/api/v2/mdb/kafka/clusters/{id}/modify`
+
+Тело — НЕ плоский `ModifyKafkaClusterParams`, а обёртка `ModifyKafkaClusterRequest`:
+```json
+{
+  "params": {
+    "acl": {}, "name": "...", "isWan": false,
+    "lanIn": 10, "lanOut": 15, "diskGb": 8, "diskType": "nvme",
+    "projectId": 160, "rootQueue": "prod",
+    "needLanIpv6": true, "needWanIpv4": false, "needWanIpv6": false,
+    "kafkaParams": {
+      "controller": { "controllerDcs": ["dc","hc","kc"], "controllerConfig": {"config": {}}, ... },
+      "brokerConfig": {"config": {}},
+      "jvmHeapSizeMb": 1024,
+      "cruiseControl": {"cruiseControlDc": "hc", "cruiseUserPassword": ""},
+      "tosAgent": true,
+      "socLogger": {"enabled": true}
+    }
+  },
+  "hardwarePresetId": 100,
+  "isNeedShards": false,
+  "hosts": [{"dc": "dc"}, {"dc": "hc"}, {"dc": "kc"}],
+  "type": "update_instances",
+  "attempts": 3
+}
+```
+
+Без `params`/`hardwarePresetId`/`attempts`/`hosts`/`type` на верхнем уровне → 400 "не должно равняться null".
+
+**Важно про baseline `cluster_params`**: перед modify в baseline `db_cluster_version` должны быть `kafkaParams.brokerConfig.config={}` и `kafkaParams.controller.controllerConfig.config={}` (пусть пустые). Иначе `KafkaClusterDiffDetector` падает с NPE на `currentParams.brokerConfig().config()`.
+
+## Mapping: request → temporal workflow input
+
+После 202 mdb-data стартует temporal workflow `modifyKafkaCluster`. Его input (декодируется через `history.events[0].workflowExecutionStartedEventAttributes.input.payloads[0].data` | base64 -d | jq) содержит секции, которые **могут быть null** — это нормально, если в запросе не было изменений:
+
+| Request field | Temporal input field | Когда null |
+|---|---|---|
+| `kafkaParams.tosAgent` | `updateBrokerConfigData.tosAgentEnabled` | поле не пришло в request |
+| `kafkaParams.socLogger` | `socLoggerData` | поле не пришло в request |
+| `kafkaParams.cruiseControl.autoRebalanceEnabled` | `cruiseUpdateConfigData.cruiseControl.autoRebalanceEnabled` | поле не пришло в request |
+| `kafkaParams.cruiseControl.autoRebalanceOnBrokerFailEnabled` | `cruiseUpdateConfigData.cruiseControl.autoRebalanceOnBrokerFailEnabled` | поле не пришло в request |
+| `kafkaParams.jvmHeapSizeMb` | `updateBrokerConfigData.heapSizeMB` | передаётся всегда (или когда brokerConfigDiff=true) |
+| `kafkaParams.controller.controllerJvmHeapSizeMb` | `updateControllerConfigData.heapSizeMB` | controllerHeap не изменился → processing-side mapper опускает **весь** `updateControllerConfigData` |
+| `kafkaParams.controller.controllerConfig` | `updateControllerConfigData.parameters` | controllerConfigDiff=false → весь блок null |
+| `kafkaParams.brokerConfig` | `updateBrokerConfigData.parameters` | brokerConfigDiff=false → параметры пустые, но блок остаётся |
+
+**Следствие**: `updateControllerConfigData: null` целиком — норма, если controller heap и controllerConfig не поменялись. `socLoggerData: null` — норма, если в запросе не было socLogger. Не путать с "propagation сломалось".
+
+**Toggle-фичи (mdb-data `KafkaClusterModificationValidator`)**:
+- `tosAgent=true` → требует docker ≥ 2.4.0
+- `socLogger.enabled=true` → требует docker ≥ 2.3.3
+- `cruiseControl.autoRebalanceEnabled` / `autoRebalanceOnBrokerFailEnabled` — без docker-чеков, можно свободно toggling
+- Выключение (`false`) — без проверок
+
+Для проверки каждой toggle-фичи нужен **отдельный** modify-запрос, меняющий только нужное поле. Комбинировать можно, но тогда в temporal input приедут все сразу.
 
 ## История тестов
 

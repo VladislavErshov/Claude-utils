@@ -73,10 +73,6 @@ HOST=$(host_to_pms_key "$INPUT_HOST")
 # Все известные Kafka PMS-переменные (из KafkaPmsProperty.java в mdb-processing)
 KNOWN_PROPERTIES=(
   kafka.soc.audit.enabled
-  kafka.soc.audit.endpoint
-  kafka.soc.audit.password.vault.path
-  kafka.soc.audit.topic
-  kafka.soc.audit.user
   kafka.sysconfig
   kafka.broker.properties
   kafka.controller.properties
