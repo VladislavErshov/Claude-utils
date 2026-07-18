@@ -42,17 +42,47 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
 
 ## Что нужно
 
-- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`) — доступ к хостам. **Только `mcc scp`** —
-  `mcc ssh` не принимает аргументы с пробелами/пайпами. Для интерактивных команд (curl Jolokia,
-  kafka-topics.sh, journalctl) пользователь сам заходит на хост.
+- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`) — доступ к хостам.
+- **`mcc scp`** — для копирования файлов/директорий (см. ниже особенности).
+- **`mcc ssh` + `expect`** — для удалённого выполнения команд. `mcc ssh` интерактивный
+  и не принимает command как аргумент, но через `expect` можно отправлять команды
+  построчно. Шаблон — в `commands/run_commands.md`. Не работает передача через stdin
+  или `bash -c "..."` — `mcc ssh` падает с `too many positional arguments`.
 
 ## mcc scp особенности
 
 - Скачивание директории: `mcc scp "<host>:/path/" "<local_dir>/"` — локальная директория должна
   существовать заранее (`mkdir -p`).
 - Скачивание файла: локальный путь — **директория**, не путь к файлу.
-- `SSL Handshake is not finished` — повторить через 1-2 сек.
+- `SSL Handshake is not finished` — повторить через 1-2 сек (tunnel ещё не поднялся).
 - `EOF на tar header` — опечатка в пути или файла не существует.
+
+## mcc ssh + expect — выполнение команд
+
+`mcc ssh <host>` открывает интерактивный шелл. Чтобы выполнить команду неинтерактивно,
+оборачиваем в `expect` и шлём команду после приглашения `/# `:
+
+```bash
+expect -c '
+set timeout 30
+spawn mcc ssh <host>
+expect "/# "
+send "uptime; echo ===DONE===\r"
+expect "===DONE==="
+send "exit\r"
+expect eof
+' 2>&1 | tail -40
+```
+
+Ограничения:
+- Сложные кавычки внутри `send` ломают парсер — лучше писать команду в файл на хосте
+  через `cat > /tmp/x.sh << "EOF" ... EOF` и затем `bash /tmp/x.sh`.
+- `sudo -u kafka bash -c "..."` с вложенными кавычками почти всегда ломается —
+  использовать heredoc-трюк.
+- `mcc scp` нестабилен на этом хосте (`SSL Handshake is not finished`) — для разовых
+  команд быстрее `expect + mcc ssh`, чем scp.
+
+Подробности и готовые шаблоны — `commands/run_commands.md`.
 
 ## Хосты и пути
 
@@ -74,6 +104,8 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
 - `commands/jolokia_inspect.md` — Jolokia MBean'ы, разница Kafka 3.x vs 4.x, Kafka CLI.
 - `commands/diagnose_broker_dead.md` — пошаговый разбор "Broker is dead".
 - `commands/known_issues.md` — детали известных проблем (симптомы, причины, фиксы).
+- `commands/run_commands.md` — выполнение команд на хосте через `mcc ssh` + `expect`.
+- `commands/check_metrics.md` — проверка метрик на 4 портах (8080 JMX, 7777 Jolokia, 23569 kafka-exporter, 23570 share-group-lag-exporter), дедупликация лагов в Grafana.
 
 ## Известные проблемы (кратко)
 
