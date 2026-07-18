@@ -14,6 +14,33 @@ allowed-tools: [bash, read_file, write_file, edit_file]
 
 Хосты: `{1,2}.mdb-data.mdb-data.{hc,pc,uc,kc}.one-infra.ru` и `{1,2}.mdb-processing.java.{hc,pc,uc,kc}.one-infra.ru`.
 
+## one-cloud-ops
+
+`one-cloud-ops` — оператор кластеров, дёргает mdb-data через `KafkaSyncApi` / sync-таски (`KafkaSyncMdbStateTask` и т.п.). Если для кластера не идёт sync (не обновляются users/topics в mdb-data) — чаще всего кластер просто не зарегистрирован в one-cloud-ops, а не баг в коде.
+
+### Хосты оператора
+
+Оператор живёт в ДЦ `hc`, `pc`, `kc` (на `uc` нет). Для mdb-data-кластеров используется namespace=infra.
+
+### Проверка регистрации кластера
+
+```bash
+# Проверить, управляется ли кластер one-cloud-ops в конкретном ДЦ:
+mcc --local -n infra -c <dc> ops <cluster-name>
+# <dc> ∈ {hc, pc, kc}, <cluster-name> — например test-43version-4-mdbdev-kafka
+```
+
+- `EntityNotFoundException: Partition <cluster> is not managed by both one-cloud-ops and ops-temporal` — кластер не зарегистрирован в этом ДЦ.
+- Проверить все 3 ДЦ подряд — может быть зарегистрирован только в одном.
+- Без `-n <namespace>` падает `NamespaceMissingException`.
+- Несуществующий namespace (mdb, mdbdev, prod) → `no such host` (DNS не резолвится).
+
+### Если sync не идёт
+
+1. Проверить регистрацию через `mcc ops` во всех 3 ДЦ (см. выше).
+2. Если нигде не зарегистрирован — проблема не в коде one-cloud-ops, деплой новой версии не поможет. Кластер нужно засабмитить (manifest типа kafka в namespace=infra) или уточнить namespace у команды оператора.
+3. Если зарегистрирован — смотреть логи one-cloud-ops и sync-таски (`KafkaSyncMdbStateTask`, task name="sync", critical=true) на хосте оператора.
+
 ## Где лежат логи
 
 | Сервис | Путь на хосте | Что искать |
