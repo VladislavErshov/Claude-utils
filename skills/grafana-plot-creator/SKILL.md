@@ -1,7 +1,7 @@
 ---
 name: grafana-plot-creator
 description: Создание и правка графиков/панелей в Grafana dashboard JSON для MDB Kafka-дашборда (и аналогичных VictoriaMetrics-дашбордах). Правила размещения панелей (gridPos, collapsed row vs top-level), паттерны multi-target таблиц (merge/organize/joinByField), PromQL с переменными $cluster/$instance/$consumer_group, форматирование descriptions на русском (\n\n для абзацев, без описания расчёта). В папке dashboard/ — две версии: stable и test. Используй когда нужно добавить новую панель, поправить PromQL/transformations/description, или разобраться почему панель отображается не в той секции.
-allowed-tools: [bash, read_file, write_file, edit_file]
+allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
 # Скилл создания Grafana-графиков
@@ -25,7 +25,7 @@ allowed-tools: [bash, read_file, write_file, edit_file]
 - `dashboard/dashboard-stable.json` — **stable**-версия дашборда (бой, импортирована в Grafana prod).
 - `dashboard/dashboard-test.json` — **test**-версия (черновик, новые итерации сюда).
 
-Готовые патроны панелей брать прямо из `dashboard-test.json` — там лежат рабочие примеры stat / timeseries / table-merge / table-joinByField. Ищать через `id` или `title`.
+Готовые патроны панелей брать прямо из `dashboard-test.json` — там лежат рабочие примеры stat / timeseries / table-merge / table-joinByField. Искать через `id` или `title`.
 
 ## Workflow с двумя версиями dashboard
 
@@ -44,7 +44,7 @@ cp /Users/vl.ershov/Downloads/grafana2.txt dashboard/dashboard-test.json
 
 ## Шаблоны панелей — брать из dashboard-test.json
 
-Готовые рабочие паттерны лежат прямо в `dashboard/dashboard-test.json`. Ищать через `id` или `title`:
+Готовые рабочие паттерны лежат прямо в `dashboard/dashboard-test.json`. Искать через `id` или `title`:
 
 | Что искать | Пример панели |
 |---|---|
@@ -63,7 +63,7 @@ cp /Users/vl.ershov/Downloads/grafana2.txt dashboard/dashboard-test.json
 ## Быстрый старт — добавить новую панель
 
 1. Прочитать `commands/panel_placement.md` — куда класть панель (top-level vs row.panels).
-2. Посмотреть подходящий шаблон в `examples/` (stat / timeseries / table-merge / table-joinByField).
+2. Найти подходящий шаблон в `dashboard/dashboard-test.json` по `id` из таблицы выше (stat / timeseries / table-merge / table-joinByField).
 3. Прочитать `commands/promql_patterns.md` — PromQL с правильными переменными и агрегацией.
 4. Сгенерировать JSON панели: скопировать шаблон, поменять title/description/expr, поставить любой `gridPos`.
 5. Вставить в `dashboard/dashboard-test.json` (top-level или внутрь row.panels).

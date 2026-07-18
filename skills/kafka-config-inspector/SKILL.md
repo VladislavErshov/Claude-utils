@@ -1,7 +1,7 @@
 ---
 name: kafka-config-inspector
 description: Инспекция конфиг-файлов Kafka-хостов — сверка PMS-переменных (pms.cloud.vk.team API) с отрендеренными конфиг-файлами на хостах (broker.properties, controller.properties, cruisecontrol.properties, capacity.json, sysconfig, jaas.conf, log4j.properties, tools-log4j.properties). Список хостов берётся из БД pg_backstage_plugin_mdb, файлы читаются через mcc scp. Используй когда нужно проверить, что PMS-API значения физически применились в /opt/kafka/config/ после modify-флоу. Скилл проверяет только property-файлы — он НЕ проверяет здоровье кластера (ISR, replication, partition balance и т.п.).
-allowed-tools: [bash, read_file, write_file, edit_file]
+allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
 # Скилл инспекции конфиг-файлов Kafka-хостов
@@ -32,9 +32,12 @@ allowed-tools: [bash, read_file, write_file, edit_file]
 
 - **mTLS-сертификаты** в `~/.mccloud/` (`client.cert`, `client.key`, `ca.crt`) — для
   PMS-API.
-- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`) — для доступа к хостам. Используем
-  **только `mcc scp`** — `mcc sshexec` не работает из-за TLS handshake timeout к
-  cloud-ops узлам, и `mcc ssh` не принимает аргументы с пробелами.
+- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — для доступа к хостам.
+  Всегда `mcc --local` (`-l`), чтобы mcc не тянул свежую версию с мастера на каждый вызов.
+  Для чтения файлов используем `mcc scp`. Для выполнения команд на хосте — `mcc ssh` + `expect`
+  (`mcc ssh` не принимает command как аргумент, но обёртка `expect` работает — см.
+  `kafka-cluster-inspector/commands/run_commands.md`). `mcc sshexec` таймаутит к cloud-ops
+  узлам (TLS handshake timeout) — не использовать.
 - **Локальная БД** `pg_backstage_plugin_mdb` в docker-контейнере `pg_backstage_plugin_mdb`
   (порт 6434) — для списка хостов.
 
@@ -60,7 +63,7 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -tA -c \
 Используй готовый скрипт `pms-read.sh` или напрямую:
 
 ```bash
-# Все 23 известных Kafka PMS-переменных для хоста:
+# Все известные Kafka PMS-переменные для хоста (19 штук, см. KNOWN_PROPERTIES в pms-read.sh):
 ~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host>
 
 # Одна переменная:
@@ -79,8 +82,12 @@ mdb-processing.
 
 ## Шаг 3: файлы на хостах (через mcc scp)
 
-⚠️ **Обязательно `-n infra`** — без флага namespace `mcc scp` падает с
-`NamespaceMissingException`. Это kafka-хосты в namespace `infra`.
+⚠️ **Destination — всегда директория, не путь к файлу.** `mcc scp` кладёт скачанное
+внутрь указанной локальной директории (она должна существовать, `mkdir -p`). Если указать
+путь к файлу — падает с `failed to open destination directory ...: no such file or directory`.
+
+⚠️ **Namespace**: на некоторых кластерах `mcc scp` падает с `NamespaceMissingException` —
+тогда добавь `-n infra`. На dev-кластерах (mcc v0.29.0) scp обычно работает и без флага.
 
 ### Скачать конфиги broker/controller (файлы в `/opt/kafka/config/` + `/etc/sysconfig/kafka`)
 
@@ -93,10 +100,11 @@ HOST=1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru
 mkdir -p /tmp/kafka-inspect/$HOST
 
 # Вся директория /opt/kafka/config/ — одним tarball (обходит баг mcc с файлами без расширения)
-mcc scp -n infra "$HOST:/opt/kafka/config/" /tmp/kafka-inspect/$HOST/ 2>&1 | tail -5
+mcc --local scp -n infra "$HOST:/opt/kafka/config/" /tmp/kafka-inspect/$HOST/ 2>&1 | tail -5
 
-# sysconfig — отдельно, он вне /opt/kafka/config/
-mcc scp -n infra "$HOST:/etc/sysconfig/kafka" /tmp/kafka-inspect/$HOST/sysconfig.kafka 2>&1 | tail -3
+# sysconfig — отдельно (он вне /opt/kafka/config/). Destination — директория, не файл!
+mkdir -p /tmp/kafka-inspect/$HOST/sysconfig
+mcc --local scp -n infra "$HOST:/etc/sysconfig/kafka" /tmp/kafka-inspect/$HOST/sysconfig/ 2>&1 | tail -3
 ```
 
 ### Скачать конфиги cruise-control (файлы в `/opt/cruise-control/config/` + `/etc/sysconfig/cruise-control`)
@@ -109,8 +117,9 @@ mcc scp -n infra "$HOST:/etc/sysconfig/kafka" /tmp/kafka-inspect/$HOST/sysconfig
 HOST=1.cruise.test-resize-mdbdev-kafka.dc.one-infra.ru
 mkdir -p /tmp/kafka-inspect/$HOST
 
-mcc scp -n infra "$HOST:/opt/cruise-control/config/" /tmp/kafka-inspect/$HOST/ 2>&1 | tail -5
-mcc scp -n infra "$HOST:/etc/sysconfig/cruise-control" /tmp/kafka-inspect/$HOST/sysconfig.cruise 2>&1 | tail -3
+mcc --local scp -n infra "$HOST:/opt/cruise-control/config/" /tmp/kafka-inspect/$HOST/ 2>&1 | tail -5
+mkdir -p /tmp/kafka-inspect/$HOST/sysconfig
+mcc --local scp -n infra "$HOST:/etc/sysconfig/cruise-control" /tmp/kafka-inspect/$HOST/sysconfig/ 2>&1 | tail -3
 ```
 
 ⚠️ `mcc scp` одиночного файла иногда падает с `failed to read downloaded archive
@@ -242,9 +251,11 @@ PMS-переменная была удалена, но файл остался.
 
 ## Важно
 
-- **`mcc scp` обязательно с `-n infra`** — без флага падает с `NamespaceMissingException`.
-- **`mcc sshexec` / `mcc ssh` не использовать** — sshexec таймаутит к cloud-ops узлам
-  (TLS handshake timeout), ssh не принимает аргументы с пробелами. Только `mcc scp -n infra`.
+- **`mcc scp` destination — всегда директория** (существующая, `mkdir -p`), не путь к файлу.
+  Файл-путь → `failed to open destination directory ...: no such file or directory`.
+- **`-n infra`** нужен не всегда — добавляй если mcc падает с `NamespaceMissingException`.
+- **Для команд на хосте** используй `mcc ssh` + `expect` (см. kafka-cluster-inspector), а не
+  `mcc sshexec` (таймаутит к cloud-ops). Но конфиги достаточно читать через `mcc scp`.
 - **Файлы без расширения** (`/etc/sysconfig/kafka`, `/etc/sysconfig/cruise-control`,
   `jaas.conf`) иногда падают с `failed to read downloaded archive header: EOF` при
   одиночном scp. Решение — качать всю директорию `/opt/kafka/config/` (или
@@ -266,14 +277,14 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -tA -c \
 # 2. PMS-API: что записано в kafka.sysconfig
 ~/.claude/skills/kafka-config-inspector/bin/pms-read.sh 1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru kafka.sysconfig | grep KAFKA_HEAP_OPTS
 
-# 3. Скачать /opt/kafka/config/ целиком + /etc/sysconfig/kafka отдельно
+# 3. Скачать /opt/kafka/config/ целиком + /etc/sysconfig/kafka отдельно (dest — директория!)
 HOST=1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru
-mkdir -p /tmp/kafka-inspect/$HOST
-mcc scp -n infra "$HOST:/opt/kafka/config/"      /tmp/kafka-inspect/$HOST/ 2>&1 | tail -3
-mcc scp -n infra "$HOST:/etc/sysconfig/kafka"    /tmp/kafka-inspect/$HOST/sysconfig.kafka 2>&1 | tail -3
+mkdir -p /tmp/kafka-inspect/$HOST/sysconfig
+mcc --local scp "$HOST:/opt/kafka/config/"   /tmp/kafka-inspect/$HOST/          2>&1 | tail -3
+mcc --local scp "$HOST:/etc/sysconfig/kafka" /tmp/kafka-inspect/$HOST/sysconfig/ 2>&1 | tail -3
 
 # 4. Что физически на хосте
-grep KAFKA_HEAP_OPTS /tmp/kafka-inspect/$HOST/sysconfig.kafka
+grep KAFKA_HEAP_OPTS /tmp/kafka-inspect/$HOST/sysconfig/kafka
 grep -E "num.io.threads|compression.type" /tmp/kafka-inspect/$HOST/opt/kafka/config/broker.properties 2>/dev/null \
   || grep -E "num.io.threads|compression.type" /tmp/kafka-inspect/$HOST/broker.properties
 

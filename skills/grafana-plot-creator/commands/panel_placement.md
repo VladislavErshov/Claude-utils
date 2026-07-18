@@ -1,6 +1,6 @@
 # Размещение панелей в Grafana dashboard JSON
 
-Структура дашборда и правила `gridPos`. Боевой пример — `/Users/vl.ershov/Downloads/grafana2.txt`.
+Структура дашборда и правила `gridPos`. Боевой пример — `dashboard/dashboard-test.json`.
 
 ## Сетка
 

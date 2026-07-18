@@ -1,6 +1,6 @@
 # PromQL-рецепты для Kafka-метрик
 
-Patтерны PromQL для MDB Kafka-дашборда. Источник данных — VictoriaMetrics.
+Паттерны PromQL для MDB Kafka-дашборда. Источник данных — VictoriaMetrics.
 
 ## Переменные дашборда
 

@@ -1,7 +1,7 @@
 ---
 name: kafka-cluster-inspector
 description: Инспекция MDB Kafka кластеров (KRaft, версии 3.x и 4.x) — диагностика "Broker is dead", чтение логов broker/controller/cruise-control через mcc scp, проверка Jolokia MBean'ов, разбор KRaft quorum / controller registration. Список хостов задаёт пользователь (формат 1.broker.<cluster>.<dc>.one-infra.ru / 1.controller.<cluster>.<dc>.one-infra.ru / 1.cruise.<cluster>.<dc>.one-infra.ru). Конфиги и логи читаются через mcc scp. Используй когда нужно проверить состояние Kafka-кластера, найти причину "Broker is dead" в UI mdb-data, разобраться почему broker/controller не стартует или не входит в KRaft quorum.
-allowed-tools: [bash, read_file, write_file, edit_file]
+allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
 # Скилл инспекции MDB Kafka кластеров
@@ -42,12 +42,14 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
 
 ## Что нужно
 
-- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`) — доступ к хостам.
+- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — доступ к хостам.
+- **Всегда `mcc --local`** (`-l`) для `ssh`/`scp` — без него mcc на каждый вызов тянет свежую
+  версию с cloud-мастера (self-update: медленно + мусор в выводе). Флаг подавляет это.
 - **`mcc scp`** — для копирования файлов/директорий (см. ниже особенности).
 - **`mcc ssh` + `expect`** — для удалённого выполнения команд. `mcc ssh` интерактивный
-  и не принимает command как аргумент, но через `expect` можно отправлять команды
-  построчно. Шаблон — в `commands/run_commands.md`. Не работает передача через stdin
-  или `bash -c "..."` — `mcc ssh` падает с `too many positional arguments`.
+  и не принимает command как аргумент (`mcc ssh <host> <cmd>` → `error: too many positional
+  arguments`), но через `expect` можно отправлять команды построчно. Шаблон — в
+  `commands/run_commands.md`. Не работает передача через stdin или `bash -c "..."`.
 
 ## mcc scp особенности
 

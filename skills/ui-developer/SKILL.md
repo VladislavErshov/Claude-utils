@@ -19,7 +19,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 - **Формы:** `react-final-form`. Значения читаем через `useForm().getState().values`, мутаторы — через `formMutators`.
 - **UI-кит:** `@gravity-ui/uikit` (Button, Disclosure, Flex, Loader, Text и т.п.). Не тянуть сторонние UI-библиотеки без явного разрешения.
 - **Стили:** SCSS-модули (`*.module.scss`) + TailwindCSS. CSS-классы через `cx(...)` или напрямую.
-- **API:** контракты генерируются в `src/shared/api/__generated__/` (например, `data-contracts.ts`) через `pnpm run api-codegen`. **Эти файлы НЕ редактировать руками** — править swagger/спеку и регенерировать.
+- **API:** контракты генерируются по доменам в `src/shared/api/__generated__/` (например, `cluster.ts`, `auth.ts`) через `pnpm run api-codegen`. **Эти файлы НЕ редактировать руками** — править swagger/спеку и регенерировать.
 - **Импорты:** используем path-alias `@/...` для абсолютных путей от `src/`.
 
 ## 📁 Структура репозитория
