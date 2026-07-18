@@ -18,27 +18,43 @@ allowed-tools: [bash, read_file, write_file, edit_file]
 
 `one-cloud-ops` — оператор кластеров, дёргает mdb-data через `KafkaSyncApi` / sync-таски (`KafkaSyncMdbStateTask` и т.п.). Если для кластера не идёт sync (не обновляются users/topics в mdb-data) — чаще всего кластер просто не зарегистрирован в one-cloud-ops, а не баг в коде.
 
-### Хосты оператора
+### Namespace и ДЦ
 
-Оператор живёт в ДЦ `hc`, `pc`, `kc` (на `uc` нет). Для mdb-data-кластеров используется namespace=infra.
+`one-cloud-ops` деплоится в нескольких namespace, каждый со своим набором ДЦ. **Namespace и ДЦ между собой не связаны** — оператор может стоять в любой комбинации, нужно проверять все варианты.
+
+Известные namespace (из CI-деплоев):
+
+| Namespace | ДЦ, где есть оператор |
+|---|---|
+| `vkontakte` | `nc`, `ic`, `zc` (по деплою), реально отвечает в `kc`, `dc`, `nc`, `ic`, `zc` |
+| `dzen` | `dc`, `ec`, `kc`, `pc`, `sc` (по деплою), отвечает во всех + `hc` |
+| `infra` | используется для некоторых mdb-кластеров |
+
+Service name на всех — `cdb.cloud-ops.batch` (queue `cloud-ops.batch`), URL API — `https://cdb.cloud-ops.clouds.vkcl.ru/...`.
+
+⚠️ С бекстейджа/локальной машины DNS `cdb.cloud-ops.clouds.vkcl.ru` может не резолвиться для ДЦ namespace `vkontakte` → `dial tcp: i/o timeout`. Если нужен этот namespace — запускать `mcc` с хоста, у которого есть доступ, либо через UI one-cloud-ops.
 
 ### Проверка регистрации кластера
 
 ```bash
-# Проверить, управляется ли кластер one-cloud-ops в конкретном ДЦ:
-mcc --local -n infra -c <dc> ops <cluster-name>
-# <dc> ∈ {hc, pc, kc}, <cluster-name> — например test-43version-4-mdbdev-kafka
+# Проверить, управляется ли кластер one-cloud-ops в конкретном ДЦ+namespace:
+mcc --local -n <namespace> -c <dc> ops <cluster-id-or-name>
+# cluster-id — UUID, cluster-name — например test-43version-4-mdbdev-kafka
 ```
 
-- `EntityNotFoundException: Partition <cluster> is not managed by both one-cloud-ops and ops-temporal` — кластер не зарегистрирован в этом ДЦ.
-- Проверить все 3 ДЦ подряд — может быть зарегистрирован только в одном.
+Маркеры ответа:
+- `EntityNotFoundException: Partition <cluster> is not managed by both one-cloud-ops and ops-temporal` — кластер не зарегистрирован в этом (ДЦ, namespace).
+- `Not found ops by namespace <ns>` — в этом ДЦ оператор с таким namespace вообще не установлен.
+- `Failed to create one-cloud client: Namespace cannot be resolved from <ns>` — namespace не зарегистрирован в PMS для этого ДЦ.
+- `dial tcp: lookup cdb.cloud-ops.clouds.vkcl.ru: i/o timeout` — оператор есть, но с этой машины до него не достучаться (DNS/сеть).
 - Без `-n <namespace>` падает `NamespaceMissingException`.
-- Несуществующий namespace (mdb, mdbdev, prod) → `no such host` (DNS не резолвится).
+
+Так как namespace и ДЦ независимы — проверять нужно декартово: все namespace × все ДЦ, пока не найдётся тот, где кластер зарегистрирован.
 
 ### Если sync не идёт
 
-1. Проверить регистрацию через `mcc ops` во всех 3 ДЦ (см. выше).
-2. Если нигде не зарегистрирован — проблема не в коде one-cloud-ops, деплой новой версии не поможет. Кластер нужно засабмитить (manifest типа kafka в namespace=infra) или уточнить namespace у команды оператора.
+1. Проверить регистрацию через `mcc ops` по всем комбинациям namespace × ДЦ (см. выше).
+2. Если нигде не зарегистрирован — проблема не в коде one-cloud-ops, деплой новой версии не поможет. Кластер нужно засабмитить (manifest типа kafka в нужный namespace) или уточнить namespace у команды оператора.
 3. Если зарегистрирован — смотреть логи one-cloud-ops и sync-таски (`KafkaSyncMdbStateTask`, task name="sync", critical=true) на хосте оператора.
 
 ## Где лежат логи
