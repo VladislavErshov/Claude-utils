@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 102879,
+  "id": 794,
   "links": [],
   "panels": [
     {
@@ -46,7 +46,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "",
+      "description": "Общая информация о хостах кластера.\n\nRole — leader-controller (ровно один на кластер) / follower-controller / broker\n\nMax Lag 🟢 < 1000 | 🟠 1000-5000 | 🔴 > 5000. Оценивать вместе с Under min ISR: партиция, долго висящая в Under min ISR, может выпадать из Max Lag, и лаг отобразится только после появления нового сегмента.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -150,12 +150,43 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Is Controller?"
+              "options": "Role"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "bool_yes_no"
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "3": {
+                        "color": "red",
+                        "index": 0,
+                        "text": "leader-controller"
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "2": {
+                        "color": "green",
+                        "index": 1,
+                        "text": "broker"
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "1": {
+                        "color": "orange",
+                        "index": 2,
+                        "text": "follower-controller"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
               }
             ]
           },
@@ -235,7 +266,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(kafka_controller_kafkacontroller_activecontrollercount{mdb_kafka_cluster=\"$cluster\"}) by (instance)",
+          "expr": "3 * (sum by (instance) (kafka_controller_kafkacontroller_activecontrollercount{mdb_kafka_cluster=\"$cluster\"}) > 0) or on(instance) 2 * (count by (instance) (kafka_server_replicamanager_partitioncount{mdb_kafka_cluster=\"$cluster\"})) or on(instance) 1 * (count by (instance) (kafka_controller_kafkacontroller_activecontrollercount{mdb_kafka_cluster=\"$cluster\"}))",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -371,7 +402,7 @@
             "renameByName": {
               "Time": "",
               "Value #A": "Uptime",
-              "Value #B": "Is Controller?",
+              "Value #B": "Role",
               "Value #C": "Partitions",
               "Value #D": "Leaders",
               "Value #E": "Leaders, %",
@@ -393,6 +424,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
+      "description": "Средние значения по кластеру.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -561,7 +593,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Number of brokers online.",
+      "description": "Количество брокеров онлайн в кластере.\n\n🟢 = общему числу брокеров | 🟠 -1 брокер | 🔴 -2 и более брокеров.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -643,7 +675,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Number of active controllers in the cluster.",
+      "description": "Количество активных контроллеров в кластере.\n\n🟢 = 1 | 🔴 = 0 или > 1 (должен быть ровно один leader-controller).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1037,7 +1069,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Number of partitions that dont have an active leader and are hence not writable or readable.",
+      "description": "Количество партиций без активного лидера — не доступны для записи и чтения.\n\n🟢 = 0 | 🟠 > 0 | 🔴 > 5.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1447,7 +1479,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Number of offline log directories.",
+      "description": "Количество офлайн log-директорий.\n\n🟢 = 0 | 🟠 > 0 | 🔴 > 1.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1676,8 +1708,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1780,8 +1811,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3167,7 +3197,7 @@
             "h": 8,
             "w": 6,
             "x": 0,
-            "y": 48
+            "y": 47
           },
           "id": 34,
           "options": {
@@ -3283,7 +3313,7 @@
             "h": 8,
             "w": 6,
             "x": 6,
-            "y": 48
+            "y": 47
           },
           "id": 35,
           "options": {
@@ -3413,7 +3443,7 @@
             "h": 8,
             "w": 6,
             "x": 12,
-            "y": 48
+            "y": 47
           },
           "id": 36,
           "options": {
@@ -3543,7 +3573,7 @@
             "h": 8,
             "w": 6,
             "x": 18,
-            "y": 48
+            "y": 47
           },
           "id": 37,
           "options": {
@@ -3591,7 +3621,7 @@
               "refId": "B"
             }
           ],
-          "title": "Reassignment Bytes In/Out",
+          "title": "Reassignment Bits In/Out",
           "type": "timeseries"
         }
       ],
@@ -3674,7 +3704,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 49
+            "y": 48
           },
           "id": 39,
           "options": {
@@ -3814,7 +3844,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 49
+            "y": 48
           },
           "id": 40,
           "options": {
@@ -3954,7 +3984,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 59
+            "y": 58
           },
           "id": 41,
           "options": {
@@ -4094,7 +4124,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 59
+            "y": 58
           },
           "id": 42,
           "options": {
@@ -4246,7 +4276,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 69
+            "y": 68
           },
           "id": 43,
           "options": {
@@ -4398,7 +4428,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 69
+            "y": 68
           },
           "id": 44,
           "options": {
@@ -4570,7 +4600,7 @@
             "h": 9,
             "w": 8,
             "x": 0,
-            "y": 50
+            "y": 87
           },
           "id": 46,
           "options": {
@@ -4676,7 +4706,7 @@
             "h": 9,
             "w": 8,
             "x": 8,
-            "y": 50
+            "y": 87
           },
           "id": 47,
           "options": {
@@ -4781,7 +4811,7 @@
             "h": 9,
             "w": 8,
             "x": 16,
-            "y": 50
+            "y": 87
           },
           "id": 48,
           "options": {
@@ -4886,7 +4916,7 @@
             "h": 9,
             "w": 8,
             "x": 0,
-            "y": 59
+            "y": 96
           },
           "id": 49,
           "options": {
@@ -4991,7 +5021,7 @@
             "h": 9,
             "w": 8,
             "x": 8,
-            "y": 59
+            "y": 96
           },
           "id": 50,
           "options": {
@@ -5096,7 +5126,7 @@
             "h": 9,
             "w": 8,
             "x": 16,
-            "y": 59
+            "y": 96
           },
           "id": 51,
           "options": {
@@ -5216,7 +5246,7 @@
             "h": 9,
             "w": 8,
             "x": 0,
-            "y": 51
+            "y": 88
           },
           "id": 53,
           "options": {
@@ -5320,7 +5350,7 @@
             "h": 9,
             "w": 8,
             "x": 8,
-            "y": 51
+            "y": 88
           },
           "id": 54,
           "options": {
@@ -5424,7 +5454,7 @@
             "h": 9,
             "w": 8,
             "x": 16,
-            "y": 51
+            "y": 88
           },
           "id": 55,
           "options": {
@@ -5528,7 +5558,7 @@
             "h": 9,
             "w": 8,
             "x": 0,
-            "y": 60
+            "y": 97
           },
           "id": 56,
           "options": {
@@ -5632,7 +5662,7 @@
             "h": 9,
             "w": 8,
             "x": 8,
-            "y": 60
+            "y": 97
           },
           "id": 57,
           "options": {
@@ -5736,7 +5766,7 @@
             "h": 9,
             "w": 8,
             "x": 16,
-            "y": 60
+            "y": 97
           },
           "id": 58,
           "options": {
@@ -10111,8 +10141,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -10225,8 +10254,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -10330,8 +10358,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -10390,7 +10417,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Суммарный лаг по консьюмер-группе (обычные и share groups) и топику.",
+      "description": "Суммарный лаг по группе и топику.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -10435,8 +10462,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -10496,7 +10522,7 @@
           "refId": "B"
         }
       ],
-      "title": "Lag by  Consumer Group",
+      "title": "Lag by Consumer and Share Group",
       "type": "timeseries"
     },
     {
@@ -10505,7 +10531,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Лаг по конкретной партиции консьюмер-группы (обычные и share groups). Лаг на одной партиции — горячая партиция, медленный консьюмер или задержки на конкретном брокере.",
+      "description": "Лаг по конкретной партиции группы. Лаг на одной партиции — горячая партиция, медленный консьюмер или задержки на конкретном брокере.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -10550,8 +10576,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -10612,7 +10637,7 @@
           "refId": "B"
         }
       ],
-      "title": "Lag by  Consumer Group Partition",
+      "title": "Lag by Consumer and Share Group Partition",
       "type": "timeseries"
     },
     {
@@ -10667,8 +10692,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           }
@@ -10737,8 +10761,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -10863,14 +10886,15 @@
             },
             "renameByName": {
               "Value": "Current offset",
-              "consumergroup": "Consumer group",
+              "consumergroup": "Group",
               "partition": "Partition",
               "topic": "Topic"
             }
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "description": "Текущий committed-offset по партициям консьюмер-группы — позиция, до которой группа подтвердила чтение.\n\nЧто смотреть:\n\n- Offset стоит на месте при активном продьюсере → консьюмер не читает или завис.\n\n- Offset отстаёт от Log Size → растёт лаг (см. панели Lag by Consumer and Share Group).\n\n- Offset по одной партиции сильно меньше остальных → горячая партиция или медленный консьюмер."
     },
     {
       "datasource": {
@@ -10878,7 +10902,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Состояние share-групп, количество участников и in-flight сообщений. State=Stable — норма, State=Dead или долгий PreparingRebalance — проблема с консьюмером, Members=0 при работающем консьюмере — консьюмер не зарегистрировался, In-flight messages растёт — консьюмер не успевает ack-ать.",
+      "description": "Состояние share-групп и ключевые счётчики. State=Stable — норма, любые другие состояния при работающем консьюмере — проблема. In-flight растёт без роста Processed — консьюмер застрял, не ack-ает.\n\nКолонки:\n\n- Group — название share-группы.\n\n- State — Stable — норма. Dead / долгий PreparingRebalance — проблема с консьюмером. Empty — нет участников. CompletingRebalance — завершается ребаланс.\n\n- Coordinator — host:port брокера-координатора share-группы.\n\n- Members — количество активных участников в группе. 0 при работающем консьюмере — консьюмер не зарегистрировался.\n\n- Processed — всего сообщений обработано с момента offset=0 (Accept + финальные Reject после max.delivery.count).\n\n- In-flight — сообщений «в полёте»: отданы консьюмеру, но ещё не ack-нуты.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -10896,8 +10920,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -10971,7 +10994,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "In-flight messages"
+              "options": "In-flight"
             },
             "properties": [
               {
@@ -10979,6 +11002,25 @@
                 "value": 150
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Processed"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Coordinator"
+            },
+            "properties": []
           }
         ]
       },
@@ -11043,13 +11085,28 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (group) (kafka_server_sharepartitionmetrics_in_flight_message_count{mdb_kafka_cluster=\"$cluster\", instance=~\"$instance\", group=~\"$consumer_group\"})",
+          "expr": "sum by (group) (max by (group, topic, partition) (kafka_server_sharepartitionmetrics_in_flight_message_count{mdb_kafka_cluster=\"$cluster\", instance=~\"$instance\", group=~\"$consumer_group\"}))",
           "format": "table",
           "instant": true,
           "interval": "1m",
           "legendFormat": "{{group}}",
           "range": false,
           "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-datasource",
+            "uid": "${vm_datasource}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum by (group) (max by (group, topic, partition) (kafka_share_group_start_offset{mdb_kafka_cluster=\"$cluster\", instance=~\"$instance\", group=~\"$consumer_group\"}))",
+          "format": "table",
+          "instant": true,
+          "interval": "1m",
+          "legendFormat": "{{group}}",
+          "range": false,
+          "refId": "D"
         }
       ],
       "title": "Share Group State",
@@ -11068,19 +11125,22 @@
               "Time": true,
               "Time 1": true,
               "Time 2": true,
-              "Value #A": true
+              "Value #A": true,
+              "Value #D": false
             },
             "includeByName": {},
             "indexByName": {
               "Value #B": 3,
-              "Value #C": 4,
+              "Value #C": 5,
+              "Value #D": 4,
               "coordinator": 2,
               "group": 0,
               "state": 1
             },
             "renameByName": {
               "Value #B": "Members",
-              "Value #C": "In-flight messages",
+              "Value #C": "In-flight",
+              "Value #D": "Processed",
               "coordinator": "Coordinator",
               "group": "Group",
               "state": "State"
@@ -11150,8 +11210,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11249,8 +11308,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11348,8 +11406,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11447,8 +11504,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11546,8 +11602,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11645,8 +11700,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12154,8 +12208,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -12260,8 +12313,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -12392,8 +12444,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -12498,8 +12549,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -12555,7 +12605,7 @@
     },
     {
       "datasource": {
-        "name": "onecloud-victoriametrics",
+        "default": false,
         "type": "victoriametrics-datasource",
         "uid": "P5E389AC86EF4AFF3"
       },
@@ -12598,7 +12648,7 @@
               "mode": "off"
             }
           },
-          "decimals": 0,
+          "decimals": 2,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -12612,7 +12662,7 @@
               }
             ]
           },
-          "unit": "bits"
+          "unit": "bytes"
         },
         "overrides": []
       },
@@ -12646,7 +12696,7 @@
             "uid": "P5E389AC86EF4AFF3"
           },
           "editorMode": "code",
-          "expr": "sum by(__name__, cloud_instance, cloud_service, dc) (\n  {\n    __name__=~\"one_cloud_(ssd|hdd|nvme)_(volume|device)_space_(free|total|used)_value\",\n    cloud_service=~\".*.$cluster\"\n  }\n)",
+          "expr": "sum by(__name__, cloud_instance, cloud_service, dc) (\n  {\n    __name__=~\"one_cloud_(ssd|hdd|nvme)_(volume|device)_space_total_value\",\n    cloud_service=~\".*.$cluster\"\n  }\n)",
           "hide": false,
           "interval": "1m",
           "legendFormat": "{{__name__}} - {{cloud_instance}}.{{cloud_service}}.{{dc}}",
@@ -12654,7 +12704,120 @@
           "refId": "A"
         }
       ],
-      "title": "Storage",
+      "title": "Storage total",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "one_cloud_(.*)_(.*)_space_(.*)_value - (.*)",
+            "renamePattern": "$1 $2 $3 - $4"
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "default": false,
+        "type": "victoriametrics-datasource",
+        "uid": "P5E389AC86EF4AFF3"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 129
+      },
+      "id": 148,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-datasource",
+            "uid": "P5E389AC86EF4AFF3"
+          },
+          "editorMode": "code",
+          "expr": "sum by(__name__, cloud_instance, cloud_service, dc) (\n  {\n    __name__=~\"one_cloud_(ssd|hdd|nvme)_(volume|device)_space_used_value\",\n    cloud_service=~\".*.$cluster\"\n  }\n)",
+          "hide": false,
+          "interval": "1m",
+          "legendFormat": "{{__name__}} - {{cloud_instance}}.{{cloud_service}}.{{dc}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Storage used",
       "transformations": [
         {
           "id": "renameByRegex",
@@ -12732,8 +12895,8 @@
       "gridPos": {
         "h": 9,
         "w": 12,
-        "x": 12,
-        "y": 129
+        "x": 0,
+        "y": 138
       },
       "id": 114,
       "options": {
@@ -12780,12 +12943,125 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "default": false,
+        "type": "victoriametrics-datasource",
+        "uid": "P5E389AC86EF4AFF3"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 138
+      },
+      "id": 149,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-datasource",
+            "uid": "P5E389AC86EF4AFF3"
+          },
+          "editorMode": "code",
+          "expr": "sum by(__name__, cloud_instance, cloud_service, dc) (\n  {\n    __name__=~\"one_cloud_(ssd|hdd|nvme)_(volume|device)_space_free_value\",\n    cloud_service=~\".*.$cluster\"\n  }\n)",
+          "hide": false,
+          "interval": "1m",
+          "legendFormat": "{{__name__}} - {{cloud_instance}}.{{cloud_service}}.{{dc}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Storage free",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "one_cloud_(.*)_(.*)_space_(.*)_value - (.*)",
+            "renamePattern": "$1 $2 $3 - $4"
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
       "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 138
+        "y": 147
       },
       "id": 115,
       "panels": [
@@ -13813,8 +14089,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Kafka cluster 9",
-  "uid": "deahz1a8c50xs9",
-  "version": 2,
+  "title": "Kafka cluster",
+  "uid": "deahz1a8c50xsb",
+  "version": 202,
   "weekStart": ""
 }
