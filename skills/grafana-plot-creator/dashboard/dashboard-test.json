@@ -757,7 +757,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Number of topics in the cluster.",
+      "description": "Общее количество топиков в кластере.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -835,7 +835,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Number of partitions in the cluster.",
+      "description": "Общее количество партиций в кластере по всем топикам.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -991,7 +991,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "The number of reassigning leader partitions on a brokers.",
+      "description": "Количество партиций, которые сейчас перемещаются между брокерами в рамках reassignment.\n\n🟢 = 0 (reassignment не идёт) | 🟠 > 0 (идёт перемещение, мониторить прогресс) | 🔴 растёт или долго не снижается.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1069,7 +1069,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Количество партиций без активного лидера — не доступны для записи и чтения.\n\n🟢 = 0 | 🟠 > 0 | 🔴 > 5.",
+      "description": "Количество партиций без активного лидера. Запись и чтение остановлено.\n\n🟢 = 0 | 🟠 > 0 | 🔴 > 5.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1151,7 +1151,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Number of under-replicated partitions (| ISR | < | all replicas |).",
+      "description": "Количество партиций с нехваткой синхронных реплик.\n\nСумма Under min ISR и At min ISR (при типичной конфигурации min.insync.replicas = replication.factor - 1).\n\n🟢 = 0 | 🟠 > 0 | 🔴 > 10.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1233,7 +1233,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Number of partitions under min insync replicas.",
+      "description": "Количество партиций, где число синхронных реплик (ISR) ниже минимума. Запись остановлена.\n\n🟢 = 0 | 🟠 > 0 | 🔴 > 5.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1315,7 +1315,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Number of partitions at min insync replicas (|ISR| = min.insync.replicas).",
+      "description": "Количество партиций на грани блокировки записи. При выпадении еще одной реплики из ISR запись остановится.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1479,7 +1479,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Количество офлайн log-директорий.\n\n🟢 = 0 | 🟠 > 0 | 🔴 > 1.",
+      "description": "Количество повреждённых дисков с данными. Партиции на брокере недоступны.\n\n🟢 = 0 | 🟠 > 0 | 🔴 > 1.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1881,7 +1881,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Number of partitions that dont have an active leader and are hence not writable or readable.",
+          "description": "Количество партиций без активного лидера. Запись и чтение остановлено.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1977,7 +1977,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Number of partitions that dont have an active leader and are hence not writable or readable.",
+          "description": "Количество партиций, где число синхронных реплик (ISR) ниже минимума. Запись остановлена.",
           "fieldConfig": {
             "defaults": {
               "color": {
