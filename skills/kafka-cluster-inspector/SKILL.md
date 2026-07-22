@@ -128,7 +128,9 @@ expect eof
 - **CC не запускается** — `UnsupportedClassVersionError` (Java 11 vs 17). Фикс — обновить Java в
   `ubuntu20-mdb-cruisecontrol-base`.
 - **CruiseControlMetricsReporter не подключается** — JAR несовместим с версией Kafka (CC 2.5.141
-  vs Kafka 4.x требует 2.5.147+), либо auth-проблема.
+  vs Kafka 4.x требует 2.5.147+), либо auth-проблема. Отдельный случай: `ClassNotFoundException:
+  CruiseControlMetricsReporter` — брокер падает при старте, JAR репортера отсутствует в образе.
+  Фикс — поднять версию docker-образа Kafka. Детали — `known_issues.md`.
 - **Fenced брокер** — `FencedBrokerCount > 0` на controller-хосте.
 - **Under-replicated partitions** — `UnderReplicatedPartitions > 0` на broker-хосте.
 

@@ -97,6 +97,46 @@ INFO Starting Cruise Control metrics reporter with reporting interval of 60000 m
 INFO App info kafka.admin.client for CruiseControlMetricsReporter unregistered
 ```
 
+### `ClassNotFoundException: CruiseControlMetricsReporter` — брокер не стартует
+
+**Симптом** в `kafka-broker.out.log`:
+```
+ERROR [main] BrokerServer - [BrokerServer id=XXXXX] Fatal error during broker startup. Prepare to shutdown
+org.apache.kafka.common.KafkaException: Class com.linkedin.kafka.cruisecontrol.metricsreporter.CruiseControlMetricsReporter cannot be found
+    at org.apache.kafka.common.config.AbstractConfig.getConfiguredInstance(AbstractConfig.java:394)
+    at kafka.server.DynamicMetricReporterState.createReporters(DynamicBrokerConfig.scala:920)
+    ...
+Caused by: java.lang.ClassNotFoundException: com.linkedin.kafka.cruisecontrol.metricsreporter.CruiseControlMetricsReporter
+```
+
+Брокер стартует, регистрируется в KRaft quorum, доходит до `DynamicMetricReporterState.createReporters`
+и падает → `systemctl status kafka-broker` = `failed (Result: exit-code)`. systemd рестартит в цикле.
+
+**Отличие от предыдущего случая**: там репортер грузился, но не подключался к брокеру (WARN).
+Здесь класс репортера **вообще отсутствует** в classpath — JAR не лежит ни в `/opt/kafka/libs/`,
+ни в `/opt/kafka/dependant-libs/`. `find /opt /etc -name "*cruise*"` пуст.
+
+**Причина**: docker-образ Kafka слишком старой версии (например `ubuntu20-kafka-3.8.0:1.1.4`).
+В старых образах JAR `cruise-control-metrics-reporter-*.jar` либо не укладывался, либо лежал
+по несовместимому пути. Конфиг `broker.properties` при этом ссылается на класс репортера
+(`metric.reporters=com.linkedin.kafka.cruisecontrol.metricsreporter.CruiseControlMetricsReporter`
++ блок `cruise.control.metrics.reporter.*`), поэтому класс обязан быть в classpath.
+
+**Фикс**: поднять версию docker-образа Kafka (`ubuntu20-kafka-3.8.0` или соответствующего
+versioned-образа) на хостах кластера через modify-флоу mdb-data. В новой версии JAR
+репортера должен присутствовать в `/opt/kafka/libs/`.
+
+**Как проверить после деплоя**:
+```bash
+ls /opt/kafka/libs/ | grep -i cruise   # должен показать cruise-control-metrics-reporter-*.jar
+systemctl is-active kafka-broker       # active
+grep "Starting Cruise Control metrics reporter" /mnt/logs/dbms/kafka-broker.out.log
+```
+
+**Временный workaround** (если нельзяすぐ передеплоить): закомментировать в `broker.properties`
+`metric.reporters` и весь блок `cruise.control.metrics.reporter.*`, рестартовать
+`kafka-broker.service`. Минус — Cruise Control перестанет получать метрики с брокеров.
+
 ## Fenced брокер
 
 **Симптом**: брокер зарегистрировался, но controller его "заборнил" (fenced). В UI может
