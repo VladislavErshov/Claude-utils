@@ -251,7 +251,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "time() - (jvm_info{mdb_kafka_cluster=\"$cluster\"} * on (instance) group_left process_start_time_seconds{mdb_kafka_cluster=\"$cluster\"})",
+          "expr": "(time() - kafka_server_appinfo_start_time_ms{mdb_kafka_cluster=\"$cluster\"} / 1000)\n  * on(instance) group_left(version)\nmax by(instance, version) (jvm_info{mdb_kafka_cluster=\"$cluster\"})\nor on(instance)\nmax by(instance, version) (time() - (jvm_info{mdb_kafka_cluster=\"$cluster\"} * on(instance) group_left process_start_time_seconds{mdb_kafka_cluster=\"$cluster\"}))",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -350,11 +350,14 @@
           "refId": "G"
         }
       ],
-      "title": "Brokers info",
+      "title": "Brokers Info",
       "transformations": [
         {
-          "id": "merge",
-          "options": {}
+          "id": "joinByField",
+          "options": {
+            "byField": "instance",
+            "mode": "outer"
+          }
         },
         {
           "id": "organize",
@@ -383,21 +386,22 @@
             "includeByName": {},
             "indexByName": {
               "Time": 0,
-              "Value #A": 5,
-              "Value #B": 6,
-              "Value #C": 7,
-              "Value #D": 8,
-              "Value #E": 9,
-              "Value #F": 10,
-              "Value #G": 11,
-              "hostname": 13,
+              "Value #A": 6,
+              "Value #B": 7,
+              "Value #C": 8,
+              "Value #D": 9,
+              "Value #E": 10,
+              "Value #F": 11,
+              "Value #G": 12,
+              "hostname": 14,
               "instance": 1,
-              "is_controller": 14,
-              "job": 2,
-              "kafka_cluster_name": 15,
-              "runtime": 3,
-              "vendor": 4,
-              "version": 12
+              "is_controller": 15,
+              "job": 3,
+              "kafka_cluster_name": 16,
+              "node_id": 2,
+              "runtime": 4,
+              "vendor": 5,
+              "version": 13
             },
             "renameByName": {
               "Time": "",
@@ -412,6 +416,7 @@
               "cloud_minion": "Minion",
               "cloud_namespace": "",
               "instance": "Instance",
+              "node_id": "Id",
               "version": "JVM Version"
             }
           }
@@ -913,7 +918,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "",
+      "description": "Суммарное количество выборов лидера в KRaft-кворуме за последний час.\n\nВ стабильном кластере должно быть 0 — всплески указывают на перезапуск контроллеров, сетевые проблемы или fencing.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1397,7 +1402,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "",
+      "description": "Количество партиций, у которых текущий лидер не совпадает с preferred-лидером.\n\n🟢 = 0 | 🟠 > 0 - есть перекос в нагрузке на чтение и запись.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1657,7 +1662,8 @@
         }
       ],
       "title": "Requests Error Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Частота ошибок (ошибок в секунду) по типам запросов (Produce, FetchConsumer, FetchFollower и др.) и кодам ошибок.\n\nНорма — близко к 0. Всплески по конкретному типу запроса указывают на проблему с клиентами или брокером."
     },
     {
       "datasource": {
@@ -1665,6 +1671,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
+      "description": "Количество брокеров онлайн в кластере.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1759,7 +1766,7 @@
           "refId": "A"
         }
       ],
-      "title": "Broker up",
+      "title": "Broker Up",
       "type": "timeseries"
     },
     {
@@ -1768,6 +1775,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
+      "description": "Максимальное отставание follower-реплик от лидера по партициям на брокере, в сообщениях.\n\n🟢 < 1000 | 🟠 1000-5000 | 🔴 > 5000.\n\nЕсли партиция долго висит в Under ISR, она может выпасть из графика — оценивать вместе с Under min ISR Partitions.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1862,7 +1870,7 @@
           "refId": "A"
         }
       ],
-      "title": "Broker max lag",
+      "title": "Broker Max Lag",
       "type": "timeseries"
     },
     {
@@ -2068,7 +2076,7 @@
           "type": "timeseries"
         }
       ],
-      "title": "Availability alerts",
+      "title": "Availability Alerts",
       "type": "row"
     },
     {
@@ -2087,7 +2095,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "When a broker is brought up after a failure, it starts catching up by reading from the leader. Once it is caught up, it gets added back to the ISR.",
+          "description": "Скорость добавления реплик обратно в ISR (In-Sync Replicas).\n\nПроисходит, когда брокер после сбоя догоняет лидера и снова включается в ISR.\n\n🟢 > 0 при восстановлении брокеров. Рост без явных причин говорит о нестабильности сети.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2185,7 +2193,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "If a broker goes down, ISR for some of the partitions will shrink. When that broker is up again, ISR will be expanded once the replicas are fully caught up. Other than that, the expected value for both ISR shrink rate and expansion rate is 0",
+          "description": "Скорость исключения реплик из ISR.\n\nПроисходит при падении брокера или отставании реплики.\n\n🟢 = 0. Рост > 0 — признак того, что брокеры не успевают за лидером из-за проблем с дисками или сетью.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2283,7 +2291,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Скорость неудачных попыток обновления ISR.\n\n🟢 = 0. Рост > 0 означает проблемы со связью между контроллером и брокерами.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2381,7 +2389,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Частота выборов лидера в KRaft-кворуме.\n\nВ стабильном кластере выборов быть не должно — всплески указывают на перезапуск контроллеров, сетевые проблемы или fencing.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2479,7 +2487,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Скорость \"грязных\" выборов лидера (unclean leader election) — когда лидером становится реплика, не входящая в ISR.\n\n🟢 = 0. Рост > 0 — критический алерт, означающий потерю данных и выбор несинхронного лидера.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2577,7 +2585,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Latency for the controller to auto balance the leaders.",
+          "description": "Задержка автобалансировки лидеров на контроллере (p99).\n\nОтражает, как быстро кластер устраняет перекосы. Высокий p99 указывает на перегрузку контроллера.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2689,7 +2697,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Rejected byte rate per topic, due to the record batch size being greater than max.message.bytes configuration.",
+          "description": "Скорость отклонённых байт по топикам.\n\n🟢 = 0. Рост > 0 означает, что продюсеры пытаются отправить сообщения крупнее, чем разрешено в `max.message.bytes`.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2785,7 +2793,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Number of message validation errors.",
+          "description": "Скорость ошибок валидации сообщений.\n\n🟢 = 0. Рост > 0 указывает на повреждение данных (CRC), старый формат (magic) или отправку сообщений без ключа в топики с компакцией.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2917,7 +2925,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Failed Produce request rate per topic.",
+          "description": "Скорость неудачных Produce-запросов по топикам.\n\n🟢 = 0. Рост > 0 — ошибки записи. Причины: таймауты клиентов, нехватка реплик в ISR или проблемы с дисками брокеров.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3013,7 +3021,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Failed Fetch request (from clients or followers) rate per topic.",
+          "description": "Скорость неудачных Fetch-запросов по топикам (от консьюмеров и follower-реплик).\n\n🟢 = 0. Рост > 0 — ошибки чтения. Причины: таймауты у консьюмеров, сетевые сбои или запросы несуществующих офсетов.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3123,7 +3131,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Aggregate incoming message rate.",
+          "description": "Суммарная скорость входящих сообщений по кластеру (msg/sec).\n\nПоказывает общую интенсивность бизнес-нагрузки. Резкие просадки или всплески сигнализируют об аномалиях на продюсерах.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3240,7 +3248,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Incoming/Outgoing byte rate of client traffic.",
+          "description": "Объём полезного сетевого трафика от продюсеров (In) и к консьюмерам (Out), бит/с.\n\nИспользуется для контроля сетевых лимитов.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3370,7 +3378,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Incoming/Outgoing byte rate of replication traffic.",
+          "description": "Трафик синхронизации данных между брокерами, бит/с.\n\nРост синхронен с Clients In; аномальный всплеск бывает при возвращении брокеров в строй.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3500,7 +3508,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Incoming/Outgoing byte rate of reassignment traffic.",
+          "description": "Служебный трафик при переносе партиций или добавлении новых брокеров, бит/с.\n\nВ покое равен 0, растёт только во время ребалансировки.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3644,7 +3652,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Aggregate incoming message rate.",
+          "description": "Скорость входящих сообщений (msg/sec).\n\nПоказывает распределение нагрузки на запись. Аномалия — резкий перекос между брокерами.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3749,7 +3757,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Total Incoming byte rate.",
+          "description": "Полный входящий сетевой трафик (клиенты + репликация + реассигнмент), бит/с.\n\nПомогает оценивать утилизацию сетевых интерфейсов.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3889,7 +3897,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Total Outgoing byte rate.",
+          "description": "Полный исходящий сетевой трафик (клиенты + репликация + реассигнмент), бит/с.\n\nПомогает выявлять сетевые узкие места (bottlenecks).",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4029,7 +4037,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Incoming/Outgoing byte rate of reassignment traffic.",
+          "description": "Служебный трафик переноса партиций, бит/с.\n\nВ норме равен 0. Рост показывает сетевую нагрузку от миграции данных.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4181,7 +4189,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Incoming/Outgoing byte rate of client traffic.",
+          "description": "Полезный бизнес-трафик (бит/с): In — от продюсеров, Out — к консьюмерам.\n\nИспользуется для контроля лимитов и квот.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4333,7 +4341,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Incoming/Outgoing byte rate of replication traffic.",
+          "description": "Сетевой трафик синхронизации данных, бит/с.\n\nВысокие значения указывают на активную синхронизацию follower-реплик с лидером.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4638,7 +4646,8 @@
             }
           ],
           "title": "Messages In Per Topic",
-          "type": "timeseries"
+          "type": "timeseries",
+          "description": "Интенсивность записи в разрезе топиков (msg/sec).\n\nПомогает найти самые активные бизнес-потоки."
         },
         {
           "datasource": {
@@ -4743,7 +4752,8 @@
             }
           ],
           "title": "Bits In Per Topic",
-          "type": "timeseries"
+          "type": "timeseries",
+          "description": "Объём входящего сетевого трафика от продюсеров в конкретный топик, бит/с.\n\nПоказывает физический вес входящих данных."
         },
         {
           "datasource": {
@@ -4848,7 +4858,8 @@
             }
           ],
           "title": "Bits Out Per Topic",
-          "type": "timeseries"
+          "type": "timeseries",
+          "description": "Объём исходящего сетевого трафика к консьюмерам из конкретного топика, бит/с.\n\nПоказывает интенсивность чтения данных."
         },
         {
           "datasource": {
@@ -4953,7 +4964,8 @@
             }
           ],
           "title": "Messages In Per Broker",
-          "type": "timeseries"
+          "type": "timeseries",
+          "description": "Распределение входящих сообщений выбранного топика по брокерам (msg/sec).\n\nПомогает выявить дисбаланс ключей партиционирования."
         },
         {
           "datasource": {
@@ -5058,7 +5070,8 @@
             }
           ],
           "title": "Bits In Per Broker",
-          "type": "timeseries"
+          "type": "timeseries",
+          "description": "Входящий трафик выбранного топика в разрезе брокеров, бит/с.\n\nПозволяет локализовать брокер, принимающий основной вес топика."
         },
         {
           "datasource": {
@@ -5163,7 +5176,8 @@
             }
           ],
           "title": "Bits Out Per Broker",
-          "type": "timeseries"
+          "type": "timeseries",
+          "description": "Исходящий трафик выбранного топика в разрезе брокеров, бит/с.\n\nПозволяет локализовать брокер, с которого идёт основное чтение."
         }
       ],
       "title": "Throughput By Topic",
@@ -5185,7 +5199,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Produce request rate.",
+          "description": "Скорость запросов на запись от продюсеров (RPS).\n\nПоказывает частоту отправки батчей в кластер.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5289,7 +5303,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "FetchConsimer request rate.",
+          "description": "Скорость запросов на чтение от консьюмеров (RPS).\n\nОтражает общую активность читающих клиентов.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5393,7 +5407,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "FetchFollower request rate.",
+          "description": "Скорость запросов на чтение от follower-реплик (RPS).\n\nПостоянный внутренний трафик синхронизации кластера.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5497,7 +5511,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Total time in ms to serve the specified request.",
+          "description": "Время обработки записи (p99, мс).\n\n🟢 < 100 | 🟠 100–500 | 🔴 > 500.\n\nРост означает проблемы с дисками или нехватку потоков (Request Handlers).",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5601,7 +5615,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Total time in ms to serve the specified request.",
+          "description": "Время обработки чтения консьюмеров (p99, мс).\n\n🟢 < 100 | 🟠 100–500 | 🔴 > 500.\n\nВысокий p99 бывает при чтении старых данных с диска (Cold Reads).",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5705,7 +5719,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Total time in ms to serve the specified request.",
+          "description": "Время обработки запросов синхронизации реплик (p99, мс).\n\n🟢 < 50 | 🟠 50–200 | 🔴 > 200.\n\nРост ведёт к отставанию реплик и уменьшению ISR.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5823,7 +5837,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Message format conversion rate for Produce requests per topic.",
+          "description": "Скорость конверсии формата сообщений при Produce-запросах по топикам (конверсий/сек).\n\n🟢 = 0. Рост > 0 означает, что продюсеры шлют старый формат сообщений. Брокер тратит CPU на конверсию «на лету» перед записью.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5926,7 +5940,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Message format conversion rate for Fetch requests per topic.",
+          "description": "Скорость конверсии формата сообщений при Fetch-запросах по топикам (конверсий/сек).\n\n🟢 = 0. Рост > 0 означает, что консьюмеры используют старую версию клиента. Брокер тратит CPU на даунгрейд формата при выдаче.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6043,7 +6057,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Average percentage of network processor threads usage.",
+          "description": "Утилизация сетевых потоков (обработка ввода-вывода), %.\n\n🟢 < 60% | 🟠 60–80% | 🔴 > 80%.\n\nРост означает сетевую перегрузку или слишком много активных соединений.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6150,7 +6164,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Average percentage of request handler threads usage.",
+          "description": "Утилизация пула потоков API (чтение/запись на диск), %.\n\n🟢 < 60% | 🟠 60–80% | 🔴 > 80%.\n\nПорог 🔴 сигнализирует о деградации дисковой подсистемы или CPU.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6255,7 +6269,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Number of open file descriptors",
+          "description": "Количество открытых файлов (логов и сетевых сокетов) относительно лимита ОС.\n\n🟢 < 70% | 🟠 70–85% | 🔴 > 85%.\n\nПревышение лимита полностью заблокирует брокер.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6350,7 +6364,7 @@
               "refId": "A"
             }
           ],
-          "title": "Open file descriptors",
+          "title": "Open File Descriptors",
           "type": "timeseries"
         }
       ],
@@ -6373,7 +6387,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "The current number of active connections",
+          "description": "Текущее количество открытых TCP-сессий.\n\nРост без увеличения трафика указывает на утечку соединений в клиентских приложениях.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6475,7 +6489,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "The number of new connections established per second",
+          "description": "Частота установки новых соединений (открытий TCP/SSL).\n\nВсплески перегружают CPU брокера из-за затрат на SSL-рукопожатия (SSL Handshakes).",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6577,7 +6591,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "The number of connections with this client",
+          "description": "Распределение активных соединений по типам и версиям клиентского ПО.\n\nПомогает находить устаревшие или неавторизованные клиенты.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6679,7 +6693,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "The number of connections closed per second",
+          "description": "Частота закрытия TCP-сессий.\n\nВысокие значения вместе с ростом New Connections говорят о нестабильности сети или плохом реюзе соединений.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6781,7 +6795,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "The number of killed connections",
+          "description": "Сессии, принудительно закрытые брокером по таймауту неактивности (`connections.max.idle.ms`).\n\nНормальный процесс очистки «мёртвых» клиентов.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6897,7 +6911,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Size of the request queue. A congested request queue will not be able to process incoming or outgoing requests.",
+          "description": "Размер очереди входящих API-запросов, ожидающих обработки.\n\n🟢 = 0. Рост > 0 означает, что Request Handlers полностью заняты и не успевают разбирать очередь.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7001,7 +7015,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Size of the response queue. The response queue is unbounded. A congested response queue can result in delayed response times and memory pressure on the broker.",
+          "description": "Размер очереди ответов, готовых к отправке клиентам.\n\n🟢 = 0. Рост > 0 указывает на то, что сетевые потоки (Network Processors) или сеть перегружены.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7119,7 +7133,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Number of requests waiting in the fetch purgatory. This is high if consumers use a large value for fetch.wait.max.ms .",
+          "description": "Число запросов чтения, застрявших в ожидании накопления данных (согласно `fetch.min.bytes` и `fetch.wait.max.ms`).\n\nВысокие значения нормальны при низкой интенсивности записи.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7221,7 +7235,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Number of requests waiting in the producer purgatory. This should be non-zero when acks=all is used on the producer.",
+          "description": "Число запросов записи, ожидающих подтверждения от реплик при `acks=all`.\n\n🟢 > 0 под нагрузкой — норма. Опасен резкий рост: это признак проблем с репликацией или сетью между брокерами.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7337,7 +7351,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Средний размер лога топика по брокерам.\n\nПомогает выявить неравномерное распределение данных топика по брокерам.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7440,7 +7454,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Суммарный размер логов на брокере (по выбранным топикам).\n\n🟢 < 80% от диска | 🟠 80-85% | 🔴 > 85%.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7543,7 +7557,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Суммарный размер логов по топикам в кластере.\n\nВторой таргет — общий размер всех топиков кластера.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7752,7 +7766,8 @@
             }
           ],
           "title": "Log Size By Partition",
-          "type": "timeseries"
+          "type": "timeseries",
+          "description": "Размер лога по партициям (брокер + топик + партиция).\n\nПомогает найти «тяжёлые» партиции с дисбалансом."
         }
       ],
       "title": "Log Size",
@@ -7774,7 +7789,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request waits in the request queue.",
+          "description": "Время ожидания Produce-запроса в очереди (p99, мс) — до начала обработки Request Handler’ом.\n\n🟢 < 10 мс | 🟠 10-50 мс | 🔴 > 50 мс.\n\nРост — Request Handlers перегружены.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7878,7 +7893,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request is processed at the leader.",
+          "description": "Время локальной обработки Produce-запроса лидером (p99, мс).\n\n🟢 < 50 мс | 🟠 50-200 мс | 🔴 > 200 мс.\n\nРост — дисковая подсистема не справляется.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7982,7 +7997,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request waits for the follower. This is non-zero for produce requests when acks=all.",
+          "description": "Время ожидания подтверждения от follower-реплик для Produce (p99, мс). Ненулевое при `acks=all`.\n\n🟢 < 50 мс | 🟠 50-200 мс | 🔴 > 200 мс.\n\nРост — проблемы сети между брокерами или follower отстаёт.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8086,7 +8101,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request waits in the response queue.",
+          "description": "Время ожидания ответа Produce в очереди ответов (p99, мс).\n\n🟢 < 10 мс | 🟠 10-50 мс | 🔴 > 50 мс.\n\nРост — сетевые потоки не успевают отправлять ответы.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8190,7 +8205,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time to send the response.",
+          "description": "Время отправки ответа Produce-запроса клиенту (p99, мс).\n\n🟢 < 50 мс | 🟠 50-200 мс | 🔴 > 200 мс.\n\nРост — сетевые проблемы или перегрузка клиента.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8294,7 +8309,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Время искусственной задержки (throttling) Produce-запроса при превышении квот (p99, мс).\n\n🟢 = 0. Рост > 0 — клиент упирается в квоту.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8412,7 +8427,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request waits in the request queue.",
+          "description": "Время ожидания Fetch-запроса консьюмера в очереди (p99, мс).\n\n🟢 < 10 мс | 🟠 10-50 мс | 🔴 > 50 мс.\n\nРост — Request Handlers перегружены.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8516,7 +8531,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request is processed at the leader.",
+          "description": "Время локальной обработки Fetch-запроса консьюмера лидером (p99, мс).\n\n🟢 < 50 мс | 🟠 50-200 мс | 🔴 > 200 мс.\n\nРост — дисковая подсистема не справляется (особенно Cold Reads).",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8620,7 +8635,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request waits for the follower. This is non-zero for produce requests when acks=all.",
+          "description": "Время ожидания подтверждения от follower-реплик для Fetch-запросa консьюмера (p99, мс).\n\n🟢 < 50 мс | 🟠 50-200 мс | 🔴 > 200 мс.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8724,7 +8739,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request waits in the response queue.",
+          "description": "Время ожидания ответа Fetch-запросa консьюмера в очереди ответов (p99, мс).\n\n🟢 < 10 мс | 🟠 10-50 мс | 🔴 > 50 мс.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8828,7 +8843,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time to send the response.",
+          "description": "Время отправки ответа Fetch-запроса консьюмера (p99, мс).\n\n🟢 < 50 мс | 🟠 50-200 мс | 🔴 > 200 мс.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8932,7 +8947,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Время искусственной задержки (throttling) Fetch-запроса консьюмера при превышении квот (p99, мс).\n\n🟢 = 0. Рост > 0 — клиент упирается в квоту.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9050,7 +9065,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request waits in the request queue.",
+          "description": "Время ожидания Fetch-запроса follower-реплики в очереди (p99, мс).\n\n🟢 < 10 мс | 🟠 10-50 мс | 🔴 > 50 мс.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9154,7 +9169,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request is processed at the leader.",
+          "description": "Время локальной обработки Fetch-запроса follower-реплики лидером (p99, мс).\n\n🟢 < 50 мс | 🟠 50-200 мс | 🔴 > 200 мс.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9258,7 +9273,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request waits for the follower. This is non-zero for produce requests when acks=all.",
+          "description": "Время ожидания подтверждения от других follower-реплик для Fetch-запросa follower (p99, мс).\n\n🟢 < 50 мс | 🟠 50-200 мс | 🔴 > 200 мс.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9362,7 +9377,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time the request waits in the response queue.",
+          "description": "Время ожидания ответа Fetch-запросa follower в очереди ответов (p99, мс).\n\n🟢 < 10 мс | 🟠 10-50 мс | 🔴 > 50 мс.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9466,7 +9481,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Time to send the response.",
+          "description": "Время отправки ответа Fetch-запроса follower-реплике (p99, мс).\n\n🟢 < 50 мс | 🟠 50-200 мс | 🔴 > 200 мс.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9570,7 +9585,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Время искусственной задержки (throttling) Fetch-запроса follower-реплики при превышении квот (p99, мс).\n\n🟢 = 0. Рост > 0 — реплика упирается в квоту.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9688,7 +9703,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Утилизация CPU процессом Kafka (ядра*сек).\n\n🟢 < 70% | 🟠 70-85% | 🔴 > 85%.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9791,7 +9806,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Среднее использование heap памяти JVM Kafka за минуту.\n\n🟢 < 70% от max | 🟠 70-80% | 🔴 > 80%.\n\nКритично > 80% — долгие GC паузы.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9906,7 +9921,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Количество GC-циклов JVM Kafka в минуту.\n\nЧастые GC указывают на давление на память.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10009,7 +10024,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Суммарное время GC-пауз JVM Kafka в минуту.\n\nВысокие значения влияют на производительность и latency.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10201,7 +10216,8 @@
         }
       ],
       "title": "Consumer group",
-      "type": "volkovlabs-variable-panel"
+      "type": "volkovlabs-variable-panel",
+      "description": "Таблица консьюмер-групп с агрегированной информацией по лагу.\n\nИспользуется для обзора всех групп кластера."
     },
     {
       "datasource": {
@@ -10306,7 +10322,8 @@
         }
       ],
       "title": "Message in per minute",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Скорость поступления сообщений в топик в минуту.\n\nПоказывает интенсивность записи по топикам."
     },
     {
       "datasource": {
@@ -10409,7 +10426,8 @@
         }
       ],
       "title": "Message consume per minute",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Скорость потребления сообщений консьюмер-группой в минуту.\n\nДолжна ≈ скорости поступления (`Message in per minute`) — иначе растёт лаг."
     },
     {
       "datasource": {
@@ -10417,7 +10435,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Суммарный лаг по группе и топику.",
+      "description": "Суммарный лаг по группе и топику (сообщений).\n\n🟢 < 1000 | 🟠 1000-10000 | 🔴 > 10000.\n\nРост указывает на медленных консьюмеров или неравномерное потребление по партициям.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -10531,7 +10549,7 @@
         "type": "victoriametrics-datasource",
         "uid": "${vm_datasource}"
       },
-      "description": "Лаг по конкретной партиции группы. Лаг на одной партиции — горячая партиция, медленный консьюмер или задержки на конкретном брокере.",
+      "description": "Лаг по конкретной партиции группы (сообщений).\n\n🟢 < 1000 | 🟠 1000-10000 | 🔴 > 10000.\n\nВысокий лаг на одной партиции — «горячая» партиция (нехватка партиционирования) или медленный консьюмер.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -10736,7 +10754,8 @@
         }
       ],
       "title": "Topic partition offset",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Текущий offset (log-end-offset) по партициям топика.\n\nПоказывает позицию, до которой топик заполнен сообщениями."
     },
     {
       "datasource": {
@@ -12154,7 +12173,7 @@
       },
       "id": 108,
       "panels": [],
-      "title": "Hardware stats",
+      "title": "Hardware Stats",
       "type": "row"
     },
     {
@@ -12259,8 +12278,9 @@
           "refId": "A"
         }
       ],
-      "title": "CPU usage",
-      "type": "timeseries"
+      "title": "CPU Usage",
+      "type": "timeseries",
+      "description": "Утилизация CPU хоста (брокер/контроллер), %.\n\n🟢 < 70% | 🟠 70-85% | 🔴 > 85%.\n\nВысокие значения влияют на обработку запросов и latency."
     },
     {
       "datasource": {
@@ -12390,8 +12410,9 @@
           "refId": "C"
         }
       ],
-      "title": "RAM usage",
-      "type": "timeseries"
+      "title": "RAM Usage",
+      "type": "timeseries",
+      "description": "Использование RAM (RSS + swap + shmem) относительно лимита памяти.\n\n🟢 < 80% | 🟠 80-90% | 🔴 > 90%.\n\nПревышение ведёт к OOM или долгим GC паузам."
     },
     {
       "datasource": {
@@ -12495,8 +12516,9 @@
           "refId": "A"
         }
       ],
-      "title": "Network IN bits",
-      "type": "timeseries"
+      "title": "Network IN Bits",
+      "type": "timeseries",
+      "description": "Входящий сетевой трафик хоста (LAN + WAN), бит/с.\n\nПомогает выявить сетевые лимиты и аномалии трафика от продюсеров."
     },
     {
       "datasource": {
@@ -12600,8 +12622,9 @@
           "refId": "A"
         }
       ],
-      "title": "Network OUT bits",
-      "type": "timeseries"
+      "title": "Network OUT Bits",
+      "type": "timeseries",
+      "description": "Исходящий сетевой трафик хоста (LAN + WAN), бит/с.\n\nПомогает выявить сетевые лимиты и аномалии трафика к консьюмерам."
     },
     {
       "datasource": {
@@ -12704,7 +12727,7 @@
           "refId": "A"
         }
       ],
-      "title": "Storage total",
+      "title": "Storage Total",
       "transformations": [
         {
           "id": "renameByRegex",
@@ -12714,7 +12737,8 @@
           }
         }
       ],
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Общий объём дискового пространства на хосте (SSD/HDD/NVMe), байт.\n\nБазовое значение для оценки заполнения."
     },
     {
       "datasource": {
@@ -12817,7 +12841,7 @@
           "refId": "A"
         }
       ],
-      "title": "Storage used",
+      "title": "Storage Used",
       "transformations": [
         {
           "id": "renameByRegex",
@@ -12827,7 +12851,8 @@
           }
         }
       ],
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Использованный объём дискового пространства на хосте.\n\n🟢 < 80% | 🟠 80-85% | 🔴 > 85%.\n\nРост приближается к лимиту — риски отказа приёмки сообщений."
     },
     {
       "datasource": {
@@ -12930,7 +12955,7 @@
           "refId": "A"
         }
       ],
-      "title": "Packets delayed/dropped",
+      "title": "Packets Delayed/Dropped",
       "transformations": [
         {
           "id": "renameByRegex",
@@ -12940,7 +12965,8 @@
           }
         }
       ],
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Количество задержанных и отброшенных пакетов на сетевом интерфейсе.\n\n🟢 = 0. Рост > 0 указывает на перегрузку сети или потери на сетевых картах."
     },
     {
       "datasource": {
@@ -13043,7 +13069,7 @@
           "refId": "A"
         }
       ],
-      "title": "Storage free",
+      "title": "Storage Free",
       "transformations": [
         {
           "id": "renameByRegex",
@@ -13053,7 +13079,8 @@
           }
         }
       ],
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Свободный объём дискового пространства на хосте.\n\nИспользуется для оценки резерва под рост логов и данных."
     },
     {
       "collapsed": true,
@@ -13071,7 +13098,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Метрики компонента Anomaly Detector Cruise Control — детектор аномалий кластера.\n\nОтслеживает нарушения целей (goal violations): недореплицированные партиции, дисбаланс брокеров, аномалии метрик.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13165,7 +13192,7 @@
               "refId": "A"
             }
           ],
-          "title": "AnomalyDetector",
+          "title": "Anomaly Detector",
           "type": "timeseries"
         },
         {
@@ -13174,7 +13201,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Метрики компонента Executor Cruise Control — исполнитель rebalance-операций.\n\nВыполняет перемещение партиций между брокерами. Активность видна при запущенном rebalance.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13277,7 +13304,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Метрики компонента Load Monitor Cruise Control — монитор нагрузки кластера.\n\nСобирает метрики брокеров и строит модель нагрузки для оптимизации.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13371,7 +13398,7 @@
               "refId": "A"
             }
           ],
-          "title": "LoadMonitor",
+          "title": "Load Monitor",
           "type": "timeseries"
         },
         {
@@ -13380,7 +13407,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Метрики компонента Goal Optimizer Cruise Control — оптимизатор целей.\n\nРассчитывает предложения (proposals) по rebalance на основе загруженности и целей.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13474,7 +13501,7 @@
               "refId": "A"
             }
           ],
-          "title": "GoalOptimizer",
+          "title": "Goal Optimizer",
           "type": "timeseries"
         },
         {
@@ -13483,7 +13510,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Утилизация CPU процессом Cruise Control (ядра*сек).\n\nРост указывает на активную работу оптимизатора (reballets, proposal computation).",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13586,7 +13613,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Среднее использование в байтах heap памяти JVM Cruise Control за минуту.\n\n🟢 < 70% от max | 🟠 70-80% | 🔴 > 80%.\n\nПревышение 80% критично — ведёт к долгим GC паузам.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13701,7 +13728,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Количество GC-циклов JVM Cruise Control в минуту.\n\nЧастые GC указывают на давление на память.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13804,7 +13831,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "",
+          "description": "Суммарное время GC-пауз JVM Cruise Control в минуту.\n\nВысокие значения влияют на отзывчивость Cruise Control.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13902,7 +13929,7 @@
           "type": "timeseries"
         }
       ],
-      "title": "Cruise-Control",
+      "title": "Cruise Control",
       "type": "row"
     }
   ],
