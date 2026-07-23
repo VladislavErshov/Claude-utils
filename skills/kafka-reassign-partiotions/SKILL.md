@@ -1,0 +1,141 @@
+# Скилл ручного перераспределения партиций Kafka
+
+Скилл для генерации и выполнения `kafka-reassign-partitions.sh` по **заданной схеме
+размещения реплик**, когда встроенный Cruise Control неприменим (нужно специфическое
+распределение «жирных»/«средних» партиций, вывод брокера из кластера, ручная балансировка
+дисковой нагрузки между ДЦ).
+
+⚠️ Скилл покрывает **только ручное перераспределение партиций через
+`kafka-reassign-partitions.sh`**. Он НЕ покрывает:
+- автоматический ребаланс через Cruise Control — см. `kafka-cluster-inspector` (`commands/cruise_control_ops.md`);
+- инспекцию логов / метрик / KRaft quorum — см. `kafka-cluster-inspector`, `kafka-metrics-investigator`;
+- throughput / latency — к Prometheus/Grafana напрямую.
+
+## Когда предлагать скилл
+
+Предлагай этот скилл, когда пользователь:
+- Просит «перераспределить партиции» / «сделать реассигн» / «reassign partitions» для конкретного топика или набора партиций.
+- Даёт **явную схему размещения** (какие партиции на какие брокеры должны попасть), а не просит «сбалансировать автоматически».
+- Хочет вывести брокер из кластера и переселить его партиции.
+- Видит дисбаланс дисковой нагрузки между брокерами/ДЦ и хочет вручную перекинуть часть партиций.
+- Упоминает `kafka-reassign-partitions.sh` явно.
+
+**НЕ предлагай**, если:
+- Просит автоматический ребаланс — это к Cruise Control (`kafka-cluster-inspector`).
+- Нужно изменить RF (replication factor) — это `kafka-configs.sh --alter --add-config replication.factor=...`, не reassign.
+- Нужно просто добавить партиции — это `kafka-topics.sh --alter --partitions N`.
+
+## Документация
+
+- https://kafka.apache.org/documentation/#basic_ops_cluster_expansion — добавление брокеров и reassign
+- https://kafka.apache.org/documentation/#replication_throttling — throttle при reassign
+- https://docs.vk.team/mdb/docs/kafka/kafka.html — детали MDB Kafka
+
+## Архитектура
+
+### Формат reassign.json
+
+```json
+{
+  "version": 1,
+  "partitions": [
+    {
+      "topic": "<topic-name>",
+      "partition": <N>,
+      "replicas": [<broker_id_1>, <broker_id_2>, <broker_id_3>],
+      "log_dirs": ["any", "any", "any"]
+    }
+  ]
+}
+```
+
+- `replicas` — **полный** новый список broker IDs для партиции (включая те, что не меняются).
+  Порядок важен: первый — preferred leader.
+- `log_dirs` — всегда `["any", ...]` для обычного reassign (используется только при переносе между дисками).
+
+### Команды
+
+```bash
+# Выполнить reassign (с throttle 100 МБ/с)
+/opt/kafka/bin/kafka-reassign-partitions.sh \
+  --bootstrap-server $cloud_hostname:9092 \
+  --command-config /opt/kafka/config/client.properties \
+  --reassignment-json-file /tmp/reassign.json \
+  --execute --throttle 104857600
+
+# Проверить статус
+/opt/kafka/bin/kafka-reassign-partitions.sh \
+  --bootstrap-server $cloud_hostname:9092 \
+  --command-config /opt/kafka/config/client.properties \
+  --reassignment-json-file /tmp/reassign.json \
+  --verify
+```
+
+`$cloud_hostname` — это переменная окружения на брокере, резолвится в bootstrap-server кластера.
+
+### Throttle
+
+- `--throttle <bytes/sec>` ограничивает скорость переноса реплик.
+- Без `--throttle` лимита нет (быстрее, но может перегрузить сеть/диск).
+- При `--execute` без `--throttle` throttle-конфиг на топик **не ставится** — чистить нечего.
+- Если throttle был установлен, после завершения reassign его **нужно снять**:
+
+```bash
+/opt/kafka/bin/kafka-configs.sh \
+  --bootstrap-server $cloud_hostname:9092 \
+  --command-config /opt/kafka/config/client.properties \
+  --entity-type topics --entity-name <topic> \
+  --alter --delete-config leader.replication.throttled.replicas,follower.replication.throttled.replicas
+```
+
+## Стратегия сохранения cross-DC redundancy
+
+В MDB Kafka типичный RF=3 с одной репликой в каждом ДЦ (hc/kc/pc). При ручном reassign:
+
+1. **Меняем только одну DC-реплику за раз** — остальные две оставляем на месте.
+2. Перед заменой убеждаемся, что новый брокер находится в том же ДЦ, что и заменяемый.
+3. Никогда не ломаем схему «1 реплика на ДЦ» — иначе при потере ДЦ теряем данные.
+
+Например, для кластера `kafka-m2b-adtech-kafka` (hc=20001-20006, kc=21001-21007, pc=22001-22006):
+- Если меняем kc-реплику — заменяем `210xx` на другой `210xx` в списке `replicas`.
+- hc (`200xx`) и pc (`220xx`) реплики остаются на своих позициях.
+
+## Процесс генерации reassign.json
+
+1. **Собрать текущее состояние** — `kafka-topics.sh --describe --topic <topic>`, распарсить `Replicas:` поле.
+2. **Составить схему нового размещения** — какая партиция на какой брокер должна перейти.
+3. **Сгенерировать JSON** — Python-скриптом, заменяя только нужные broker IDs, сохраняя порядок и hc/pc реплики.
+4. **Проверить** — вывести diff «что меняется», сколько партиций затронуто.
+5. **Выполнить** — `--execute --throttle 100MB`.
+6. **Верифицировать** — `--verify` до статуса `completed` для всех партиций.
+7. **Снять throttle** — если был установлен.
+
+### Шаблон Python-скрипта
+
+Скрипт-генератор хранит `CURRENT_REPLICAS` (словарь partition → список broker IDs из `kafka-topics.sh --describe`) и `NEW_<DC>_REPLICA` (словарь partition → новый broker ID для конкретной DC). Затем заменяет DC-реплику в текущем списке, сохраняя порядок иPreferred leader'а.
+
+Примеры — в `history/INCALL-42698.md` (кампания с fat/medium партициями) и в файле `/tmp/gen_reassign.py`.
+
+## Инструменты и нюансы выполнения
+
+- **mcc ssh + expect** — `mcc ssh` интерактивный, команды шлются через `expect` после промпта `/# `. Шаблоны — `kafka-host-inspector`.
+- **ANSI-коды в выводе** — `grep` подсвечивает совпадения цветом, что ломает парсинг. Фильтровать через `sed -E 's/\x1b\[[0-9;]*[mK]//g'`.
+- **mcc scp нестабилен** — «Cannot open tunnel... SSL Handshake is not finished». Альтернатива — base64 через ssh:
+  ```bash
+  cat /tmp/reassign.json | base64 | tr -d '\n' > /tmp/reassign.json.b64
+  # затем через expect:
+  send "echo '<base64-строка>' | base64 -d > /tmp/reassign.json\r"
+  ```
+- **JMX-метрика размера лога** — `kafka_log_log_size{partition="N",topic="X",}` на порту 8080 broker-хоста. Используется для оценки дисковой нагрузки партиции.
+
+## Структура скилла
+
+- `SKILL.md` — этот файл.
+- `history/` — разобранные инциденты с полным ходом работы (сбор информации, генерация JSON, выполнение, верификация). Полезно перед началом работы смотреть, нет ли похожего случая.
+
+## Что НЕ покрывает скилл
+
+- Cruise Control execution — см. `kafka-cluster-inspector`.
+- Изменение RF — это `kafka-configs.sh`, не reassign.
+- Добавление партиций — это `kafka-topics.sh --alter --partitions`.
+- Intrinsic Kafka CLI особенности (создание топиков, ACL) — см. `kafka-cluster-inspector` (`commands/administration.md`).

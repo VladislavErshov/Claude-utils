@@ -137,6 +137,65 @@ grep "Starting Cruise Control metrics reporter" /mnt/logs/dbms/kafka-broker.out.
 `metric.reporters` и весь блок `cruise.control.metrics.reporter.*`, рестартовать
 `kafka-broker.service`. Минус — Cruise Control перестанет получать метрики с брокеров.
 
+## Broker не регистрируется в controller quorum (рассинхрон `controller.quorum.voters`)
+
+**Инцидент-референс**: INCALL-42685 (2026-07-23, кластер `kafka-spd-adtech-kafka`).
+
+**Симптом** в `kafka-broker.out.log` — broker циклически падает каждые ~2 мин при старте:
+```
+ERROR [broker-XXXXX-lifecycle-manager] BrokerLifecycleManager - Shutting down because we were unable to register with the controller quorum.
+ERROR [main] BrokerServer - Received a fatal error while waiting for the controller to acknowledge that we are caught up
+ERROR [main] BrokerServer - Fatal error during broker startup. Prepare to shutdown
+java.lang.RuntimeException: Received a fatal error while waiting for the controller to acknowledge that we are caught up
+Caused by: java.util.concurrent.CancellationException
+```
+И в хвосте крутится без прогресса:
+```
+INFO [MetadataLoader id=XXXXX] initializeNewPublishers: the loader is still catching up because we still don't know the high water mark yet.
+```
+
+**В UI mdb-data** при этом часть controller-хостов может быть `UNAVAILABLE` или `unknown`,
+а broker-хосты — `AVAILABLE`/`observer` (т.е. проблема не в самих брокерах).
+
+**Причина**: рассинхрон `controller.quorum.voters` при миграции ДЦ controller'ов. На broker-хостах
+voters уже обновили (добавили новый ДЦ, удалили старый), а на controller-хосте старого ДЦ
+`node.id` остался, и его нет в voters → Kafka отказывается стартовать:
+```
+ERROR [main] Kafka$ - Exiting Kafka due to fatal exception
+java.lang.IllegalArgumentException: requirement failed: If process.roles contains the 'controller' role,
+the node id 11001 must be included in the set of voters controller.quorum.voters=Set(13001, 10001, 12001)
+    at kafka.server.KafkaConfig.validateControllerQuorumVotersMustContainNodeIdForKRaftController$1(KafkaConfig.scala:1287)
+```
+
+Старый controller (не в voters) падает при старте → в UI `UNAVAILABLE`. При этом quorum из
+оставшихся voters может собраться и выбрать лидера, но broker может упорно ломиться к
+устаревшему лидеру и не получать metadata → падает по registration timeout.
+
+**Что проверять**:
+1. На проблемном broker-хосте:
+   ```bash
+   grep -E "controller.quorum.voters" /mnt/logs/dbms/kafka-broker.out.log | head -1
+   grep -E "Shutting down because we were unable|still don't know the high water mark" /mnt/logs/dbms/kafka-broker.out.log | tail -5
+   ```
+2. На каждом controller-хосте:
+   ```bash
+   grep -E "node id .* must be included in the set of voters" /mnt/logs/dbms/kafka-controller.out.log | head -1
+   grep -E "ControllerServer.*Transition|Kafka Server started|elected as leader" /mnt/logs/dbms/kafka-controller.out.log | tail -5
+   ```
+3. Сравнить `node.id` каждого controller'а с `controller.quorum.voters` на broker-хостах.
+   Каждый controller с `process.roles=controller` обязан быть в voters.
+
+**Фикс**: синхронизировать `controller.quorum.voters` на всех хостах (brokers + controllers)
+так, чтобы все живые controller'ы были в voters, а выведенные из кворума — не были.
+При миграции ДЦ controller'ов (типовой сценарий: `kc` → `ec`) обновить voters одновременно
+на broker-хостах и на оставшихся controller-хостах; на выводимом controller-хосте либо
+перевести `process.roles` в `broker`, либо погасить и удалить хост.
+
+**Норма, не ошибка**: в `kafka-controller.out.log` записи
+`NotControllerException: The active controller appears to be node XXXX` — это переизбрание
+лидера кворума, не падение. `QuorumState` transitions `Leader → ResignedState → FollowerState`
+тоже норма.
+
 ## Fenced брокер
 
 **Симптом**: брокер зарегистрировался, но controller его "заборнил" (fenced). В UI может

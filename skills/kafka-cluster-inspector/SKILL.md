@@ -59,15 +59,35 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
   `cruise-control.err.log`, маркеры старта/ошибок.
 - **`kafka-metrics-investigator`** — метрики (JMX 8080, Jolokia 7777, kafka-exporter 23569,
   share-group-lag-exporter 23570), Jolokia MBean'ы, диагностика "Broker is dead" через MBean'ы.
+- **`kafka-reassign-partiotions`** — ручное перераспределение партиций через
+  `kafka-reassign-partitions.sh` по заданной схеме размещения реплик. Предлагай, когда
+  пользователь даёт **явную схему** (какие партиции на какие брокеры), хочет вывести брокер
+  из кластера, видит дисбаланс дисковой нагрузки между ДЦ и хочет перекинуть партиции вручную.
+  Не предлагай для автоматического ребаланса — это к Cruise Control (`commands/cruise_control_ops.md`).
 
 ## Структура скилла
 
 - `SKILL.md` — этот файл.
-- `commands/known_issues.md` — детали известных проблем (симптомы, причины, фиксы).
+- `commands/runbook.md` — дежурный ранбук: доступность кластера, рестарт, логи, порты,
+  kafkactl, синхронизация kafka.sync, тайминги и ссылка на встречу.
+- `commands/troubleshooting.md` — каталог типовых проблем из дежурного ранбука (создание
+  топика, не могу подключиться, сэмпл сообщений, перевод на SASL_PLAINTEXT, место на
+  брокерах / в логах, Connection timed out, зависшие таски, обновление версии,
+  перераспределение партиций, переезд rc→hc, STARTING RESERVED, io/network треды,
+  ребалансировка consumer group, удаление брокера, новый listener, JoinGroup INCONSISTENT_GROUP_PROTOCOL).
+- `commands/cruise_control_ops.md` — операции с Cruise Control: диагностика (dead,
+  RUNNING UNAVAILABLE, нет метрик), актуализация конфига, поднятие CC на кластере, перенос
+  в другой ДЦ.
+- `commands/administration.md` — рутинное администрирование: проверка видимости брокеров,
+  удаление контроллера, unregister брокера, пользователи / топики / ACL / consumer groups
+  (создание, проверка, удаление).
+- `commands/known_issues.md` — каталог известных технических проблем (симптомы, причины,
+  фиксы): Broker is dead, InvalidReplicationFactor, CruiseControlMetricsReporter и т.д.
 
 ## Известные проблемы (кратко)
 
-Подробности — `commands/known_issues.md`.
+Подробности — `commands/known_issues.md`. Разбор типовых дежурных проблем —
+`commands/troubleshooting.md`.
 
 - **"Broker is dead" в UI** — rscheck/host_checker падает на MBean `kafka.server:type=raft-metrics/current-state`,
   удалённом в Kafka 4.x. Фикс — `kafka.server:name=BrokerState,type=KafkaServer`. Разбор —
@@ -82,13 +102,20 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
   vs Kafka 4.x требует 2.5.147+), либо auth-проблема. Отдельный случай: `ClassNotFoundException:
   CruiseControlMetricsReporter` — брокер падает при старте, JAR репортера отсутствует в образе.
   Фикс — поднять версию docker-образа Kafka. Детали — `known_issues.md`.
+- **Broker не регистрируется в controller quorum** (INCALL-42685) — рассинхрон
+  `controller.quorum.voters` при миграции ДЦ controller'ов. На broker-хостах voters обновили,
+  а на выводимом controller-хосте `node.id` остался и больше не в voters → контроллер падает
+  при старте (`node id XXXX must be included in the set of voters`), broker не может
+  зарегистрироваться (`Shutting down because we were unable to register with the controller quorum`).
+  Фикс — синхронизировать voters на всех хостах. Детали — `known_issues.md`.
 - **Fenced брокер** — `FencedBrokerCount > 0` на controller-хосте (проверка через `kafka-metrics-investigator`).
 - **Under-replicated partitions** — `UnderReplicatedPartitions > 0` на broker-хосте (проверка через `kafka-metrics-investigator`).
 
 ## Что НЕ покрывает скилл
 
 - Throughput / latency / performance — к Prometheus/Grafana.
-- Настройка топиков / ACL / quotas — к mdb-data API.
-- Rebalance execution — только чтение состояния CC, не запуск.
+- Rebalance execution — только чтение состояния CC, не запуск (но в `troubleshooting.md`
+  есть инструкция по `kafka-reassign-partitions.sh` и перераспределению через CC).
 - KRaft log corruption — нужен `kafka-dump-log.sh`.
-- Дисковое место / memory — к хостовым чекерам.
+- Дисковое место / memory — к хостовым чекерам (но в `troubleshooting.md` есть разбор
+  забившихся дисков и `-stray` партиций).
