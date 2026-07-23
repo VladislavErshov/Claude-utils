@@ -14,10 +14,10 @@
 broker-only хостах. rscheck использовал его в `is_broker()` для определения роли ноды.
 На 4.x получаем `InstanceNotFoundException` → KeyError на `response["value"]` → "Broker is dead".
 
-**Фикс**: см. `diagnose_broker_dead.md` — использовать `kafka.server:name=BrokerState,type=KafkaServer`
+**Фикс**: см. скилл `kafka-metrics-investigator`, команда `diagnose_broker_dead.md` — использовать `kafka.server:name=BrokerState,type=KafkaServer`
 вместо `raft-metrics/current-state`. MBean существует на broker-хосте и отсутствует на controller-хосте.
 
-Подробный пошаговый разбор — `diagnose_broker_dead.md`.
+Подробный пошаговый разбор — скилл `kafka-metrics-investigator`, `commands/diagnose_broker_dead.md`.
 
 ## `only N broker(s) are registered` при создании topic
 

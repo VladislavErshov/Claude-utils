@@ -1,15 +1,22 @@
 ---
 name: kafka-cluster-inspector
-description: Инспекция MDB Kafka кластеров (KRaft, версии 3.x и 4.x) — диагностика "Broker is dead", чтение логов broker/controller/cruise-control через mcc scp, проверка Jolokia MBean'ов, разбор KRaft quorum / controller registration. Список хостов задаёт пользователь (формат 1.broker.<cluster>.<dc>.one-infra.ru / 1.controller.<cluster>.<dc>.one-infra.ru / 1.cruise.<cluster>.<dc>.one-infra.ru). Конфиги и логи читаются через mcc scp. Используй когда нужно проверить состояние Kafka-кластера, найти причину "Broker is dead" в UI mdb-data, разобраться почему broker/controller не стартует или не входит в KRaft quorum.
+description: Инспекция MDB Kafka кластеров (KRaft, версии 3.x и 4.x) — архитектура кластера, разбор KRaft quorum / controller registration, каталог известных проблем (CruiseControlMetricsReporter, InvalidReplicationFactor, Java version mismatch, Broker is dead). Список хостов задаёт пользователь (формат 1.broker.<cluster>.<dc>.one-infra.ru / 1.controller.<cluster>.<dc>.one-infra.ru / 1.cruise.<cluster>.<dc>.one-infra.ru). Используй когда нужно понять состояние кластера, найти причину почему broker/controller не стартует или не входит в KRaft quorum, разобраться с известными проблемами. Работа с хостами — `kafka-host-inspector`, анализ логов — `kafka-log-investigator`, метрики и Jolokia MBean'ы — `kafka-metrics-investigator`.
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
 # Скилл инспекции MDB Kafka кластеров
 
-Скилл для разбора состояния Kafka-кластеров под управлением mdb-data.
+Скилл-каталог для разбора состояния Kafka-кластеров под управлением mdb-data. Содержит
+архитектуру кластера, формат хостов и каталог известных проблем. Конкретные операции
+делегированы подчинённым скиллам.
 
-⚠️ Скилл проверяет **только состояние процессов Kafka + Cruise Control** (запуск, регистрация в
-quorum, MBean'ы, rscheck). Он НЕ проверяет: throughput / latency, настройки топиков / ACL,
+⚠️ Скилл описывает **состояние процессов Kafka + Cruise Control** на уровне кластера
+(запуск, регистрация в quorum, rscheck) и каталог известных проблем. Конкретные операции:
+- **работа с хостами** (mcc ssh/scp, пути) — `kafka-host-inspector`
+- **анализ логов** broker/controller/cruise — `kafka-log-investigator`
+- **метрики, MBean'ы, диагностика "Broker is dead"** — `kafka-metrics-investigator`
+
+Скилл НЕ покрывает: throughput / latency, настройки топиков / ACL,
 rebalance execution, дисковое место, memory. Это к Prometheus/Grafana и mdb-data API.
 
 ## Документация
@@ -40,87 +47,31 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
 
 Пользователь даёт список хостов. Скилл не угадывает хосты — только работает с тем, что дал юзер.
 
-## Что нужно
+## Подчинённые скиллы
 
-- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — доступ к хостам.
-- **Всегда `mcc --local`** (`-l`) для `ssh`/`scp` — без него mcc на каждый вызов тянет свежую
-  версию с cloud-мастера (self-update: медленно + мусор в выводе). Флаг подавляет это.
-- **`mcc scp`** — для копирования файлов/директорий (см. ниже особенности).
-- **`mcc ssh` + `expect`** — для удалённого выполнения команд. `mcc ssh` интерактивный
-  и не принимает command как аргумент (`mcc ssh <host> <cmd>` → `error: too many positional
-  arguments`), но через `expect` можно отправлять команды построчно. Шаблон — в
-  `commands/run_commands.md`. Не работает передача через stdin или `bash -c "..."`.
+Работа с хостами и логами вынесена в отдельные скиллы — вызывай их напрямую:
 
-## mcc scp особенности
-
-- Скачивание директории: `mcc scp "<host>:/path/" "<local_dir>/"` — локальная директория должна
-  существовать заранее (`mkdir -p`).
-- Скачивание файла: локальный путь — **директория**, не путь к файлу.
-- **Загрузка файла на хост: путь назначения — только директория.** Если указать полный путь
-  с именем файла (`mcc scp local.py <host>:/etc/host_checker/checks/check_kafka.py`), mcc создаст
-  на хосте **директорию** с именем `check_kafka.py` и положит файл внутрь. Правильно:
-  `mcc scp local.py <host>:/etc/host_checker/checks/` — файл скопируется с тем же именем.
-  Если целевой файл уже существует и не перезаписывается — удалить его заранее через
-  `expect + mcc ssh` (`rm -f /path/to/file`) и затем scp по директории.
-- `SSL Handshake is not finished` — повторить через 1-2 сек (tunnel ещё не поднялся).
-- `EOF на tar header` — опечатка в пути или файла не существует.
-
-## mcc ssh + expect — выполнение команд
-
-`mcc ssh <host>` открывает интерактивный шелл. Чтобы выполнить команду неинтерактивно,
-оборачиваем в `expect` и шлём команду после приглашения `/# `:
-
-```bash
-expect -c '
-set timeout 30
-spawn mcc ssh <host>
-expect "/# "
-send "uptime; echo ===DONE===\r"
-expect "===DONE==="
-send "exit\r"
-expect eof
-' 2>&1 | tail -40
-```
-
-Ограничения:
-- Сложные кавычки внутри `send` ломают парсер — лучше писать команду в файл на хосте
-  через `cat > /tmp/x.sh << "EOF" ... EOF` и затем `bash /tmp/x.sh`.
-- `sudo -u kafka bash -c "..."` с вложенными кавычками почти всегда ломается —
-  использовать heredoc-трюк.
-- `mcc scp` нестабилен на этом хосте (`SSL Handshake is not finished`) — для разовых
-  команд быстрее `expect + mcc ssh`, чем scp.
-
-Подробности и готовые шаблоны — `commands/run_commands.md`.
-
-## Хосты и пути
-
-| Что | Путь на хосте |
-|---|---|
-| Логи сервисов | `/mnt/logs/dbms/` (kafka-broker/controller/exporter, cruise-control) |
-| Конфиги Kafka | `/opt/kafka/config/` (server.properties, client.properties) |
-| SSL | `/opt/kafka/ssl/` (server.keystore.jks, server.truststore.jks) |
-| Systemd | `/etc/systemd/system/kafka-*.service`, `cruise-control.service` |
-| rscheck | `/etc/rscheck/` (kafka.conf.j2, modules/checkkafka.py) |
-| host_checker | `/etc/host_checker/` (checks/check_kafka.py) |
-| Prometheus JMX | `/opt/prometheus/` (kafka-2_0_0.yml, cruise-control.yml) |
-| Cruise Control | `/opt/cruise-control/` (config/, libs/, dependant-libs/) |
+- **`kafka-host-inspector`** — подключение к хостам через `mcc ssh` + `expect`, особенности
+  `mcc scp`, шаблоны выполнения команд, путеводитель по путям на хосте (логи, конфиги, SSL,
+  systemd, rscheck, host_checker, prometheus, cruise-control).
+- **`kafka-log-investigator`** — скачивание и анализ логов broker/controller/cruise-control
+  (`/mnt/logs/dbms/`), что грепать в `kafka-broker.out.log` / `kafka-controller.out.log` /
+  `cruise-control.err.log`, маркеры старта/ошибок.
+- **`kafka-metrics-investigator`** — метрики (JMX 8080, Jolokia 7777, kafka-exporter 23569,
+  share-group-lag-exporter 23570), Jolokia MBean'ы, диагностика "Broker is dead" через MBean'ы.
 
 ## Структура скилла
 
 - `SKILL.md` — этот файл.
-- `commands/download_logs.md` — скачивание и анализ логов broker/controller/cruise.
-- `commands/jolokia_inspect.md` — Jolokia MBean'ы, разница Kafka 3.x vs 4.x, Kafka CLI.
-- `commands/diagnose_broker_dead.md` — пошаговый разбор "Broker is dead".
 - `commands/known_issues.md` — детали известных проблем (симптомы, причины, фиксы).
-- `commands/run_commands.md` — выполнение команд на хосте через `mcc ssh` + `expect`.
-- `commands/check_metrics.md` — проверка метрик на 4 портах (8080 JMX, 7777 Jolokia, 23569 kafka-exporter, 23570 share-group-lag-exporter), дедупликация лагов в Grafana.
 
 ## Известные проблемы (кратко)
 
 Подробности — `commands/known_issues.md`.
 
 - **"Broker is dead" в UI** — rscheck/host_checker падает на MBean `kafka.server:type=raft-metrics/current-state`,
-  удалённом в Kafka 4.x. Фикс — `kafka.server:name=BrokerState,type=KafkaServer`. Разбор — `diagnose_broker_dead.md`.
+  удалённом в Kafka 4.x. Фикс — `kafka.server:name=BrokerState,type=KafkaServer`. Разбор —
+  скилл `kafka-metrics-investigator` (`commands/diagnose_broker_dead.md`).
 - **`only N broker(s) are registered`** — не все брокеры успели зарегистрироваться, либо controller
   quorum не собрался.
 - **`<unresolved>` controller hostname** — норма в момент initialization, проблема если не резолвится
@@ -131,8 +82,8 @@ expect eof
   vs Kafka 4.x требует 2.5.147+), либо auth-проблема. Отдельный случай: `ClassNotFoundException:
   CruiseControlMetricsReporter` — брокер падает при старте, JAR репортера отсутствует в образе.
   Фикс — поднять версию docker-образа Kafka. Детали — `known_issues.md`.
-- **Fenced брокер** — `FencedBrokerCount > 0` на controller-хосте.
-- **Under-replicated partitions** — `UnderReplicatedPartitions > 0` на broker-хосте.
+- **Fenced брокер** — `FencedBrokerCount > 0` на controller-хосте (проверка через `kafka-metrics-investigator`).
+- **Under-replicated partitions** — `UnderReplicatedPartitions > 0` на broker-хосте (проверка через `kafka-metrics-investigator`).
 
 ## Что НЕ покрывает скилл
 
