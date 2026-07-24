@@ -226,3 +226,106 @@ curl -s 'http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,nam
 ```bash
 curl -s 'http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,name=UnderMinIsrPartitionCount'
 ```
+
+## Offline partitions из-за удалённого брокера в Replicas
+
+**Инцидент-референс**: MDBSUP-4166 (2026-07-24, кластер `spfrclustermdb-oneme-kafka`).
+
+**Симптом** в Grafana (кластерные метрики за range 1h):
+- `offline partitions count` > 0 (в инциденте — 27)
+- `under replicated` > 0 (14)
+- `at min ISR` > 0 (14)
+
+При этом в UI mdb-data **все broker-хосты `AVAILABLE` / `observer`** — проблемных хостов нет.
+MBean `UnderReplicatedPartitions` / `UnderMinIsrPartitionCount` / `AtMinIsrPartitionCount`
+на отдельных брокерах при этом **могут быть 0** — метрика локальная (только партиции, hosted на
+данном брокере), а проблема кластерная.
+
+**Диагноз через `kafka-topics --describe --unavailable-partitions`** (bootstrap-server = **FQDN**
+брокера, не `localhost` — иначе `SslAuthenticationException: No subject alternative DNS name
+matching localhost found`):
+
+```
+Topic: nnPlatformResultsLog  Partition: 3  Leader: none  Replicas: 22026,20019,21023  Isr: 22026
+Topic: hashCalculationResult Partition: 6  Leader: none  Replicas: 22026,20012,21016  Isr: 22026
+...
+```
+
+Паттерн: у всех offline партиций **один и тот же broker id** (здесь `22026`) в `Replicas`,
+и **только он в `Isr`**. Этот broker:
+- preferred leader для всех проблемных партиций;
+- единственная ISR-реплика — другие реплики ранее выпали из ISR;
+- **недоступен** (хост удалён из mdb-data, mcc не подключается с `NamespaceMissingException`).
+
+Так как `unclean.leader.election.enable=false` (default в Kafka 3.x) и `min.insync.replicas=2`,
+controller не может выбрать лидера из не-ISR реплик → партиции висят `Leader: none`.
+
+**Отличие от "Fenced брокер"**: fenced брокер жив, но controller его временно изолировал.
+Здесь брокер физически удалён из инфраструктуры, но остался в metadata Kafka как preferred
+leader для части партиций.
+
+### Фикс (два этапа)
+
+#### Этап 1: Unclean leader election — вернуть лидера
+
+```bash
+sudo -u kafka /opt/kafka/bin/kafka-leader-election.sh \
+  --bootstrap-server <broker-fqdn>:9092 \
+  --admin.config /opt/kafka/config/client.properties \
+  --election-type unclean \
+  --all-topic-partitions
+```
+
+**Нюанс Kafka 3.8**: `kafka-leader-election.sh` принимает **`--admin.config`**, а не
+`--command-config` (как `kafka-topics.sh`). С `--command-config` —
+`UnrecognizedOptionException`.
+
+`--all-topic-partitions` для `UNCLEAN` безопасно для здоровых партиций — election запускается
+только там, где лидера нет.
+
+**Маркер успеха**: `Successfully completed leader election (UNCLEAN) for partitions ...`.
+
+**Важно**: unclean election может терять данные — сообщения, записанные на мёртвом брокере и
+не успевшие реплицироваться, утеряны. Но партиции уже offline, данные и так недоступны.
+
+#### Этап 2: Убрать мёртвый broker id из Replicas через reassign
+
+После unclean election брокер остаётся в `Replicas` как мёртвая реплика (в Isr его уже нет).
+Полный разбор — скилл `kafka-reassign-partiotions`, `history/MDBSUP-4166.md`.
+
+Кратко:
+1. `kafka-topics --describe | grep "Replicas:.*<dead_broker_id>"` — собрать все партиции.
+2. Сгенерировать `reassign.json`: заменить мёртвый broker id на живого брокера из того же ДЦ
+   (для сохранения cross-DC схемы), не занятого в текущих Replicas этой партицы.
+3. `kafka-reassign-partitions.sh --execute` **без `--throttle`** (с throttle может упасть с
+   `TimeoutException` на `incrementalAlterConfigs` — см. ниже грабли).
+4. `--verify` до `completed` для всех партиций.
+
+Reassign проходит мгновенно, т.к. мёртвый брокер не содержал уникальных данных, а новые реплики
+уже в ISR после unclean election — Kafka просто обновляет metadata.
+
+### Грабли
+
+1. **`localhost:9092` не работает** — SSL-сертификат не содержит `localhost` в SAN. Использовать
+   FQDN брокера.
+2. **`--under-min-isr` не поддерживается в Kafka 3.8** у `kafka-topics.sh`. Использовать
+   `--at-min-isr-partitions` (ISR == min.insync.replicas, на грани) и
+   `--under-replicated-partitions` (ISR < RF, включает under-min-isr как подмножество).
+3. **`--command-config` vs `--admin.config`**: у `kafka-topics.sh` и `kafka-reassign-partitions.sh`
+   — `--command-config`, у `kafka-leader-election.sh` — `--admin.config`.
+4. **Timeout на `incrementalAlterConfigs` при `--throttle`**: `--execute --throttle N` вызывает
+   `incrementalAlterConfigs` для установки throttle через controller. Если controller перегружен
+   или metadata quorum медленный — `TimeoutException` за 60 сек. Reassign при этом не
+   запускается. Решение — `--execute` без `--throttle`, либо повторить позже.
+5. **`grep "^Topic:"` не матчит строки партиций** — перед `Topic:` в строках партиций есть
+   табуляция. Использовать `grep "Replicas:.*<broker_id>"` или `grep -E "^\s*Topic:"`.
+6. **tcl/expect + Python `[...]`**: `expect -c '...'` интерполирует `[...]` как tcl command
+   substitution. List comprehensions ломаются. Решение — base64-кодировать python-скрипт
+   локально, отправить через `echo '<b64>' | base64 -d > /tmp/script.py`.
+
+### Похожий сценарий — Cruise Control не убирает мёртвый брокер
+
+В инциденте MDBSUP-4166 на кластере был Cruise Control (видно по устаревшему throttle-config в
+`oneme_antispam_pr_idsEntityFacts`), но он **не убрал** 22026 из Replicas автоматически.
+`ReassigningPartitions` MBean = 0. Вероятно, CC не настроен на auto-removal dead brokers, либо
+был отключён. Если CC есть, но проблема не устраняется — действовать вручную по этапу 2.

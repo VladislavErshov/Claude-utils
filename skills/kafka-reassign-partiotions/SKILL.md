@@ -114,7 +114,7 @@
 
 Скрипт-генератор хранит `CURRENT_REPLICAS` (словарь partition → список broker IDs из `kafka-topics.sh --describe`) и `NEW_<DC>_REPLICA` (словарь partition → новый broker ID для конкретной DC). Затем заменяет DC-реплику в текущем списке, сохраняя порядок иPreferred leader'а.
 
-Примеры — в `history/INCALL-42698.md` (кампания с fat/medium партициями) и в файле `/tmp/gen_reassign.py`.
+Примеры — в `history/INCALL-42698.md` (кампания с fat/medium партициями), `history/MDBSUP-4166.md` (вывод удалённого broker 22026 из Replicas через unclean election + reassign) и в файле `/tmp/gen_reassign.py`.
 
 ## Инструменты и нюансы выполнения
 

@@ -83,6 +83,9 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
   (создание, проверка, удаление).
 - `commands/known_issues.md` — каталог известных технических проблем (симптомы, причины,
   фиксы): Broker is dead, InvalidReplicationFactor, CruiseControlMetricsReporter и т.д.
+- `history/` — краткие разборы реальных инцидентов (симптом + фикс + грабли). Полные разборы
+  могут лежать в `kafka-reassign-partiotions/history/`. Перед диагностикой смотреть, нет ли
+  похожего случая.
 
 ## Известные проблемы (кратко)
 
@@ -110,6 +113,13 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
   Фикс — синхронизировать voters на всех хостах. Детали — `known_issues.md`.
 - **Fenced брокер** — `FencedBrokerCount > 0` на controller-хосте (проверка через `kafka-metrics-investigator`).
 - **Under-replicated partitions** — `UnderReplicatedPartitions > 0` на broker-хосте (проверка через `kafka-metrics-investigator`).
+- **Offline partitions из-за удалённого брокера в Replicas** (MDBSUP-4166) — в Grafana
+  `offline/under-repl/at-min-isr > 0`, все broker-хосты AVAILABLE, но `kafka-topics
+  --unavailable-partitions` показывает партии с `Leader: none` и паттерном
+  `Replicas: <dead_broker>,... Isr: <dead_broker>`. Хост удалён из mdb-data, но остался в
+  metadata Kafka как preferred leader. Фикс — unclean leader election (`kafka-leader-election.sh
+  --admin.config --election-type unclean --all-topic-partitions`) + reassign для убирания
+  мёртвого broker id из Replicas (скилл `kafka-reassign-partiotions`). Детали — `known_issues.md`.
 
 ## Что НЕ покрывает скилл
 
