@@ -10321,7 +10321,7 @@
           "refId": "A"
         }
       ],
-      "title": "Message in per minute",
+      "title": "Message IN Per Minute",
       "type": "timeseries",
       "description": "Скорость поступления сообщений в топик в минуту.\n\nПоказывает интенсивность записи по топикам."
     },
@@ -10425,9 +10425,9 @@
           "refId": "A"
         }
       ],
-      "title": "Message consume per minute",
+      "title": "Message Consume Per Minute",
       "type": "timeseries",
-      "description": "Скорость потребления сообщений консьюмер-группой в минуту.\n\nДолжна ≈ скорости поступления (`Message in per minute`) — иначе растёт лаг."
+      "description": "Скорость потребления сообщений консьюмер-группой в минуту.\n\nДолжна ≈ скорости поступления (`Message IN Per Minute`) — иначе растёт лаг."
     },
     {
       "datasource": {
