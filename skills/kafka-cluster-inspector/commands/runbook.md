@@ -39,7 +39,7 @@ systemctl restart kafka-broker      # брокеры
 | `kafka-exporter.err.log` | ошибки kafka-exporter (метрики консьюмеров) |
 | `kafka-exporter.out.log` | лог kafka-exporter |
 
-Анаализ логов через mcc ssh/scp — скилл `kafka-log-investigator`.
+Анализ логов через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`/`mcc scp`) — скилл `kafka-log-investigator`.
 
 ## Порты
 
@@ -67,9 +67,11 @@ systemctl restart kafka-broker      # брокеры
 
 ### Установка на хост брокера
 
+Через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (команды `scp`, `ssh`):
+
 ```bash
-mcc scp kafkactl_5.18.0_linux_amd64.tar.gz <broker>:/opt/kafka/config
-mcc ssh <broker>
+# scp kafkactl_5.18.0_linux_amd64.tar.gz <broker>:/opt/kafka/config
+# ssh <broker>
 cd /opt/kafka/config
 tar -xvf kafkactl_5.18.0_linux_amd64.tar.gz
 vim kctl.yaml

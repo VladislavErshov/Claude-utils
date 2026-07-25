@@ -12,7 +12,8 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 
 ⚠️ Скилл описывает **состояние процессов Kafka + Cruise Control** на уровне кластера
 (запуск, регистрация в quorum, rscheck) и каталог известных проблем. Конкретные операции:
-- **работа с хостами** (mcc ssh/scp, пути) — `kafka-host-inspector`
+- **работа с хостами** (mcc ssh/scp, пути) — [`mcc-host-access`](../mcc-host-access/SKILL.md)
+  (база) + `kafka-host-inspector` (Kafka-специфика)
 - **анализ логов** broker/controller/cruise — `kafka-log-investigator`
 - **метрики, MBean'ы, диагностика "Broker is dead"** — `kafka-metrics-investigator`
 
@@ -51,9 +52,9 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
 
 Работа с хостами и логами вынесена в отдельные скиллы — вызывай их напрямую:
 
-- **`kafka-host-inspector`** — подключение к хостам через `mcc ssh` + `expect`, особенности
-  `mcc scp`, шаблоны выполнения команд, путеводитель по путям на хосте (логи, конфиги, SSL,
-  systemd, rscheck, host_checker, prometheus, cruise-control).
+- **`kafka-host-inspector`** — Kafka-специфика выполнения команд на хосте, путеводитель по
+  путям (логи, конфиги, SSL, systemd, rscheck, host_checker, prometheus, cruise-control).
+  Базовые паттерны `mcc ssh + expect`/`mcc scp` — в [`mcc-host-access`](../mcc-host-access/SKILL.md).
 - **`kafka-log-investigator`** — скачивание и анализ логов broker/controller/cruise-control
   (`/mnt/logs/dbms/`), что грепать в `kafka-broker.out.log` / `kafka-controller.out.log` /
   `cruise-control.err.log`, маркеры старта/ошибок.

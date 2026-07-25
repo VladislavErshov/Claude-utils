@@ -119,7 +119,7 @@ pg_rewind: 2: 6FA/D508BD58 - 0/0
 
 ## Подключиться под суперпользователем к postgres/pgbouncer
 
-Зайти через `mcc ssh` на контейнер.
+Зайти на контейнер через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`).
 
 **Сам postgres:**
 ```bash
@@ -478,10 +478,9 @@ systemctl start pgbouncer
    ```bash
    etcdctl snapshot save snapshot.db
    ```
-   Файл `snapshot.db` на всякий случай скачать на локальную машину:
-   ```bash
-   mcc scp 1.db.amokrousov-test-16-mdbdev-pgsql.pc.one-infra.ru:/snapshot.db .
-   ```
+   Файл `snapshot.db` на всякий случай скачать на локальную машину через скилл
+   [`mcc-host-access`](../../mcc-host-access/SKILL.md) (команда `scp`,
+   `1.db.amokrousov-test-16-mdbdev-pgsql.pc.one-infra.ru:/snapshot.db` → `.`).
 
 2. **Ребутстрапнуть оставшийся в живых хост etcd из дампа:**
    ```bash
@@ -564,7 +563,7 @@ systemctl start pgbouncer
    - для шардированного кластера так же надо поменять `mdb.pgsql.sharded.coordinator.hosts`
 
 2. **Для шардированного кластера** (эти пункты только для шардированного кластера):
-   - находим мастер и делаем `mcc ssh`
+   - находим мастер и заходим через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`)
    - `sudo -u postgres psql -h /tmp -p 5432 -U root -d postgres`
    - далее нужно подключиться к базам, где установлен citus (это все базы кроме служебных `postgres`, `template0`, `template1`); список получаем командой `\l`
    - `\c <database name>`
@@ -772,7 +771,7 @@ ALTER USER username WITH SUPERUSER;
 ⚠️ **Важно:** версия образа 3.1.3 и выше.
 
 ```bash
-mcc ssh <master host>
+# Зайти на мастер через скилл mcc-host-access (mcc ssh) <master host>
 # подключаемся к бд template1
 sudo -u postgres psql -h /tmp -p 5432 -U root -d template1    # проверяем что расширение ещё не стоит
 \dx
@@ -784,11 +783,10 @@ CREATE EXTENSION vector;
 \dx
 ```
 
-Пример консоли:
+Пример консоли (через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)):
 ```
-m.khlybova@m-khlybova ~ % mcc ssh 1.db.trend-media-infra-pgsql.kc.one-infra.ru
+m.khlybova@m-khlybova ~ % <подключение к хосту 1.db.trend-media-infra-pgsql.kc.one-infra.ru через скилл mcc-host-access>
 *** notice: using autodetected cloud kc
-Self-update failed, try to use --local flag to use local copy: failed to apply update: library method failed: open /usr/local/bin/.mcc.new: permission denied
 ** Connected. Container is at your command.
 1.db.trend-media-infra-pgsql.kc.one-infra.ru: /# sudo -u postgres psql -h /tmp -p 5432 -U root -d template1
 psql (16.9 (Ubuntu 16.9-1.pgdg20.04+1))

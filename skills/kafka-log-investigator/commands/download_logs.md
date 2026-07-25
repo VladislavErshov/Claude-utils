@@ -2,7 +2,13 @@
 
 ## Скачать логи со всех хостов
 
-Пользователь даёт список хостов. Пример:
+Пользователь даёт список хостов.
+
+### Брокеры и контроллеры
+
+Скачать `/mnt/logs/dbms/` со всех хостов — через скилл
+[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc scp`, см. `commands/scp.md`
+для шаблона массового скачивания). Шаблоны хостов:
 
 ```
 BROKERS=(
@@ -15,45 +21,16 @@ CONTROLLERS=(
   1.controller.<cluster>.kc.one-infra.ru
   1.controller.<cluster>.pc.one-infra.ru
 )
-CRUISE=(
-  1.cruise.<cluster>.hc.one-infra.ru
-)
-```
-
-### Брокеры и контроллеры
-
-```bash
-mkdir -p ~/kafka_logs/brokers ~/kafka_logs/controllers
-
-for H in "${BROKERS[@]}"; do
-  D=~/kafka_logs/brokers/$H
-  mkdir -p "$D"
-  mcc scp "$H:/mnt/logs/dbms/" "$D/" 2>&1 | head -3
-done
-
-for H in "${CONTROLLERS[@]}"; do
-  D=~/kafka_logs/controllers/$H
-  mkdir -p "$D"
-  mcc scp "$H:/mnt/logs/dbms/" "$D/" 2>&1 | head -3
-done
 ```
 
 ### Cruise Control (если есть в кластере)
 
-```bash
-mkdir -p ~/kafka_logs/cruise
-for H in "${CRUISE[@]}"; do
-  D=~/kafka_logs/cruise/$H
-  mkdir -p "$D"
-  mcc scp "$H:/mnt/logs/dbms/" "$D/" 2>&1 | head -3
-done
-```
+Скачать `/mnt/logs/dbms/` с cruise-хоста — через скилл
+[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc scp`). Шаблон хоста:
+`1.cruise.<cluster>.hc.one-infra.ru`.
 
 ⚠️ Путь именно `/mnt/logs/dbms` (с 's' в `logs`). Опечатка `/mnt/log/dbms` даёт
-`failed to read downloaded archive header: EOF`.
-
-⚠️ `mcc scp` иногда падает с `SSL Handshake is not finished` — просто повторить
-команду для проблемного хоста через 1-2 секунды.
+ошибку скачивания.
 
 ## Структура скачанных логов
 

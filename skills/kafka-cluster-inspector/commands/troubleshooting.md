@@ -4,6 +4,10 @@
 операции с Cruise Control — `cruise_control_ops.md`, администрирование топиков/ACL/users —
 `administration.md`.
 
+Базовые паттерны доступа к хостам и грабли Tcl/SSL —
+скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md). Специфичные для Kafka скрипты на expect
+(например `runner.exp` для очистки `*-stray` партиций) — ниже.
+
 Каталог известных инцидентов и технических багов (Broker is dead, InvalidReplicationFactor,
 FencedBroker, CruiseControlMetricsReporter) — `known_issues.md`.
 
@@ -161,71 +165,17 @@ systemctl restart kafka-exporter
 
 ### Случай 1: прерывание ребаланса Cruise Control или reassign → остались `-stray` партиции
 
-Скопировать скрипт в `clean_up.sh` локально. Заполнить количество брокеров, ДЦ и правильные
-имена кластера/очереди в циклах `for`. После выполнения смотреть, сколько и где очистилось.
-Сделать рестарт хостов, на которых была ошибка (иначе память может долго не обновляться).
+Перебрать хосты × ДЦ через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+(команда `ssh`). Шаблон хоста: `$i.broker.<cluster>.<dc>.one-infra.ru`
+(`i=1..75`, `dc=hc,kc,pc`). На каждом хосте выполнить:
 
 ```bash
-#!/bin/bash
-
-MAX_PARALLEL=10
-TEMP_STATS="stats.tmp"
-> "$TEMP_STATS"
-
-cat << 'EOF' > runner.exp
-set timeout 60
-set host [lindex $argv 0]
-log_user 0
-if {[catch {spawn mcc ssh $host} reason]} {
-    puts "0"
-    exit
-}
-expect {
-    -re "\[#$\]" {
-        send "cd /mnt/data/log && du -sk *-stray 2>/dev/null | awk '{s+=\$1} END {print s+0}' && rm -rf *-stray && echo 'DONE' && exit\r"
-        expect {
-            -re "(\[0-9\]+).*DONE" { puts "$expect_out(1,string)" }
-            timeout { puts "0" }
-        }
-    }
-    timeout { puts "0" }
-    eof { puts "0" }
-}
-catch {close}
-catch {wait}
-EOF
-
-echo "Запуск очистки (непрерывный поток: $MAX_PARALLEL)..."
-
-for dc in hc kc pc; do
-    for i in {1..75}; do
-        host="$i.broker.<cluster>.$dc.one-infra.ru"
-
-        (
-            size_kb=$(expect runner.exp "$host" | tr -d '\r' | grep -E '^[0-9]+$' || echo "0")
-            echo "$size_kb" >> "$TEMP_STATS"
-            if [ "$size_kb" -gt 0 ]; then
-                echo "[$host]: Удалено $size_kb KB"
-            else
-                echo "[$host]: Чисто"
-            fi
-        ) &
-
-        while [ $(jobs -r | wc -l) -ge $MAX_PARALLEL ]; do
-            sleep 0.2
-        done
-    done
-done
-
-wait
-total_gb=$(awk '{s+=$1} END {printf "%.2f", s/1024/1024}' "$TEMP_STATS")
-
-echo "-----------------------------------"
-echo "Очистка завершена."
-echo "Всего удалено: $total_gb GB"
-
-rm runner.exp "$TEMP_STATS"
+cd /mnt/data/log
+du -sk *-stray 2>/dev/null | awk '{s+=$1} END {print s+0}'
+rm -rf *-stray
 ```
+
+Сделать рестарт хостов, на которых была ошибка (иначе память может долго не обновляться).
 
 ### Случай 2: в остальных случаях
 
@@ -271,10 +221,10 @@ systemctl restart kafka-broker
 Скорее всего, docker-образ с багом логротейта.
 
 Сначала чистим логи, перезапускаем кафку. С забитым диском логов кафка может не подняться
-на новом образе.
+на новом образе. Зайти на хост через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+и выполнить:
 
 ```bash
-mcc ssh <хост с забитым логом>
 systemctl stop kafka-broker
 cd /mnt/logs/dbms
 rm kafka-*

@@ -72,22 +72,16 @@ PY
 ## ERR Slot 10922 is already busy при создании кластера
 
 Нужно сделать `FLUSHALL` и `CLUSTER RESET SOFT` на всех нодах, перезапустить операцию.
-Пример скрипта:
+Перебрать хосты × ДЦ через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+(команда `sshexec`, см. `commands/sshexec.md` для шаблона перебора). Команды на хосте:
 
-```bash
-clouds=("ic" "nc" "zc")
-for cloud in "${clouds[@]}"; do
-  for ((i=1; i<=3; i++)); do # Шарды
-    instance="1.shard$i-db.video-api-stat-tkns-vkvideo-redis.$cloud.one-infra.ru"
-    mcc sshexec $instance --namespace infra redis-cli --user master --pass \
-      "$(awk '$1=="user" && $2=="master" { gsub(/^[^>]*>/, "", $0); gsub(/ .*/, "", $0); print }' /etc/redis/acl/users.acl)" \
-      FLUSHALL
-    mcc sshexec $instance --namespace infra redis-cli --user master --pass \
-      "$(awk '$1=="user" && $2=="master" { gsub(/^[^>]*>/, "", $0); gsub(/ .*/, "", $0); print }' /etc/redis/acl/users.acl)" \
-      CLUSTER RESET SOFT
-  done
-done
 ```
+redis-cli --user master --pass "$(awk '$1=="user" && $2=="master" { gsub(/^[^>]*>/, "", $0); gsub(/ .*/, "", $0); print }' /etc/redis/acl/users.acl)" FLUSHALL
+redis-cli --user master --pass "$(awk '$1=="user" && $2=="master" { gsub(/^[^>]*>/, "", $0); gsub(/ .*/, "", $0); print }' /etc/redis/acl/users.acl)" CLUSTER RESET SOFT
+```
+
+Шаблон хоста: `1.shard$i-db.video-api-stat-tkns-vkvideo-redis.$cloud.one-infra.ru`
+(`i=1..3`, `clouds=("ic" "nc" "zc")`).
 
 ## Cluster sharded: не собирается кластер
 
@@ -100,16 +94,15 @@ done
 
 ## Удалить ноду в шардированном Redis (подробный алгоритм)
 
-1. На ноде, которую удаляем:
+1. На ноде, которую удаляем — подключиться через скилл
+   [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`), затем:
    ```
-   mcc ssh <host>
    redis-cli
    auth master <password>
    cluster myid          # скопировать полученный id
    ```
-2. На реплике-хосте (мастере шарда):
+2. На реплике-хосте (мастере шарда) — так же через скилл mcc-host-access:
    ```
-   mcc ssh <replica host>
    redis-cli
    auth master <password>
    cluster myid          # скопировать id
@@ -130,17 +123,14 @@ done
 По умолчанию при создании кластера Redis все мастера попадают в 1 ДЦ, иногда просят
 распределить их равномерно. Отслеживать распределение по ДЦ можно в Мониторинге.
 
-```bash
-for ((i=1; i <= S; i+=D)); do
-    local HOST="1.shard${i}-db.<queue>.<dc>.one-infra.ru"
-    echo "host $HOST"
-    mcc sshexec "$HOST" "redis-cli -c --user master -a <password> cluster failover" --namespace infra
-done
-```
+Перебрать хосты × ДЦ через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+(команда `sshexec`, см. `commands/sshexec.md` для шаблона перебора). Команда на хосте:
+`redis-cli -c --user master -a <password> cluster failover`. Шаблон хоста:
+`1.shard${i}-db.<queue>.<dc>.one-infra.ru`.
 
 Где:
-- `S` — количество шардов.
-- `D` — количество ДЦ.
+- `i` — номер шарда, перебор `for ((i=1; i <= S; i+=D))`, где `S` — количество шардов,
+  `D` — количество ДЦ.
 - `<queue>` — имя очереди в хосте.
 - `<dc>` — ДЦ, в котором нужно назначить мастеров.
 - `<password>` — пароль мастера (`cat /etc/redis/redis.conf | grep masterauth` на одном хосте).
@@ -188,20 +178,18 @@ done
    мастера — переключить его перед операцией.
 
 Если нужно постфактум прописать `cluster-preferred-endpoint-type hostname` на всём
-кластере — скрипт локально:
-```bash
-for (i=1; i<=N; i++); do
-  for dc in hc kc pc; do
-    export HOST="1.shard${i}-db.<queue>.${dc}.one-infra.ru"
-    echo "host $HOST"
-    mcc sshexec $HOST "redis-cli -c --user master -a <password> config set cluster-preferred-endpoint-type hostname cluster-Announce-hostname $HOST" --namespace infra
-    mcc sshexec $HOST "redis-cli -c --user master -a <password> config REWRITE" --namespace infra
-  done
-done
+кластере — перебрать хосты × ДЦ через скилл
+[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+`commands/sshexec.md` для шаблона перебора). Команды на хосте:
+
 ```
-Поправить: `N` — количество шардов; список ДЦ; `queue` — имя очереди; `password` —
-`cat /etc/redis/redis.conf | grep masterauth`; при необходимости namespace в `HOST` и
-`mcc sshexec`.
+redis-cli -c --user master -a <password> config set cluster-preferred-endpoint-type hostname cluster-Announce-hostname $HOST
+redis-cli -c --user master -a <password> config REWRITE
+```
+
+Шаблон хоста: `1.shard${i}-db.<queue>.${dc}.one-infra.ru`. Поправить: `N` — количество
+шардов; список ДЦ; `queue` — имя очереди; `password` —
+`cat /etc/redis/redis.conf | grep masterauth`.
 
 ## ACL: детали
 
@@ -299,16 +287,11 @@ Default-клиент позволяет подключиться к Redis без
    значением.
 3. Запустить update через UI с минимальным изменением параметров (например +1 байт в
    `maxMemory`). Либо запускать таски оператора на каждый шард (кластер шардированный).
-4. Альтернативный вариант — запустить рестарт скриптом:
-   ```bash
-   for ((i=1; i <= 3; i++)); do
-     for dc in hc kc pc; do
-       local HOST="1.shard${i}-db.mdb-health-mdb-redis.${dc}.one-infra.ru"
-       echo "host $HOST"
-       mcc sshexec "$HOST" "confp --oneshot; systemctl restart redis" --namespace infra
-     done
-   done
-   ```
+4. Альтернативный вариант — запустить рестарт скриптом: перебрать хосты × ДЦ через
+   скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+   `commands/sshexec.md` для шаблона перебора). Команда на хосте:
+   `confp --oneshot; systemctl restart redis`. Шаблон хоста:
+   `1.shard${i}-db.mdb-health-mdb-redis.${dc}.one-infra.ru` (`i=1..3`, `dc=hc,kc,pc`).
 5. Если требуется скорость и параметр может быть применён без рестарта инстанса:
    - Добавить его в PMS (`zen.redis.conf`).
    - Зайти на все инстансы, сделать `confp --oneshot`.

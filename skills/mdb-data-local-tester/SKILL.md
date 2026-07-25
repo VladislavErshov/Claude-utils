@@ -143,7 +143,7 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
 
 ## Получение реальных данных кластера
 
-Используй `/db-seed`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их через `mcc ssh/psql`, результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
+Используй `/db-seed`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их на удалённом хосте (через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md), `mcc ssh` + `psql`), результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
 
 ## Проверка PMS-переменных (modify-флоу в mdb-processing)
 

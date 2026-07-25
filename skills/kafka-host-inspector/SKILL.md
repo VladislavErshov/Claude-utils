@@ -1,14 +1,16 @@
 ---
 name: kafka-host-inspector
-description: Методы работы с хостами MDB Kafka (broker / controller / cruise-control) — подключение через mcc ssh + expect, особенности mcc scp, шаблоны выполнения команд на хосте, путеводитель по путям на хосте (логи, конфиги, SSL, systemd, rscheck, host_checker, prometheus, cruise-control). Список хостов задаёт пользователь (формат 1.broker.<cluster>.<dc>.one-infra.ru / 1.controller.<cluster>.<dc>.one-infra.ru / 1.cruise.<cluster>.<dc>.one-infra.ru). Используй когда нужно выполнить команду на Kafka-хосте неинтерактивно, скачать/залить файл, найти где лежит конфиг или лог, или разобраться с нюансами mcc ssh/scp.
+description: Методы работы с хостами MDB Kafka (broker / controller / cruise-control) — путеводитель по путям на хосте (логи, конфиги, SSL, systemd, rscheck, host_checker, prometheus, cruise-control), специфика выполнения команд на Kafka-хосте. Список хостов задаёт пользователь (формат 1.broker.<cluster>.<dc>.one-infra.ru / 1.controller.<cluster>.<dc>.one-infra.ru / 1.cruise.<cluster>.<dc>.one-infra.ru). Используй когда нужно выполнить команду на Kafka-хосте, скачать/залить файл, найти где лежит конфиг или лог.
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
 # Скилл работы с хостами MDB Kafka
 
 Скилл-помощник для подключения и выполнения команд на хостах Kafka-кластера под управлением
-mdb-data. Не содержит диагностики — только методы работы с хостами (mcc ssh + expect,
-mcc scp особенности, путеводитель по путям).
+mdb-data. Не содержит диагностики — только методы работы с хостами и путеводитель по путям.
+
+> Работа с хостами (ssh + expect, scp, sshexec) — через скилл
+> [`mcc-host-access`](../mcc-host-access/SKILL.md). Ниже — только специфика Kafka.
 
 Диагностику кластера (логи, KRaft quorum, известные проблемы) — см. `kafka-cluster-inspector`.
 Метрики и Jolokia MBean'ы — см. `kafka-metrics-investigator`.
@@ -25,57 +27,18 @@ mcc scp особенности, путеводитель по путям).
 
 Пользователь даёт список хостов. Скилл не угадывает хосты — только работает с тем, что дал юзер.
 
-## Что нужно
+## Специфика Kafka-хостов
 
-- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — доступ к хостам.
-- **Всегда `mcc --local`** (`-l`) для `ssh`/`scp` — без него mcc на каждый вызов тянет свежую
-  версию с cloud-мастера (self-update: медленно + мусор в выводе). Флаг подавляет это.
-- **`mcc scp`** — для копирования файлов/директорий (см. ниже особенности).
-- **`mcc ssh` + `expect`** — для удалённого выполнения команд. `mcc ssh` интерактивный
-  и не принимает command как аргумент (`mcc ssh <host> <cmd>` → `error: too many positional
-  arguments`), но через `expect` можно отправлять команды построчно. Шаблон — в
-  `commands/run_commands.md`. Не работает передача через stdin или `bash -c "..."`.
-
-## mcc scp особенности
-
-- Скачивание директории: `mcc scp "<host>:/path/" "<local_dir>/"` — локальная директория должна
-  существовать заранее (`mkdir -p`).
-- Скачивание файла: локальный путь — **директория**, не путь к файлу.
-- **Загрузка файла на хост: путь назначения — только директория.** Если указать полный путь
-  с именем файла (`mcc scp local.py <host>:/etc/host_checker/checks/check_kafka.py`), mcc создаст
-  на хосте **директорию** с именем `check_kafka.py` и положит файл внутрь. Правильно:
-  `mcc scp local.py <host>:/etc/host_checker/checks/` — файл скопируется с тем же именем.
-  Если целевой файл уже существует и не перезаписывается — удалить его заранее через
-  `expect + mcc ssh` (`rm -f /path/to/file`) и затем scp по директории.
-- `SSL Handshake is not finished` — повторить через 1-2 сек (tunnel ещё не поднялся).
-- `EOF на tar header` — опечатка в пути или файла не существует.
-
-## mcc ssh + expect — выполнение команд
-
-`mcc ssh <host>` открывает интерактивный шелл. Чтобы выполнить команду неинтерактивно,
-оборачиваем в `expect` и шлём команду после приглашения `/# `:
-
-```bash
-expect -c '
-set timeout 30
-spawn mcc --local ssh <host>
-expect "/# "
-send "uptime; echo ===DONE===\r"
-expect "===DONE==="
-send "exit\r"
-expect eof
-' 2>&1 | tail -40
-```
-
-Ограничения:
-- Сложные кавычки внутри `send` ломают парсер — лучше писать команду в файл на хосте
-  через `cat > /tmp/x.sh << "EOF" ... EOF` и затем `bash /tmp/x.sh`.
-- `sudo -u kafka bash -c "..."` с вложенными кавычками почти всегда ломается —
-  использовать heredoc-трюк.
-- `mcc scp` нестабилен на некоторых хостах (`SSL Handshake is not finished`) — для разовых
-  команд быстрее `expect + mcc ssh`, чем scp.
-
-Подробности и готовые шаблоны — `commands/run_commands.md`.
+- Для выполнения команд на хосте — скилл [`mcc-host-access`](../mcc-host-access/SKILL.md)
+  (команда `ssh` + expect, см. `commands/ssh.md`).
+- Для `sudo -u kafka` с env-переменными — `source` из `/etc/sysconfig/kafka`
+  (см. `commands/run_commands.md`).
+- Для скачивания конфигов — скачать директорию целиком (`/opt/kafka/config/`),
+  не отдельными файлами — обходит проблему с файлами без расширения
+  (`jaas.conf`, `sysconfig`). Подробнее — см. [`mcc-host-access`](../mcc-host-access/SKILL.md)
+  (команда `scp`, `commands/scp.md`).
+- При загрузке скриптов-чекеров на хост — путь назначения **директория**
+  (см. `commands/run_commands.md`).
 
 ## Хосты и пути
 
@@ -93,4 +56,5 @@ expect eof
 ## Структура скилла
 
 - `SKILL.md` — этот файл.
-- `commands/run_commands.md` — выполнение команд на хосте через `mcc ssh` + `expect` (шаблоны: одна команда, несколько подряд, сложные через heredoc, sudo -u kafka + env).
+- `commands/run_commands.md` — Kafka-специфичные шаблоны команд на хосте
+  (env через `/etc/sysconfig/kafka`, проверка после deploy, проверка share-group-lag-exporter).

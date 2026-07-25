@@ -18,6 +18,9 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 (см. `kafka-cluster-inspector`), KRaft quorum, конфиги, rscheck-скрипты целиком, throughput/latency
 (к Prometheus/Grafana напрямую).
 
+> Доступ к хостам и грабли Tcl/SSL/Namespace — в скилле
+> [`mcc-host-access`](../mcc-host-access/SKILL.md). Ниже — только специфика метрик.
+
 ## Документация
 
 - https://docs.vk.team/mdb/docs/kafka/kafka-intro.html — введение
@@ -52,35 +55,8 @@ host_checker для проверки состояния брокера, не Pro
 
 ## Что нужно
 
-- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — доступ к хостам.
-- **Всегда `mcc --local`** (`-l`) для `ssh`/`scp` — без него mcc на каждый вызов тянет свежую
-  версию с cloud-мастера (self-update: медленно + мусор в выводе). Флаг подавляет это.
-- **`mcc ssh` + `expect`** — для удалённого выполнения команд. `mcc ssh` интерактивный
-  и не принимает command как аргумент (`mcc ssh <host> <cmd>` → `error: too many positional
-  arguments`), но через `expect` можно отправлять команды построчно. Шаблон — в
-  `commands/run_commands.md` скилла `kafka-cluster-inspector`.
-
-## mcc ssh + expect — выполнение команд
-
-`mcc ssh <host>` открывает интерактивный шелл. Чтобы выполнить команду неинтерактивно,
-оборачиваем в `expect` и шлём команду после приглашения `/# `:
-
-```bash
-expect -c '
-set timeout 30
-spawn mcc --local ssh <host>
-expect "/# "
-send "curl -s localhost:8080/metrics | head -5; echo ===DONE===\r"
-expect "===DONE==="
-send "exit\r"
-expect eof
-' 2>&1 | tail -40
-```
-
-Ограничения:
-- Сложные кавычки внутри `send` ломают парсер — лучше писать команду в файл на хосте
-  через `cat > /tmp/x.sh << "EOF" ... EOF` и затем `bash /tmp/x.sh`.
-- Подробности и готовые шаблоны — `commands/run_commands.md` скилла `kafka-cluster-inspector`.
+- **Доступ к хостам** — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+  Специфика метрик — `commands/check_metrics.md`.
 
 ## Структура скилла
 

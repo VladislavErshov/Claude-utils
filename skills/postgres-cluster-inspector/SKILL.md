@@ -4,6 +4,9 @@
 
 ⚠️ Скилл проверяет **состояние процессов postgres + stolon + etcd + pgbouncer** (запуск, роль, replication, rscheck) через **логи и stolonctl/etcdctl**. Не покрывает: throughput / latency, настройки пользователей / баз, производительность — это к Prometheus/Grafana и mdb-data API.
 
+> Доступ к хостам и грабли Tcl/SSL/Namespace — в скилле
+> [`mcc-host-access`](../mcc-host-access/SKILL.md). Ниже — только специфика PostgreSQL.
+
 ## Документация
 
 - https://docs.vk.team/mdb/docs/ — общая документация MDB
@@ -37,34 +40,8 @@
 
 ## Что нужно
 
-- **mcc** (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — доступ к хостам.
-- **Всегда `mcc --local`** (`-l`) для `ssh`/`scp` — без него mcc на каждый вызов тянет свежую версию с cloud-мастера (self-update: медленно + мусор в выводе).
-- **`mcc scp`** — для копирования файлов/директорий (см. `commands/connection.md`).
-- **`mcc ssh` + `expect`** — для удалённого выполнения команд. `mcc ssh` интерактивный и не принимает command как аргумент, но через `expect` можно отправлять команды построчно. Шаблон — в `commands/connection.md`. Не работает передача через stdin или `bash -c "..."`.
-
-## mcc ssh + expect — выполнение команд
-
-`mcc ssh <host>` открывает интерактивный шелл. Чтобы выполнить команду неинтерактивно, оборачиваем в `expect` и шлём команду после приглашения `/# `:
-
-```bash
-expect -c '
-set timeout 30
-spawn mcc --local ssh <host>
-expect "/# "
-send "uptime; echo ===DONE===\r"
-expect "===DONE==="
-send "exit\r"
-expect eof
-' 2>&1 | tail -40
-```
-
-Ограничения:
-- **Tcl interprets `[...]` как command substitution** — `grep -E "0[23]:"` сломается. Используйте `grep "^2026-07-23 03:"` (без character class) или escape как `\[23\]`.
-- Сложные кавычки внутри `send` ломают парсер — лучше писать команду в файл на хосте через heredoc и затем `bash /tmp/x.sh`.
-- `sudo -u postgres bash -c "..."` с вложенными кавычками почти всегда ломается — использовать heredoc-трюк.
-- `mcc scp` нестабилен (`SSL Handshake is not finished`) — для разовых команд быстрее `expect + mcc ssh`, чем scp. При `SSL Handshake is not finished` — повторить через 2-3 сек.
-
-Подробности и готовые шаблоны — `commands/connection.md`.
+- **Доступ к хостам** — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+  Специфика PostgreSQL-хостов — `commands/connection.md`.
 
 ## Хосты и пути
 
@@ -85,7 +62,7 @@ expect eof
 ## Структура скилла
 
 - `SKILL.md` — этот файл.
-- `commands/connection.md` — подключение через mcc ssh + expect, особенности mcc scp, шаблоны команд.
+- `commands/connection.md` — PostgreSQL-специфичные команды на хосте (stolonctl, etcdctl, psql/pgbouncer admin, чтение dbstate/keeperstate).
 - `commands/host-paths.md` — путеводитель по путям на хосте.
 - `commands/diagnostics.md` — что проверять при разных симптомах (postgres is dead, etcd is dead, реплика не догоняет).
 - `commands/reinit_replica.md` — Переналивка реплики: Простой/Сложный/Самый сложный случаи.

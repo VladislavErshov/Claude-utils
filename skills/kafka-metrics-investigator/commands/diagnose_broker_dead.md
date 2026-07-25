@@ -46,11 +46,12 @@ curl -s 'http://localhost:7777/jolokia/read/kafka.server:type=raft-metrics/curre
 
 ### Шаг 3: подтвердить, что rscheck падает именно на этом
 
-Посмотреть исходник rscheck (можно через mcc scp):
+Посмотреть исходник rscheck — скачать с хоста через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+(команда `scp`, источник `1.broker.<cluster>.<dc>.one-infra.ru:/etc/rscheck/` → `~/kafka_rscheck/`):
 
 ```bash
 mkdir -p ~/kafka_rscheck
-mcc scp "1.broker.<cluster>.<dc>.one-infra.ru:/etc/rscheck/" ~/kafka_rscheck/ 2>&1 | head -3
+# scp "1.broker.<cluster>.<dc>.one-infra.ru:/etc/rscheck/" → ~/kafka_rscheck/
 cat ~/kafka_rscheck/modules/checkkafka.py
 ```
 
@@ -68,11 +69,13 @@ curl -s 'http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,nam
 
 ### Шаг 4: host_checker
 
-Та же история — `check_kafka.py` в host_checker тоже использует `kafka.server:type=raft-metrics/current-state`:
+Та же история — `check_kafka.py` в host_checker тоже использует `kafka.server:type=raft-metrics/current-state`.
+Скачать с хоста через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (команда `scp`,
+источник `1.broker.<cluster>.<dc>.one-infra.ru:/etc/host_checker/` → `~/kafka_host_checker/`):
 
 ```bash
 mkdir -p ~/kafka_host_checker
-mcc scp "1.broker.<cluster>.<dc>.one-infra.ru:/etc/host_checker/" ~/kafka_host_checker/ 2>&1 | head -3
+# scp "1.broker.<cluster>.<dc>.one-infra.ru:/etc/host_checker/" → ~/kafka_host_checker/
 cat ~/kafka_host_checker/checks/check_kafka.py
 ```
 

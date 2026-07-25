@@ -1,6 +1,6 @@
 ---
 name: kafka-docker-developer
-description: Разработка docker-образа MDB Kafka (ubuntu20-kafka-base, ubuntu20-kafka-3.8.0) в репозитории docker-images — правка Python-чекеров (check_kafka.py, rscheck@kafka), confp jinja2-шаблонов (broker/controller.properties, jaas.conf, sysconfig), systemd-юнитов (kafka-broker/controller/exporter.service), build.d-скриптов и dockerfile, горячая заливка файлов на тестовый кластер через mcc scp без пересборки образа, сборка/деплой образа через CI и верификация через rscheck@kafka / UI mdb-data. TRIGGER — «поправить чекер / роль хоста Kafka», «hot-reload check_kafka.py на кластер», «изменить конфиг/сервис/сборку образа Kafka», «пересобрать/задеплоить образ ubuntu20-kafka», «разобраться в цикле разработки docker-images для Kafka». SKIP — диагностика живого кластера (broker dead, KRaft quorum, MBean) → /kafka-cluster-inspector; сверка PMS-переменных с отрендеренными конфигами → /kafka-config-inspector; топики/ACL/quotas → mdb-data API; графики/метрики → /grafana-plot-creator.
+description: Разработка docker-образа MDB Kafka (ubuntu20-kafka-base, ubuntu20-kafka-3.8.0) в репозитории docker-images — правка Python-чекеров (check_kafka.py, rscheck@kafka), confp jinja2-шаблонов (broker/controller.properties, jaas.conf, sysconfig), systemd-юнитов (kafka-broker/controller/exporter.service), build.d-скриптов и dockerfile, горячая заливка файлов на тестовый кластер через скилл mcc-host-access (mcc scp) без пересборки образа, сборка/деплой образа через CI и верификация через rscheck@kafka / UI mdb-data. TRIGGER — «поправить чекер / роль хоста Kafka», «hot-reload check_kafka.py на кластер», «изменить конфиг/сервис/сборку образа Kafka», «пересобрать/задеплоить образ ubuntu20-kafka», «разобраться в цикле разработки docker-images для Kafka». SKIP — диагностика живого кластера (broker dead, KRaft quorum, MBean) → /kafka-cluster-inspector; сверка PMS-переменных с отрендеренными конфигами → /kafka-config-inspector; топики/ACL/quotas → mdb-data API; графики/метрики → /grafana-plot-creator.
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
@@ -9,8 +9,9 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 Скилл для разработки образов `ubuntu20-kafka-base` и `ubuntu20-kafka-3.8.0` в репозитории
 `docker-images`. Покрывает два цикла:
 
-1. **Hot-reload** — правка Python-чекеров и заливка на хост тестового кластера через `mcc scp`
-   без пересборки образа. Для быстрой проверки гипотез.
+1. **Hot-reload** — правка Python-чекеров и заливка на хост тестового кластера через скилл
+   [`mcc-host-access`](../mcc-host-access/SKILL.md) (`mcc scp`) без пересборки образа.
+   Для быстрой проверки гипотез.
 2. **Full rebuild** — правка systemd-юнитов, confp-шаблонов, build.d-скриптов с пересборкой
    образа и деплоем через CI/mdb modify.
 
@@ -106,7 +107,8 @@ docker-images/ubuntu20-kafka-3.8.0/
 перезалить без переустановки пакета. См. `commands/checker_hot_deploy.md`.
 
 1. Правишь `check_kafka.py` локально в `docker-images`.
-2. Заливаешь файл на хост(ы) тестового кластера через `mcc scp` (dest = **директория**, не файл).
+2. Заливаешь файл на хост(ы) тестового кластера через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md)
+   (команда `scp`, dest = **директория**, не файл).
 3. Перезапускаешь `rscheck@kafka.service`.
 4. Проверяешь, что в UI mdb-data роль/статус обновились.
 5. Если гипотеза подтвердилась — коммитишь в `docker-images`, идёт штатный деплой через CI.
@@ -117,19 +119,10 @@ docker-images/ubuntu20-kafka-3.8.0/
 `commands/confp_templates.md`, `commands/systemd_units.md`, `commands/build_image.md`,
 `commands/deploy_image.md` — заполняются по мере использования.
 
-## mcc scp / mcc ssh — особенности
+## Доступ к хостам — особенности
 
-Подробности — в `/kafka-cluster-inspector/commands/run_commands.md`. Кратко:
-
-- **`mcc --local`** (`-l`) — обязательно. Без него mcc тянет свежую версию с мастера на каждый
-  вызов (медленно + мусор в выводе).
-- **`mcc scp local <host>:/dir/`** — dest **всегда директория**. Если указать путь с именем
-  файла, mcc создаст на хосте директорию с этим именем и положит файл внутрь.
-- **`mcc ssh <host>`** — интерактивный, не принимает command как аргумент. Команды — через
-  `expect` (шаблон в `commands/checker_hot_deploy.md` и в
-  `/kafka-cluster-inspector/commands/run_commands.md`).
-- **`SSL Handshake is not finished`** — повторить через 1-2 сек, tunnel ещё поднимается.
-- **NamespaceMissingException** на scp — добавить `-n infra`.
+Доступ к хостам и копирование файлов — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+Специфика hot-reload чекеров — `commands/checker_hot_deploy.md`.
 
 ## Типичные хосты
 
@@ -159,6 +152,6 @@ docker-images/ubuntu20-kafka-3.8.0/
 
 ## Связанные скиллы
 
-- `/kafka-cluster-inspector` — выполнение команд на хосте через `expect`, детали `mcc ssh`/`scp`,
-  чтение логов, Jolokia.
+- `/mcc-host-access` — базовые паттерны `mcc ssh`/`scp`/`sshexec`, грабли Tcl/SSL/Namespace.
+- `/kafka-cluster-inspector` — диагностика кластера, чтение логов, Jolokia.
 - `/kafka-config-inspector` — сверка PMS-переменных с конфигами на хостах.

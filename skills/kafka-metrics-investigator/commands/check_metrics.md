@@ -3,6 +3,9 @@
 Kafka-брокер отдаёт метрики через **четыре** независимых exporter'а на разных портах.
 Если в Grafana пропали метрики — нужно проверить каждый порт отдельно.
 
+Доступ к хосту — через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`).
+Здесь — только специфика проверки метрик.
+
 ## Порты
 
 | Порт | Что отдаёт | Кто запущен | Метрики в Grafana |
@@ -16,19 +19,14 @@ JMX (8080) — основной источник метрик. Если он м�
 
 ## Быстрая проверка всех портов
 
+Зайти на хост через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`)
+и выполнить:
+
 ```bash
-expect -c '
-set timeout 90
-spawn mcc --local ssh <host>
-expect {
-  "/# " { }
-  timeout { puts "CONNECT_TIMEOUT"; exit 1 }
-}
-send "for p in 8080 7777 23569 23570; do printf \"port %s: \" \$p; curl -s -o /dev/null -w \"%{http_code}\\n\" --max-time 10 localhost:\$p/metrics || echo fail; done; echo ===DONE===\r"
-expect "===DONE==="
-send "exit\r"
-expect eof
-' 2>&1 | grep -vE "^Get \"|^spawn mcc|^\*\* Connected|^1\.broker.*: /# |Self-update|^ERROR:" | tail -20
+for p in 8080 7777 23569 23570; do
+  printf "port %s: " $p
+  curl -s -o /dev/null -w "%{http_code}\n" --max-time 10 localhost:$p/metrics || echo fail
+done
 ```
 
 **Важно:** `--max-time 10` минимум! JMX exporter (8080) отдаёт ~674KB, при `--max-time 5` curl не успевает скачать и возвращает `000` — выглядит как мёртвый, но на самом деле жив.
@@ -45,16 +43,10 @@ port 23570: 200     # share-group-lag-exporter — жив
 
 ## Проверка статуса сервисов
 
+На хосте (через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md), `mcc ssh`):
+
 ```bash
-expect -c '
-set timeout 60
-spawn mcc --local ssh <host>
-expect "/# "
-send "systemctl is-active kafka-broker kafka-exporter share-group-lag-exporter; echo ===DONE===\r"
-expect "===DONE==="
-send "exit\r"
-expect eof
-' 2>&1 | tail -10
+systemctl is-active kafka-broker kafka-exporter share-group-lag-exporter
 ```
 
 Должно быть `active` для всех трёх.

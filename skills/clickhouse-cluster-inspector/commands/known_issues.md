@@ -70,26 +70,18 @@ du -sh /var/lib/clickhouse/1/store/*/*/detached/    # ищем папки
 systemctl restart mdb-clickhouse-server
 ```
 
-**Почистить весь кластер** (шаблон):
-```bash
-cluster_name="zen-events-log"
-project="zinfra"
-clouds=("rc" "pc")
-shard_start=1
-shard_end=15
-
-for cloud in "${clouds[@]}"; do
-    for ((i=shard_start; i<=shard_end; i++)); do
-        instance="1.shard${i}-db.${cluster_name}-${project}-ch.${cloud}.idzn.ru"
-        echo "Cleaning ${instance}"
-        mcc sshexec -n dzen "$instance" "find /var/lib/clickhouse/1/store -path '*/detached/*' -delete"
-    done
-done
-```
+**Почистить весь кластер** — перебрать хосты × ДЦ через скилл
+[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+`commands/sshexec.md` для шаблона перебора). Команда на хосте:
+`find /var/lib/clickhouse/1/store -path '*/detached/*' -delete`. Параметры шаблона:
+`cluster_name="zen-events-log"`, `project="zinfra"`, `clouds=("rc" "pc")`,
+`shard_start=1`, `shard_end=15`, шаблон хоста
+`1.shard${i}-db.${cluster_name}-${project}-ch.${cloud}.idzn.ru`.
 
 ## Хост не поднялся после работ в облаке
 
-**Симптом**: хост в UI `unknown`/`UNAVAILABLE`, `mcc ssh` возвращает:
+**Симптом**: хост в UI `unknown`/`UNAVAILABLE`, подключение через скилл
+[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`) возвращает:
 ```
 *** ERROR (ServiceValidationException): Task Instance <host> is not scheduling on a minion,
 please start it first
@@ -188,14 +180,11 @@ timeout 3 bash -c "echo > /dev/tcp/<peer>/<raft_port>"       # L4 к raft_port 9
 
 ### Релоад конфигов на всём кластере
 
-```bash
-cloud="rc"
-for ((shardN=1; shardN<=22; shardN++)); do
-  instance="1.shard${shardN}-db.<cluster>-${project}-ch.$cloud.one-infra.ru"
-  echo "==== ==== ==== Updating $instance ==== ==== ===="
-  mcc sshexec "$instance" --namespace infra "confp --oneshot; clickhouse-client --user backup-admin --password \$(grep -oP 'password:\s*\K[^ ]+' /etc/rscheck/checkclickhouse.conf) --query 'SYSTEM RELOAD CONFIG'"
-done
-```
+Перебрать хосты × ДЦ через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+(команда `sshexec`, см. `commands/sshexec.md` для шаблона перебора). Команда на хосте:
+`confp --oneshot; clickhouse-client --user backup-admin --password $(grep -oP 'password:\s*\K[^ ]+' /etc/rscheck/checkclickhouse.conf) --query 'SYSTEM RELOAD CONFIG'`.
+Шаблон хоста: `1.shard${shardN}-db.<cluster>-${project}-ch.$cloud.one-infra.ru`
+(`shardN=1..22`).
 
 ## Part intersects previous part
 

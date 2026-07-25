@@ -3,30 +3,14 @@
 ## Скачать логи со всех хостов кластера
 
 Пользователь даёт список хостов вида `1.db.<cluster>-cfs-redis.<dc>.one-infra.ru`.
-Для каждого:
-
-```bash
-CLUSTER_HOSTS=(
-  1.db.<cluster>-cfs-redis.ec.one-infra.ru
-  1.db.<cluster>-cfs-redis.kc.one-infra.ru
-  1.db.<cluster>-cfs-redis.pc.one-infra.ru
-)
-
-mkdir -p ~/redis_logs
-for H in "${CLUSTER_HOSTS[@]}"; do
-  D=~/redis_logs/$H
-  mkdir -p "$D"
-  mcc scp "$H:/mnt/logs/dbms/" "$D/" 2>&1 | head -3
-done
-```
+Скачать `/mnt/logs/dbms/` со всех хостов — через скилл
+[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc scp`, см. `commands/scp.md`
+для шаблона массового скачивания).
 
 Скачаются: `redis.log`, `redis-sentinel.log`, `redis-server-systemd-service.log`.
 
 ⚠️ Путь именно `/mnt/logs/dbms` (с 's' в `logs`). Опечатка `/mnt/log/dbms` даёт
-`failed to read downloaded archive header: EOF`.
-
-⚠️ `mcc scp` иногда падает с `SSL Handshake is not finished` — просто повторить
-команду для проблемного хоста через 1-2 секунды.
+ошибку скачивания.
 
 ## Что искать в redis-sentinel.log
 
@@ -97,12 +81,13 @@ grep "$TARGET_HOST" "$LOG" | grep "+sdown" | tail -10
 ## Проверка после SENTINEL RESET
 
 После выполнения `SENTINEL RESET <master>` на всех хостах — подождать 30-60 сек и
-проверить, что спам `Failed to resolve hostname` прекратился:
+проверить, что спам `Failed to resolve hostname` прекратился: ещё раз скачать
+`/mnt/logs/dbms/redis-sentinel.log` со всех хостов (через скилл
+[`mcc-host-access`](../../mcc-host-access/SKILL.md), `mcc scp`) и проверить:
 
 ```bash
 for H in "${CLUSTER_HOSTS[@]}"; do
   echo "=== $H ==="
-  mcc scp "$H:/mnt/logs/dbms/redis-sentinel.log" ~/redis_logs/$H/ 2>&1 | head -2
   tail -20 ~/redis_logs/$H/redis-sentinel.log | grep "Failed to resolve hostname" | tail -3
 done
 ```

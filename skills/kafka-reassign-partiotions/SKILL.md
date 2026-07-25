@@ -118,12 +118,17 @@
 
 ## Инструменты и нюансы выполнения
 
-- **mcc ssh + expect** — `mcc ssh` интерактивный, команды шлются через `expect` после промпта `/# `. Шаблоны — `kafka-host-inspector`.
-- **ANSI-коды в выводе** — `grep` подсвечивает совпадения цветом, что ломает парсинг. Фильтровать через `sed -E 's/\x1b\[[0-9;]*[mK]//g'`.
-- **mcc scp нестабилен** — «Cannot open tunnel... SSL Handshake is not finished». Альтернатива — base64 через ssh:
+Доступ к хостам и выполнение команд / копирование файлов — через скилл
+[`mcc-host-access`](../mcc-host-access/SKILL.md).
+Специфика reassign:
+
+- **ANSI-коды в выводе** — `grep` подсвечивает совпадения цветом, что ломает парсинг.
+  Фильтровать через `sed -E 's/\x1b\[[0-9;]*[mK]//g'`.
+- **Загрузка reassign.json на хост** при нестабильном `scp` — через base64
+  поверх `ssh + expect` (шаблон expect-сессии — см. `mcc-host-access`):
   ```bash
   cat /tmp/reassign.json | base64 | tr -d '\n' > /tmp/reassign.json.b64
-  # затем через expect:
+  # затем в expect-сессии:
   send "echo '<base64-строка>' | base64 -d > /tmp/reassign.json\r"
   ```
 - **JMX-метрика размера лога** — `kafka_log_log_size{partition="N",topic="X",}` на порту 8080 broker-хоста. Используется для оценки дисковой нагрузки партиции.

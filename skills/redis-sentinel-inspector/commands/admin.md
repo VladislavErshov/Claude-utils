@@ -136,16 +136,11 @@ Default-клиент позволяет подключиться к Redis без
 3. Запустить update через UI с минимальным изменением параметров (например +1 байт в
    `maxMemory`). Либо запускать таски оператора на каждый шард (если кластер
    шардированный).
-4. Альтернативный вариант — запустить рестарт скриптом:
-   ```bash
-   for ((i=1; i <= 3; i++)); do
-     for dc in hc kc pc; do
-       local HOST="1.shard${i}-db.mdb-health-mdb-redis.${dc}.one-infra.ru"
-       echo "host $HOST"
-       mcc sshexec "$HOST" "confp --oneshot; systemctl restart redis" --namespace infra
-     done
-   done
-   ```
+4. Альтернативный вариант — запустить рестарт скриптом: перебрать хосты × ДЦ через
+   скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+   `commands/sshexec.md` для шаблона перебора). Команда на хосте:
+   `confp --oneshot; systemctl restart redis`. Шаблон хоста:
+   `1.shard${i}-db.mdb-health-mdb-redis.${dc}.one-infra.ru` (`i=1..3`, `dc=hc,kc,pc`).
 5. Если требуется скорость и параметр может быть применён без рестарта инстанса:
    - Добавить его в PMS (`zen.redis.conf`).
    - Зайти на все инстансы, сделать `confp --oneshot`.

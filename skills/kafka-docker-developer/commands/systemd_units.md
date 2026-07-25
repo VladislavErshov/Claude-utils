@@ -15,7 +15,8 @@
 
 Systemd-юниты требуют `systemctl daemon-reload` после замены. Hot-reload на хосте:
 
-1. `mcc scp` файла в `/etc/systemd/system/` (dest = директория).
+1. Через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc scp`) скопировать
+   файл в `/etc/systemd/system/` (dest = директория).
 2. `systemctl daemon-reload`.
 3. `systemctl restart <unit>`.
 

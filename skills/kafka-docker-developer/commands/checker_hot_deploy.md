@@ -43,48 +43,33 @@ $EDITOR ubuntu20-kafka-base/rootfs/etc/host_checker/checks/check_kafka.py
 
 ## Шаг 2: залить на хост
 
-⚠️ **`mcc scp` — dest всегда директория.** Если указать полный путь с именем файла, mcc создаст
-на хосте **директорию** с именем `check_kafka.py` и положит файл внутрь. После этого импорт
-модуля в rscheck ломается, а `grep` падает с `Is a directory`.
+Доступ к хосту — через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md).
+
+Специфика hot-deploy чекера: dest **всегда директория** (`/etc/host_checker/checks/`),
+а перед заливкой нужно удалить старый файл (и возможную случайную директорию, если ранее
+scp создал её с именем файла).
 
 ```bash
 HOST=1.broker.test-<cluster>-mdbdev-kafka.dc.one-infra.ru
 FILE=ubuntu20-kafka-base/rootfs/etc/host_checker/checks/check_kafka.py
 
-# 2a. Удалить старый файл (и случайную директорию, если ранее scp создал её)
-expect -c '
-set timeout 30
-spawn mcc '"$HOST"'
-expect "/# "
-send "rm -rf /etc/host_checker/checks/check_kafka.py && echo ===DONE===\r"
-expect "===DONE==="
-send "exit\r"
-expect eof
-' 2>&1 | tail -5
+# 2a. Удалить старый файл (и случайную директорию, если ранее scp создал её).
+#     Зайти на хост через скилл mcc-host-access (команда ssh) и выполнить:
+rm -rf /etc/host_checker/checks/check_kafka.py
 
-# 2b. Скопировать (dest = директория!)
-mcc scp "$FILE" "$HOST:/etc/host_checker/checks/"
+# 2b. Скопировать через скилл mcc-host-access (команда scp, dest = директория!):
+#     scp "$FILE" "$HOST:/etc/host_checker/checks/"
 ```
-
-Если `scp` падает с `SSL Handshake is not finished` — повторить через 1-2 сек.
-Если `NamespaceMissingException` — `mcc scp -n infra ...`.
 
 ## Шаг 3: верификация + рестарт rscheck
 
+Зайти на хост через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+и выполнить:
+
 ```bash
-expect -c '
-set timeout 30
-spawn mcc '"$HOST"'
-expect "/# "
-send "ls -la /etc/host_checker/checks/check_kafka.py; echo ===1===\r"
-expect "===1==="
-send "grep -c ROLE_DISPLAY /etc/host_checker/checks/check_kafka.py; echo ===2===\r"
-expect "===2==="
-send "systemctl restart rscheck@kafka && systemctl is-active rscheck@kafka; echo ===3===\r"
-expect "===3==="
-send "exit\r"
-expect eof
-' 2>&1 | tail -15
+ls -la /etc/host_checker/checks/check_kafka.py
+grep -c ROLE_DISPLAY /etc/host_checker/checks/check_kafka.py
+systemctl restart rscheck@kafka && systemctl is-active rscheck@kafka
 ```
 
 Что проверяем:
@@ -99,7 +84,7 @@ expect eof
 хоста в mdb-data.
 
 Если роль не обновилась:
-- Проверить лог rscheck: `journalctl -u rscheck@kafka -n 50 --no-pager` через `expect + mcc ssh`.
+- Проверить лог rscheck на хосте: `journalctl -u rscheck@kafka -n 50 --no-pager`.
 - Проверить что `BackstageClient.send_info()` не падает — может быть проблема с auth/URL.
 - Backstage кэширует данные; подождать ещё 30 сек.
 
@@ -116,14 +101,10 @@ git commit -m "<MDBDEV-XXXX> <краткое описание>"
 
 ## Частые грабли
 
-- **`mcc scp` с путём-файлом создаёт директорию** — см. выше. Симптом: `grep` падает с
+- **`scp` с путём-файлом создаёт директорию** — см. выше. Симптом: `grep` падает с
   `Is a directory`, rscheck в логе: `ModuleNotFoundError` / `ImportError`.
 - **Файл не перезаписывается, но scp выходит с 0** — у scp нет ошибки, но размер/timestamp на
   хосте не меняется. Решение: `rm -f` + scp (шаг 2a).
-- **`SSL Handshake is not finished`** при scp/ssh — повторить через 1-2 сек, tunnel ещё
-  поднимается.
-- **`mcc ssh <host> <cmd>`** — `too many positional arguments`. Только интерактив. Команды —
-  через `expect` (шаг 3).
 - **`rscheck@kafka` перезапустился, но роль в UI не обновилась** — backstage кэширует данные;
   подождать 10-30 сек, обновить страницу mdb-data.
 - **MBean `kafka.server:type=raft-metrics/current-state` отсутствует** — удалён в Kafka 4.x.
@@ -138,7 +119,7 @@ git commit -m "<MDBDEV-XXXX> <краткое описание>"
 
 ## Связанные команды
 
-- `/kafka-cluster-inspector` `commands/run_commands.md` — детали `mcc ssh` + `expect`, сложные
-  команды с кавычками, heredoc-трюк.
+- `/kafka-cluster-inspector` `commands/run_commands.md` — выполнение команд на хостах через
+  скилл `mcc-host-access` (`mcc ssh`), сложные команды с кавычками, heredoc-трюк.
 - `/kafka-config-inspector` — сверка что PMS-API значения физически применились в
   `/opt/kafka/config/` (не для чекеров, но полезно после передеплоя образа).

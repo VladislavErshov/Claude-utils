@@ -1,12 +1,15 @@
 ---
 name: prod-log-investigator
-description: Используй этот скилл, когда нужно скачать и проанализировать прод-логи mdb-data или mdb-processing для разбора ошибок (502/500/NPE и т.п.). Скачивает логи со всех прод-ДЦ через mcc scp, фильтрует шум, ищет stacktrace-ы.
+description: Используй этот скилл, когда нужно скачать и проанализировать прод-логи mdb-data или mdb-processing для разбора ошибок (502/500/NPE и т.п.). Скачивает логи со всех прод-ДЦ через скилл mcc-host-access, фильтрует шум, ищет stacktrace-ы.
 allowed-tools: [bash, read_file, write_file, edit_file]
 ---
 
 # Скилл для сбора и анализа прод-логов MDB Data и MDB Processing
 
 Ты работаешь в режиме расследования инцидентов: пользователь дал ошибку (обычно 502/500 из UI), нужно найти её причину в прод-логах.
+
+> Доступ к хостам и копирование файлов — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+> Ниже — только специфика прод-логов mdb-data / mdb-processing.
 
 ## Прод-ДЦ
 
@@ -32,15 +35,12 @@ allowed-tools: [bash, read_file, write_file, edit_file]
 
 Service name на всех — `cdb.cloud-ops.batch` (queue `cloud-ops.batch`), URL API — `https://cdb.cloud-ops.clouds.vkcl.ru/...`.
 
-⚠️ С бекстейджа/локальной машины DNS `cdb.cloud-ops.clouds.vkcl.ru` может не резолвиться для ДЦ namespace `vkontakte` → `dial tcp: i/o timeout`. Если нужен этот namespace — запускать `mcc` с хоста, у которого есть доступ, либо через UI one-cloud-ops.
+⚠️ С бекстейджа/локальной машины DNS `cdb.cloud-ops.clouds.vkcl.ru` может не резолвиться для ДЦ namespace `vkontakte` → `dial tcp: i/o timeout`. Если нужен этот namespace — запускать проверку с хоста, у которого есть доступ, либо через UI one-cloud-ops.
 
 ### Проверка регистрации кластера
 
-```bash
-# Проверить, управляется ли кластер one-cloud-ops в конкретном ДЦ+namespace:
-mcc --local -n <namespace> -c <dc> ops <cluster-id-or-name>
-# cluster-id — UUID, cluster-name — например test-43version-4-mdbdev-kafka
-```
+Проверка делается через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (команда `ops` с флагами `-n <namespace> -c <dc>`):
+- `cluster-id` — UUID, `cluster-name` — например `test-43version-4-mdbdev-kafka`.
 
 Маркеры ответа:
 - `EntityNotFoundException: Partition <cluster> is not managed by both one-cloud-ops and ops-temporal` — кластер не зарегистрирован в этом (ДЦ, namespace).
@@ -53,7 +53,7 @@ mcc --local -n <namespace> -c <dc> ops <cluster-id-or-name>
 
 ### Если sync не идёт
 
-1. Проверить регистрацию через `mcc ops` по всем комбинациям namespace × ДЦ (см. выше).
+1. Проверить регистрацию через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (команда `ops`) по всем комбинациям namespace × ДЦ (см. выше).
 2. Если нигде не зарегистрирован — проблема не в коде one-cloud-ops, деплой новой версии не поможет. Кластер нужно засабмитить (manifest типа kafka в нужный namespace) или уточнить namespace у команды оператора.
 3. Если зарегистрирован — смотреть логи one-cloud-ops и sync-таски (`KafkaSyncMdbStateTask`, task name="sync", critical=true) на хосте оператора.
 
@@ -68,29 +68,10 @@ mcc --local -n <namespace> -c <dc> ops <cluster-id-or-name>
 
 ## Скачивание
 
-```bash
-# mdb-data
-mkdir -p ~/copied_logs_data && cd ~/copied_logs_data
-for DC in hc pc uc kc; do
-  for NUM in 1 2; do
-    HOST="${NUM}.mdb-data.mdb-data.${DC}.one-infra.ru"
-    mcc scp "$HOST:/mnt/logs/mdb-data.err.log" . 2>/dev/null
-    mv mdb-data.err.log "${HOST}.log" 2>/dev/null
-  done
-done
+Скачать логи mdb-data (`/mnt/logs/mdb-data.err.log` с хостов `{1,2}.mdb-data.mdb-data.{hc,pc,uc,kc}.one-infra.ru`) и mdb-processing (директорию `/one/logs/` с хостов `{1,2}.mdb-processing.java.{hc,pc,uc,kc}.one-infra.ru`) — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (команда `scp`, см. `commands/scp.md` для шаблона массового скачивания по списку хостов × ДЦ).
 
-# mdb-processing (качает всю директорию /one/logs/)
-mkdir -p ~/copied_logs_processing && cd ~/copied_logs_processing
-for DC in hc pc uc kc; do
-  for NUM in 1 2; do
-    HOST="${NUM}.mdb-processing.java.${DC}.one-infra.ru"
-    mkdir -p "$HOST"
-    mcc scp "$HOST:/one/logs/" "$HOST/" 2>/dev/null
-  done
-done
-```
-
-**Только `mcc scp`** — `mcc ssh` не принимает аргументы с пробелами/пайпами, не используй его.
+**Только `scp`** — `ssh` не принимает аргументы с пробелами/пайпами, не используй его.
+Подробнее про доступ к хостам и грабли — скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
 
 ## Анализ mdb-data логов
 

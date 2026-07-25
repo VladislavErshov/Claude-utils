@@ -1,6 +1,6 @@
 ---
 name: redis-sentinel-inspector
-description: Инспекция и дежурство по Redis Sentinel-кластерам (mdb-data, cfs-redis) — known-peers, забытые хосты, спам "Failed to resolve hostname" в redis-sentinel.log, SENTINEL RESET, вечная переливка реплик, закончился диск, битый AOF, смена мастера, ACL-пользователи, миграция 7→8. Список хостов даёт пользователь (формат 1.db.<cluster>-cfs-redis.<dc>.one-infra.ru). Конфиги и логи читаются через mcc scp/sshexec. Используй когда нужно проверить состояние Sentinel-кластера, найти зомби-хост, остановить переливку, починить битый AOF, поменять ACL, провести failover. Для шардированного Redis Cluster — см. скилл `redis-cluster-inspector`.
+description: Инспекция и дежурство по Redis Sentinel-кластерами (mdb-data, cfs-redis) — known-peers, забытые хосты, спам "Failed to resolve hostname" в redis-sentinel.log, SENTINEL RESET, вечная переливка реплик, закончился диск, битый AOF, смена мастера, ACL-пользователи, миграция 7→8. Список хостов даёт пользователь (формат 1.db.<cluster>-cfs-redis.<dc>.one-infra.ru). Конфиги и логи читаются через скилл `mcc-host-access` (`mcc scp`/`mcc sshexec`). Используй когда нужно проверить состояние Sentinel-кластера, найти зомби-хост, остановить переливку, починить битый AOF, поменять ACL, провести failover. Для шардированного Redis Cluster — см. скилл `redis-cluster-inspector`.
 allowed-tools: [bash, read_file, write_file, edit_file]
 ---
 
@@ -121,8 +121,9 @@ sentinel-хосте кластера. Команда сбрасывает known-
 `Replication buffer limit has been reached (268435456 bytes), stopped buffering
 replication stream. Further accumulation may occur on master side.`
 
-**Быстрое решение**: поднять сеть на OUT у мастера, на IN у реплики, зайти через
-`mcc ssh` на мастер и через `redis-cli` увеличить параметры репликации:
+**Быстрое решение**: поднять сеть на OUT у мастера, на IN у реплики, зайти на мастер
+через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (`mcc ssh`) и через
+`redis-cli` увеличить параметры репликации:
 
 ```
 config set repl-backlog-size 2GB            # было 1mb — увеличить до 10-20% от maxmemory
@@ -165,7 +166,8 @@ config set client-output-buffer-limit "replica 2GB 1GB 180"
 **Решение**: если это реплика и мастер в порядке — проще почистить диск, реплика
 синхронизируется заново. Если это единственный мастер:
 
-1. Сделать копии повреждённых файлов (через `mcc scp`) — всю папку `/mnt/appendonlydir`.
+1. Сделать копии повреждённых файлов (через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md),
+   команда `scp`) — всю папку `/mnt/appendonlydir`.
 2. `systemctl stop redis`.
 3. `redis-check-aof /mnt/redis/appendonlydir/appendonly.aof.manifest` — найти повреждённый файл.
 4. `redis-check-aof --fix /mnt/redis/appendonlydir/appendonly.aof.<номер>.incr.aof`.
@@ -238,7 +240,8 @@ Default-пользователя выдаём, когда клиент/прил�
      (пример: `zkv/mdb/mdbdev/redis/redis-cluster-nd1-mdbdev-redis.mdbdev.db.production.mdb.prod/users/` — у старых кластеров путь может отличаться, смотреть в админке)
    - `vault_password_key`: `password`
    - `user_settings`: `{"username": "default"}`
-3. (Опционально) Зайти на хост через `mcc ssh`, `redis-cli`, `auth master <password>`,
+3. (Опционально) Зайти на хост через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md),
+   `redis-cli`, `auth master <password>`,
    `acl list` — убедиться, что у `default` стоит то, что в vault в `permission`.
 
 ### ACL: выдать права пользователю для диагностики
@@ -276,16 +279,11 @@ Default-пользователя выдаём, когда клиент/прил�
    `template_type = redis_cluster_config` — добавить в конец сразу с нужным значением.
 3. Запустить update через UI с минимальным изменением (например +1 байт в `maxMemory`),
    либо таски оператора на каждый шард (если кластер шардированный).
-4. Альтернатива — рестарт скриптом:
-   ```bash
-   for ((i=1; i <= 3; i++)); do
-     for dc in hc kc pc; do
-       local HOST="1.shard${i}-db.mdb-health-mdb-redis.${dc}.one-infra.ru"
-       echo "host $HOST"
-       mcc sshexec "$HOST" "confp --oneshot; systemctl restart redis" --namespace infra
-     done
-   done
-   ```
+4. Альтернатива — рестарт скриптом: перебрать хосты × ДЦ через скилл
+   [`mcc-host-access`](../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+   `commands/sshexec.md` для шаблона перебора). Команда на хосте:
+   `confp --oneshot; systemctl restart redis`. Шаблон хоста:
+   `1.shard${i}-db.mdb-health-mdb-redis.${dc}.one-infra.ru` (`i=1..3`, `dc=hc,kc,pc`).
 5. Если параметр применяется без рестарта — добавить в PMS (`zen.redis.conf`), на всех
    инстансах `confp --oneshot`, через `redis-cli`:
    ```
@@ -348,14 +346,11 @@ save 1 43200     # изменение хотя бы одной записи за
 
 1. Проверить, что конфигурации совместимы: RAM (включая запас на фрагментацию, буферы,
    CoW), место на диске под дамп.
-2. Получить бэкап на каждом мастере кластера:
-   ```bash
-   mcc scp <source_master_host>:/mnt/redis/dump.rdb ./
-   ```
-3. Скопировать rdb на соответствующие мастера таргетного кластера:
-   ```bash
-   mcc scp ./dump.rdb <target_master_host>:/mnt/redis
-   ```
+2. Получить бэкап на каждом мастере кластера — скачать `/mnt/redis/dump.rdb` через
+   скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (`mcc scp`, см.
+   `commands/scp.md` для шаблона массового скачивания).
+3. Скопировать rdb на соответствующие мастера таргетного кластера — через скилл
+   [`mcc-host-access`](../mcc-host-access/SKILL.md) (`mcc scp`, dest = `/mnt/redis`).
 4. `systemctl restart redis` — при рестарте подтянется `/mnt/redis/dump.rdb`.
 
 ### Провести учения по отключению инстанса Redis
@@ -390,19 +385,12 @@ save 1 43200     # изменение хотя бы одной записи за
 | RDB dump | `/mnt/redis/dump.rdb` |
 
 ⚠️ Путь именно `/mnt/logs/dbms` (с 's' в `logs`), не `/mnt/log/dbms`. Опечатка приводит
-к `failed to read downloaded archive header: EOF` при scp.
+к ошибке скачивания логов.
 
-## mcc scp особенности
+## Работа с хостами
 
-- **Скачивание директории**: `mcc scp "<host>:/etc/redis/" "<local_dir>/"` — работает,
-  локальная директория назначения должна существовать (`mkdir -p` заранее).
-- **Скачивание одиночного файла**: `mcc scp "<host>:/path/file" "<local_dir>/"` —
-  локальный путь должен быть **директорией**, не путём к файлу. Иначе ошибка
-  `failed to open destination directory`.
-- **SSL Handshake is not finished** — туннель к minion-у не успел подняться. Просто
-  повторить команду (бывает через 1-2 ретрая).
-- **EOF на tar header** — файл не существует по указанному пути, либо опечатка в пути
-  (например `/mnt/log/dbms` вместо `/mnt/logs/dbms`).
+Подключение к хосту, выполнение команд и скачивание файлов — через скилл
+[`mcc-host-access`](../mcc-host-access/SKILL.md). Специфика Redis — ниже по тексту скилла.
 
 ## Структура скилла
 

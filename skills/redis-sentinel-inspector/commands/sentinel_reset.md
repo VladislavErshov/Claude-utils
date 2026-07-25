@@ -25,17 +25,10 @@
 хостах кластера одинаковый по master-name и sentinel-pass (отличаются только
 `sentinel announce-ip` и иногда `quorum`).
 
-```bash
-HOST=1.db.<cluster>-cfs-redis.<dc>.one-infra.ru
-mkdir -p ~/redis_conf
-mcc scp "$HOST:/etc/redis/" ~/redis_conf/ 2>&1 | head -3
-```
-
-⚠️ Локальный путь назначения **должен быть директорией**, не путём к файлу.
-`mcc scp "$HOST:/etc/redis/sentinel.conf" ~/file.conf` — НЕ сработает с ошибкой
-`failed to open destination directory`. Скачивать всю директорию `/etc/redis/`.
-
-⚠️ `mcc scp` иногда падает с `SSL Handshake is not finished` — просто повторить.
+Скачать `/etc/redis/` (целиком директорию) с хоста — через скилл
+[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc scp`, см.
+`commands/scp.md` для шаблона). Шаблон хоста:
+`1.db.<cluster>-cfs-redis.<dc>.one-infra.ru`.
 
 ## Вытащить master-name и sentinel-pass
 
@@ -68,8 +61,8 @@ redis-cli -p 26379 --user master -a 'B49QFI2UA1xA0QDN9Y8iAYeHGXFdfE' SENTINEL RE
 ## Выполнить на ВСЕХ хостах кластера
 
 Команду нужно выполнить на **каждом** оставшемся sentinel-хосте кластера.
-Пользователь заходит на хост (через `mcc ssh <host>` или иным способом) и
-запускает `redis-cli` локально на хосте.
+Пользователь заходит на хост (через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+или иным способом) и запускает `redis-cli` локально на хосте.
 
 Ожидаемый ответ: `(integer) 1` — sentinel сбросил state для указанного мастера.
 

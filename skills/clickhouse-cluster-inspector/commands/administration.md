@@ -18,10 +18,10 @@
 1. Найти настройку в PMS (возможно уже есть — поменять значение для кластера) или
    смотреть в документации CH, куда её ставить.
 2. Обновить значение в PMS.
-3. Релоад конфигов — кнопка в UI mdb-data на вкладке «хосты», либо вручную:
-   ```bash
-   mcc sshexec <host> --namespace infra "confp --oneshot; clickhouse-client --user backup-admin --password \$(grep -oP 'password:\s*\K[^ ]+' /etc/rscheck/checkclickhouse.conf) --query 'SYSTEM RELOAD CONFIG'"
-   ```
+3. Релоад конфигов — кнопка в UI mdb-data на вкладке «хосты», либо вручную через
+   скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`).
+   Команда на хосте:
+   `confp --oneshot; clickhouse-client --user backup-admin --password $(grep -oP 'password:\s*\K[^ ]+' /etc/rscheck/checkclickhouse.conf) --query 'SYSTEM RELOAD CONFIG'`
    Либо `python3 /usr/scripts/reload-config.py` на хосте.
 
 ## Удаление реплики
@@ -117,17 +117,11 @@ SYSTEM RELOAD DICTIONARY my-dictionary;
 ## Добавить словари геобаз
 
 1. Получить от пользователей файлы словарей.
-2. Через `mcc scp` перенести на хосты:
-```bash
-mcc scp /temp/regions_hierarchy.txt <host>:/var/lib/clickhouse/1/regions --namespace infra
-mcc scp /temp/regions_names_ru.txt <host>:/var/lib/clickhouse/1/regions --namespace infra
-```
-   Важно: имена файлов — строго `regions_hierarchy.txt` и `regions_names_<ru/en/...>.txt`.
-   Путь — строго `/var/lib/clickhouse/1/regions` (на эту папку настроен rsync на случай потери диска).
-
-⚠️ **Особенность `mcc scp` при загрузке файла на хост**: путь назначения — **только директория**.
-Если указать полный путь с именем файла, mcc создаст на хосте директорию с этим именем и
-положит файл внутрь. Правильно: `mcc scp local.txt <host>:/var/lib/clickhouse/1/regions/`.
+2. Перенести на хосты через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+   (команда `scp`, см. `commands/scp.md`). Файлы — `regions_hierarchy.txt` и
+   `regions_names_<ru/en/...>.txt`, путь назначения — `/var/lib/clickhouse/1/regions`
+   (на эту папку настроен rsync на случай потери диска). Загружать в директорию, не
+   по пути-файлу (см. грабли `scp` в `mcc-host-access`).
 
 3. В PMS `zen.clickhouse.additional_config.xml`:
 ```xml

@@ -1,27 +1,19 @@
 # Диагностика MDB PostgreSQL хостов
 
+Доступ к хостам — через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md).
+Здесь — только специфика PostgreSQL.
+
 ## Чеклист первичной разведки (read-only)
 
-При поступлении "хост лежит" — выполнить одним заходом через expect:
+При поступлении "хост лежит" — зайти на хост через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+и выполнить команды:
 
 ```bash
-expect -c '
-set timeout 60
-spawn mcc --local ssh <host>
-expect "/# "
-send "uptime; echo ===UPTIME===\r"
-expect "===UPTIME==="
-send "free -h; echo ===MEM===\r"
-expect "===MEM==="
-send "df -h | grep -E \"^/dev|Filesystem\"; echo ===DISK===\r"
-expect "===DISK==="
-send "systemctl status stolon-keeper stolon-proxy stolon-sentinel etcd pgbouncer --no-pager -l 2>&1 | grep -E \"●|Active:|Main PID:\" | head -40; echo ===SVC===\r"
-expect "===SVC==="
-send "ls -la /mnt/logs/dbms/ 2>&1 | head -30; echo ===LOGS===\r"
-expect "===LOGS==="
-send "exit\r"
-expect eof
-' 2>&1 | tail -150
+uptime
+free -h
+df -h | grep -E "^/dev|Filesystem"
+systemctl status stolon-keeper stolon-proxy stolon-sentinel etcd pgbouncer --no-pager -l 2>&1 | grep -E "●|Active:|Main PID:" | head -40
+ls -la /mnt/logs/dbms/ 2>&1 | head -30
 ```
 
 Что смотреть:
