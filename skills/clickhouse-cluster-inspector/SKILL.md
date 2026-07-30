@@ -96,6 +96,7 @@ Possibly it's overloaded, doesn't see leader or stale` — Raft-подсисте
 - `commands/queries.md` — полезные SQL-запросы для диагностики (system.replicas, system.parts, system.errors, system.processes, system.zookeeper_connection).
 - `history/` — разборы реальных инцидентов (формат `incident_<YYYY-MM>_<краткое_описание>.md`). История для будущих разборов — что видели, чем лечили, что сработало.
   - `incident_2026_07_keeper_split.md` — sellgate-media-infra-ch: Keeper split-brain после остановки одного кипера в облаке, зависший Raft-state на pc, фикс через дроп диска + рестарт.
+  - `incident_2026_07_mysql_port_9004.md` — uchiru-bi-dwh (MDBSUP-3886): включение MySQL emulation port 9004. Три шага: PMS `<mysql_port>` + манифест сервиса `'9004': 'lan,tcp'` + `confp --oneshot && systemctl restart mdb-clickhouse-server` (не `RELOAD CONFIG`).
 
 ## Известные проблемы (кратко)
 

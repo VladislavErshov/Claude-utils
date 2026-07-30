@@ -1,6 +1,6 @@
 ---
 name: kafka-config-inspector
-description: Инспекция конфиг-файлов Kafka-хостов — сверка PMS-переменных (pms.cloud.vk.team API) с отрендеренными конфиг-файлами на хостах (broker.properties, controller.properties, cruisecontrol.properties, capacity.json, sysconfig, jaas.conf, log4j.properties, tools-log4j.properties). Список хостов берётся из БД pg_backstage_plugin_mdb, файлы читаются через скилл mcc-host-access. Используй когда нужно проверить, что PMS-API значения физически применились в /opt/kafka/config/ после modify-флоу. Скилл проверяет только property-файлы — он НЕ проверяет здоровье кластера (ISR, replication, partition balance и т.п.).
+description: Инспекция конфиг-файлов Kafka-хостов — сверка PMS-переменных (pms.cloud.vk.team API) с отрендеренными конфиг-файлами на хостах (broker.properties, controller.properties, cruisecontrol.properties, capacity.json, sysconfig, jaas.conf, log4j.properties, tools-log4j.properties). Список хостов берётся из БД pg_backstage_plugin_mdb, файлы читаются через скилл mcc-host-access. Используй когда нужно проверить, что PMS-API значения физически применились в /opt/kafka/config/ после modify-флоу. Скилл проверяет только property-файлы — он НЕ проверяет здоровье кластера (ISR, replication, partition balance и т.п.). Поддерживает два namespace: infra (one-infra.ru) и dzen (idzn.ru) — для дзена передавай `ns=dzen` в pms-read.sh.
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
@@ -61,20 +61,57 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -tA -c \
 
 ## Шаг 2: PMS-API значения
 
+### Namespace: `infra` vs `dzen`
+
+PMS-API (`pms.cloud.vk.team`) хранит свойства в пространствах имён (namespace).
+Скрипт `pms-read.sh` по умолчанию использует `namespace=infra, application=mdb` —
+это общий контур MDB.
+
+**Для дзен-кластеров** (FQDN оканчивается на `.idzn.ru`, например
+`12.broker.events-front-kafka.dc.idzn.ru`) нужно явно передавать `namespace=dzen`:
+без него PMS вернёт пустые значения / `<NOT_SET>` для всех переменных, хотя они
+есть в `dzen`.
+
+`pms-read.sh` принимает namespace третьим аргументом, application — четвёртым:
+
+```bash
+# Дзен-кластер (домен .idzn.ru):
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh events-front-kafka.clouds "" dzen mdb
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh 12.broker.events-front-kafka.dc.idzn.ru kafka.sysconfig dzen mdb
+
+# Общий контур (one-infra.ru) — namespace по умолчанию infra:
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh 1.broker.test-mdbdev-kafka.dc.one-infra.ru
+```
+
+Web-интерфейс PMS для проверки namespace хоста:
+- **Дзен**: `https://pms.cloud.vk.team/client/#/props-search?ns=dzen&a=mdb&h=<host>`
+- **Infra**: `https://pms.cloud.vk.team/client/#/props-search?ns=infra&a=mdb&h=<host>`
+
+Где `<host>` — PMS-ключ (`<queue>.clouds` для broker/cruise,
+`controller.<queue>.clouds` для controller). Параметр `a=mdb` — application,
+почти всегда `mdb`.
+
+Признаки дзен-кластера: FQDN `<N>.<role>.<queue>.<dc>.idzn.ru` (вместо
+`one-infra.ru`), PMS-ключ вида `<queue>.clouds` в namespace `dzen`. На хосте
+`cloud_hierarchy` в `/proc/1/environ` содержит `...front.db.production.mdb.prod`
+(типичный dzen-путь).
+
+### Запуск pms-read.sh
+
 Используй готовый скрипт `pms-read.sh` или напрямую:
 
 ```bash
 # Все известные Kafka PMS-переменные для хоста (19 штук, см. KNOWN_PROPERTIES в pms-read.sh):
-~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host>
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> "" <namespace> <application>
 
 # Одна переменная:
-~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.sysconfig
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.sysconfig <namespace> <application>
 
 # Несколько ключевых для modify-флоу:
-~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.soc.audit.enabled
-~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.broker.properties
-~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.controller.properties
-~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.cruisecontrol.properties
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.soc.audit.enabled <namespace> <application>
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.broker.properties <namespace> <application>
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.controller.properties <namespace> <application>
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.cruisecontrol.properties <namespace> <application>
 ```
 
 ⚠️ PMS-API — **read-only**. Менять PMS-файлы через `POST /api/conf/update.do` /

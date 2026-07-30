@@ -118,19 +118,35 @@
 
 ## Инструменты и нюансы выполнения
 
-Доступ к хостам и выполнение команд / копирование файлов — через скилл
-[`mcc-host-access`](../mcc-host-access/SKILL.md).
-Специфика reassign:
+> **Сначала читай [`/mcc-host-access`](../../mcc-host-access/SKILL.md)** — все паттерны
+> доступа к хостам (ssh/sshexec/scp/expect), грабли Tcl/expect, ANSI-коды, base64-загрузка
+> файлов собраны там. Ниже — только специфика reassign.
 
 - **ANSI-коды в выводе** — `grep` подсвечивает совпадения цветом, что ломает парсинг.
   Фильтровать через `sed -E 's/\x1b\[[0-9;]*[mK]//g'`.
-- **Загрузка reassign.json на хост** при нестабильном `scp` — через base64
-  поверх `ssh + expect` (шаблон expect-сессии — см. `mcc-host-access`):
-  ```bash
-  cat /tmp/reassign.json | base64 | tr -d '\n' > /tmp/reassign.json.b64
-  # затем в expect-сессии:
-  send "echo '<base64-строка>' | base64 -d > /tmp/reassign.json\r"
-  ```
+- **Загрузка reassign.json на хост** — `mcc scp` либо молча падает, либо создаёт
+  директорию вместо файла (см. `mcc-host-access/commands/scp.md`). Рабочие варианты:
+  - `mcc scp /tmp/reassign.json <host>:/tmp/` (dest **директория** с trailing `/`).
+  - При нестабильном scp — base64 поверх `mcc ssh + expect`. **Важно:** `mcc sshexec`
+    падает с `414 URI Too Long` уже на ~8KB base64 (команда уходит в URL). Поэтому
+    base64 нужно дробить на чанки по ~800 символов и собирать на хосте:
+    ```bash
+    python3 -c "
+    import base64
+    b64 = base64.b64encode(open('/tmp/reassign.json','rb').read()).decode()
+    chunks = [b64[i:i+800] for i in range(0, len(b64), 800)]
+    lines = ['set timeout 120', 'spawn mcc --local ssh <host>', 'expect \"/# \"',
+             'send \"rm -f /tmp/r.b64\\r\"', 'expect \"/# \"']
+    for i, c in enumerate(chunks):
+        op = '>' if i == 0 else '>>'
+        lines.append(f'send \"printf %s \\'{c}\\' {op} /tmp/r.b64\\r\"')
+        lines.append('expect \"/# \"')
+    lines += ['send \"base64 -d /tmp/r.b64 > /tmp/reassign.json && wc -c /tmp/reassign.json\\r\"',
+              'expect \"/# \"', 'send \"exit\\r\"', 'expect eof']
+    open('/tmp/upload.exp','w').write('\\n'.join(lines)+'\\n')
+    "
+    expect -f /tmp/upload.exp 2>&1 | tail -20
+    ```
 - **JMX-метрика размера лога** — `kafka_log_log_size{partition="N",topic="X",}` на порту 8080 broker-хоста. Используется для оценки дисковой нагрузки партиции.
 
 ## Структура скилла
@@ -141,6 +157,15 @@
 ## Что НЕ покрывает скилл
 
 - Cruise Control execution — см. `kafka-cluster-inspector`.
-- Изменение RF — это `kafka-configs.sh`, не reassign.
 - Добавление партиций — это `kafka-topics.sh --alter --partitions`.
 - Intrinsic Kafka CLI особенности (создание топиков, ACL) — см. `kafka-cluster-inspector` (`commands/administration.md`).
+
+## Что покрывает скилл, но неочевидно
+
+- **Снижение RF** (replication factor) — это reassign с укороченным списком `replicas`.
+  `kafka-configs.sh --alter --add-config replication.factor=...` **не работает** для
+  изменения RF — это static-конфигурация темы. Реальный путь: сгенерировать
+  reassign.json, где для каждой партиции указан новый (более короткий) список реплик,
+  и выполнить `--execute`. Важно сохранить preferred leader (первую реплику) и
+  кросс-DC redundancy (минимум 3 разных DC в новом списке). Пример — см.
+  `history/` (кампания по снижению RF с 5/4/7 до 3 на топике uvThinStatPure).
