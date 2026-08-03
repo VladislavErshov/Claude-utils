@@ -6482,7 +6482,7 @@
               "refId": "A"
             }
           ],
-          "title": "Active connections",
+          "title": "Active Connections",
           "type": "timeseries"
         },
         {
@@ -6584,7 +6584,7 @@
               "refId": "A"
             }
           ],
-          "title": "New connections rate",
+          "title": "New Connections Rate",
           "type": "timeseries"
         },
         {
@@ -6680,13 +6680,13 @@
                 "uid": "${vm_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by (mdb_kafka_cluster, instance, client_software_name) (kafka_server_socketservermetrics_connections{mdb_kafka_cluster=\"$cluster\",instance=~\"$instance\"}[$__rate_interval])",
-              "legendFormat": "{{ instance }} - {{client_software_name}}",
+              "expr": "sum by (mdb_kafka_cluster, instance, client_software_name, client_software_version) (kafka_server_socketservermetrics_connections{mdb_kafka_cluster=\"$cluster\",instance=~\"$instance\"})",
+              "legendFormat": "{{ instance }} - {{client_software_name}} {{client_software_version}}",
               "range": true,
               "refId": "A"
             }
           ],
-          "title": "Client connections",
+          "title": "Client Connections",
           "type": "timeseries"
         },
         {
@@ -6788,7 +6788,7 @@
               "refId": "A"
             }
           ],
-          "title": "Closed connections rate",
+          "title": "Closed Connections Rate",
           "type": "timeseries"
         },
         {
@@ -6890,7 +6890,7 @@
               "refId": "A"
             }
           ],
-          "title": "Killed connections",
+          "title": "Killed Connections",
           "type": "timeseries"
         }
       ],
