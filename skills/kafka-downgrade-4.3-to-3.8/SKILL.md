@@ -12,11 +12,13 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 переименовании 4.3-папок из `<name>.<uuid>-stray` обратно в каноничные с
 переписыванием `partition.metadata` новым topic_id.
 
-⚠️ **Бизнес-данные сохраняются НЕ ВСЕГДА.** Грабля #18 (обнуление `.log` при
-log recovery) сработала на кластере `test-downgrade3-mdbdev-kafka` для
-partition с большим числом records (172 сообщения потеряны), несмотря на
-сохранённые `.index`/`.timeindex` и удалённый `.snapshot`. На `test-downgrade2`
-для partition с малым числом records (69) — данные сохранились. Гарантий нет.
+⚠️ **Бизнес-данные сохраняются НЕ ВСЕГДА — есть проблема с разметкой timestamps.** После rename stray → canonical и старта брокеров Kafka 3.8 запускает log recovery. Без `.snapshot` (мы его удалили на Этапе 6) Kafka НЕ восстанавливает `largestRecordTimestamp` в `LogSegment` → считает = 0 (т.е. `1970-01-01 00:00:00 UTC`). При `retention.ms=604800000` (default 7 дней) retention видит сегменты с timestamp=0 как устаревшие → удаляет через ~30 сек после старта (грабля #18).
+
+**Два метода работы с этой проблемой:**
+
+- **Метод A (рекомендуется, основной) — удалить `.index`/`.timeindex`/`.snapshot`/`leader-epoch-checkpoint` на Этапе 6.** Тогда Kafka не может загрузить segment metadata из индексов и **вынуждена сделать полный log recovery**: построчно сканирует `.log` и восстанавливает `maxTimestampSoFar` из реальных records. После этого `largestRecordTimestamp` = реальный timestamp последней записи, retention не срабатывает, `retention.ms=-1` НЕ нужен. Минус — полный log recovery при старте (секунды/минуты для больших segment-ов). Подтверждено на `test-downgrade5` 2026-08-11.
+
+- **Метод B (ускоренный) — оставить `.index`/`.timeindex`, удалить только `.snapshot`, поставить `retention.ms=-1`.** Брокер стартует быстрее (без полного сканирования `.log`), но `largestRecordTimestamp` остаётся = 0 и retention отключается навсегда. Возвращать `retention.ms` обратно нельзя — retention снова удалит segments с timestamp=0. Применять только если Method A слишком медленный (прод-кластер с большими segment-ами). Если Method B применён реактивно (после срабатывания грабли #18) — восстановить `.log` с непострадавшего брокера через `recover_log.sh` (Этап 8).
 
 ## Когда применять
 
@@ -275,7 +277,7 @@ export KAFKA_HEAP_OPTS='-Xmx512m'
 
 `__consumer_offsets` создаём сразу вместе с бизнес-топиками. Kafka при `--create` создаст каноничные папки с пустым `.log` + новым topic_id, а 4.3-папки переименует в `<name>.<uuid>-stray` (т.к. `partition.metadata` содержит OLD topic_id).
 
-⚠️ **`retention.ms=-1` НЕ ставить по умолчанию.** Создавай топики с теми же конфигами, что были в 4.3 (из дампа `topics_configs.txt`). Грабля #18 (retention удаляет `.log` с `largestRecordTimestamp=0`) на свежих кластерах НЕ срабатывает — подтверждено на `test-downgrade5 run2`, `test-downgrade7`, `test-downgrade6`. Реактивный фикспс — см. Этап 9: если после старта брокеров `kafka-consumer-groups --describe` не показывает часть partitions ИЛИ `ls -la /mnt/data/log/<topic>-<N>/*.log` показывает 0 байт — поставить `retention.ms=-1` через `kafka-configs --alter --add-config retention.ms=-1` и пересоздать partition из бэкапа (если есть).
+⚠️ **`retention.ms=-1` НЕ ставить по умолчанию.** Создавай топики с теми же конфигами, что были в 4.3 (из дампа `topics_configs.txt`). Method A (удаление `.index`/`.timeindex`/`.snapshot` на Этапе 6) заставляет Kafka делать полный log recovery и восстанавливать `largestRecordTimestamp` из records — грабля #18 НЕ срабатывает, `retention.ms=-1` не нужен. Подтверждено на `test-downgrade5` 2026-08-11 (run3). Реактивный фикс — см. Этап 8: если после старта `kafka-consumer-groups --describe` не показывает часть partitions ИЛИ `ls -la /mnt/data/log/<topic>-<N>/*.log` показывает 0 байт — поставить `retention.ms=-1` через `kafka-configs --alter --add-config retention.ms=-1` и восстановить `.log` с непострадавшего брокера через `recover_log.sh`.
 
 ⚠️ `__consumer_offsets` имеет `cleanup.policy=compact` — retention по времени на нём не работает в любом случае.
 
@@ -309,48 +311,51 @@ export KAFKA_HEAP_OPTS='-Xmx512m'
 
 ### 6. Переименование stray → canonical, починить `partition.metadata`
 
-Главная операция процедуры. На каждом broker-хосте (после остановки брокеров):
+Главная операция процедуры. На каждом broker-хосте (после остановки брокеров).
+
+**Метод A (основной, без retention.ms=-1):** удаляем `.index`/`.timeindex`/`.snapshot`/`leader-epoch-checkpoint` — оставляем только `.log` + `partition.metadata`. Kafka при старте делает полный log recovery и восстанавливает `largestRecordTimestamp` из records (см. граблю #18).
 
 ```bash
 systemctl stop kafka-broker.service
 
 DATA_DIR=/mnt/data/log
-TIDS_FILE=/mnt/data/new_topics.txt  # с машины оператора
+TIDS_FILE=/mnt/data/new_topics.txt  # с машины оператора (формат: "topic tid" построчно)
 
-# Получить topic_id по имени топика из дампа
 get_tid() {
-    awk -v t="$1" '$2==t {for(i=1;i<=NF;i++) if($i=="TopicId:") print $(i+1)}' "$TIDS_FILE"
+    awk -v t="$1" '$1==t {print $2; exit}' "$TIDS_FILE"
 }
 
-# Обработать все stray-директории
+# 1. stray → canonical
 find "$DATA_DIR" -maxdepth 1 -type d -name '*-stray' | while read s; do
     b=$(basename "$s")
-    # Имя каноничной папки: убрать ".<uuid>-stray"
     c=$(echo "$b" | sed -E 's/\.[^.]+-stray$//')
-    # Имя топика: убрать "-<partition>"
-    topic=$(echo "$c" | sed -E 's/-[0-9]+$//')
-
-    TID=$(get_tid "$topic")
-    [ -z "$TID" ] && { echo "WARN: no tid for $topic, skip $s"; continue; }
-
     target="$DATA_DIR/$c"
-    # Удалить каноничную папку (с пустым .log от Kafka) и переместить stray на её место
     [ -d "$target" ] && rm -rf "$target"
     mv "$s" "$target"
-
-    # Переписать partition.metadata новым topic_id
-    printf "version: 0\ntopic_id: %s\n" "$TID" > "$target/partition.metadata"
-    # Удалить .snapshot (грабля #18) и чекпоинты
-    rm -f "$target"/*.snapshot "$target"/*-checkpoint "$target/leader-epoch-checkpoint"
-    chown kafka:kafka "$target/partition.metadata"
-
-    echo "OK: $c -> tid=$TID"
 done
+
+# 2. Для каждой topic-папки: переписать partition.metadata + удалить индексы
+for t in test test2 test3 __consumer_offsets; do
+    TID=$(get_tid "$t")
+    [ -z "$TID" ] && { echo "WARN: no tid for $t"; continue; }
+    for d in "$DATA_DIR"/${t}-*; do
+        [ -d "$d" ] || continue
+        # ВАРИАНТ 1 (основной): удалить индексы, оставить только .log + partition.metadata
+        rm -f "$d"/*.index "$d"/*.timeindex "$d"/*.snapshot "$d"/leader-epoch-checkpoint "$d"/*-checkpoint
+        printf "version: 0\ntopic_id: %s\n" "$TID" > "$d/partition.metadata"
+        chown kafka:kafka "$d/partition.metadata" 2>/dev/null || true
+    done
+    echo "FIXED: $t -> tid=$TID"
+done
+
+echo "stray remaining: $(find $DATA_DIR -maxdepth 1 -type d -name '*-stray' | wc -l)"
 ```
 
-⚠️ **`.log`, `.index`, `.timeindex` — НЕ ТРОГАТЬ.** Они лежат в stray от 4.3, после rename остаются на месте. Критично (грабля #18: с сохранёнными `.index`/`.timeindex` Kafka принимает `.log` как есть — но не всегда, см. граблю #18).
+⚠️ **Метод A (основной): удаляем `.index`/`.timeindex`/`.snapshot`/`leader-epoch-checkpoint` — оставляем только `.log` + `partition.metadata`.** Kafka при старте делает полный log recovery, сканирует `.log` и восстанавливает `largestRecordTimestamp` из реальных records. retention.ms=-1 НЕ нужен, retention можно оставить default. Минус — старт брокера дольше (секунды/минуты для больших segment-ов). Подтверждено на `test-downgrade5` 2026-08-11.
 
-⚠️ **`.snapshot` — удалить обязательно** (грабля #18: содержит producer state от 4.3, вызывает обнуление `.log`).
+⚠️ **Метод B (ускоренный, только если Method A слишком медленный): оставить `.index`/`.timeindex`, удалить только `.snapshot`.** В этом случае `largestRecordTimestamp` НЕ восстанавливается (= 0), и нужно ставить `retention.ms=-1` на все бизнес-топики (Этап 5), иначе retention удалит segments через 30 сек после старта. `retention.ms` обратно вернуть нельзя — см. граблю #18. В скрипте выше закомментировать строку `rm -f "$d"/*.index "$d"/*.timeindex ...` (оставить только `rm -f "$d"/*.snapshot "$d"/leader-epoch-checkpoint "$d"/*-checkpoint`).
+
+⚠️ **`.log` — НЕ ТРОГАТЬ в обоих методах.** Records от 4.3 остаются на месте, Kafka их прочитает при log recovery.
 
 ⚠️ Длинные скрипты через `mcc sshexec` отваливаются (грабля #5). Лучше залить скрипт файлом через `mcc scp` на каждый broker-хост, затем выполнить `bash /mnt/data/rename_stray.sh`.
 
@@ -359,7 +364,7 @@ done
 # Нет оставшихся stray
 find /mnt/data/log -maxdepth 1 -type d -name '*-stray'  # должен вернуть пусто
 
-# В каждой topic-папке есть .log + .index + .timeindex + partition.metadata, нет .snapshot
+# Метод A: в каждой topic-папке есть .log + partition.metadata, нет .index/.timeindex/.snapshot
 ls /mnt/data/log/test-0/
 cat /mnt/data/log/test-0/partition.metadata  # version: 0 + topic_id
 ```
@@ -583,7 +588,7 @@ vector.service                   loaded active running Vector service for produc
 
 ## Критические грабли (найдены в реальной процедуре)
 
-1. **Stray partitions — главная проблема.** Kafka помечает папку как `<name>.<uuid>-stray` если `partition.metadata` отсутствует или topic_id не совпадает с metadata кластера. Решение: создать `partition.metadata` вручную с правильным topic_id, **НЕ удалять `.index`/`.timeindex`** (Kafka обнулит `.log` — грабля #18), переименовать stray → каноничное.
+1. **Stray partitions — главная проблема.** Kafka помечает папку как `<name>.<uuid>-stray` если `partition.metadata` отсутствует или topic_id не совпадает с metadata кластера. Решение: создать `partition.metadata` вручную с правильным topic_id, переименовать stray → каноничное. Индексы (`.index`/`.timeindex`/`.snapshot`/`leader-epoch-checkpoint`) удалять — это Method A (Этап 6), заставляет Kafka делать полный log recovery и восстанавливать `largestRecordTimestamp` из records (фикс грабли #18). `.log` НЕ ТРОГАТЬ.
 
 2. **`partition.metadata` нельзя просто удалить** (как пишут в vanilla-инструкциях) — Kafka всё равно сделает stray, потому что в `.log` остаются producer state с старым topic_id. Нужно именно ПОДСТАВИТЬ правильный topic_id.
 
@@ -617,21 +622,25 @@ vector.service                   loaded active running Vector service for produc
 
 17. **CC-топики от 4.3 (`__CruiseControlMetrics-*`, `__KafkaCruiseControl*`) вызывают `CorruptRecordException` при старте Kafka 3.8.** Симптом: `Found record size 0 smaller than minimum record overhead (14) in file /mnt/data/log/__CruiseControlMetrics-2/00000000000000000000.log`, брокер падает. Фикс — удалить все CC-директории на всех брокерах перед стартом (Этап 3), Kafka 3.8 создаст их заново при запуске Cruise Control.
 
-18. **🚨 RETENTION удаляет восстановленные `.log` от 4.3.** После rename stray → canonical и старта брокеров Kafka 3.8 запускает log recovery. Без `.snapshot` (мы его удалили на Этапе 7) Kafka НЕ восстанавливает `largestRecordTimestamp` в `LogSegment` → считает = 0 (т.е. `1970-01-01 00:00:00 UTC`). При `retention.ms=604800000` (default 7 дней) retention видит сегменты с timestamp=0 как устаревшие → удаляет через ~30 сек после старта.
+18. **🚨 RETENTION удаляет восстановленные `.log` от 4.3.** После rename stray → canonical и старта брокеров Kafka 3.8 запускает log recovery. Без `.snapshot` (мы его удалили на Этапе 6) Kafka 3.8 НЕ восстанавливает `largestRecordTimestamp` в `LogSegment` из индексов → считает = 0 (т.е. `1970-01-01 00:00:00 UTC`). При `retention.ms=604800000` (default 7 дней) retention видит сегменты с timestamp=0 как устаревшие → удаляет через ~30 сек после старта.
 
-    **Кластер `test-downgrade3-mdbdev-kafka` (ПОТЕРЯ → ВОССТАНОВЛЕНО):** `test-2` (172 records от 4.3) обнулён retention через 30 сек после старта. `kafka-get-offsets` показывал `test:2:172` (log-end-offset), но `00000000000000000172.log` = 0 байт. Восстановлено повторным копированием `.log` + `.index` + `.timeindex` + `leader-epoch-checkpoint` с broker kc (где retention не успел сработать) на hc и pc, плюс `--config retention.ms=-1` на топике `test`.
+    **Почему 1970 год:** `largestRecordTimestamp` в `LogSegment` хранится в памяти и персистится через `.snapshot` файл (producer state). Если `.snapshot` удалён — Kafka 3.8 при log recovery **не сканирует `.log` автоматически**, а считает `largestRecordTimestamp=0`. Простого пути «исправить» `largestRecordTimestamp=0` нет — `kafka-dump-log` читает, но не пишет; патч `.timeindex` вручную опасен (бинарный формат).
 
-    **`__consumer_offsets-38` (3227 байт от 4.3):** Kafka оставила records 26-28 от 4.3, добавила record 29 (group metadata от reset). Group coordinator не загрузил group metadata из-за 4.3 records в начале `.log` → `consumer-groups --describe` не показывает partition p2 (даже после `--reset-offsets --to-offset 134`).
+    **Два метода работы (см. Этап 6):**
 
-    **Кластер `test-downgrade2-mdbdev-kafka` (УСПЕХ без retention.ms=-1):** бизнес-топик `test` (p0=69, p1=156, p2=0) и `__consumer_offsets` полностью сохранены. Повезло — retention не успел сработать или timestamp случайно совпал.
+    - **Method A (основной, рекомендуется) — удалить `.index`/`.timeindex`/`.snapshot`/`leader-epoch-checkpoint` на Этапе 6.** Тогда Kafka не может загрузить segment metadata из индексов и **вынуждена сделать полный log recovery**: построчно сканирует `.log` и восстанавливает `maxTimestampSoFar` из реальных records (`CreateTime` каждого record). После этого `largestRecordTimestamp` = реальный timestamp последней записи, retention не срабатывает, `retention.ms=-1` НЕ нужен. Минус — старт брокера дольше (секунды/минуты для больших segment-ов 1 GB). Подтверждено на `test-downgrade5` 2026-08-11 (run3): грабля #18 НЕ сработала, `.log` сохранены на всех 3 брокерах.
+
+    - **Method B (ускоренный, только если Method A слишком медленный) — оставить `.index`/`.timeindex`, удалить только `.snapshot`, поставить `retention.ms=-1`.** Брокер стартует быстрее (без полного сканирования `.log`), но `largestRecordTimestamp` остаётся = 0 и retention отключается навсегда. Возвращать `retention.ms` обратно нельзя — retention снова удалит segments с timestamp=0. Применять только на проде с большими segment-ами, где Method A слишком медленный.
+
+    **Если Method B применён реактивно (грабля #18 уже сработала на части брокеров):** восстановить `.log`/`.index`/`.timeindex` с непострадавшего брокера через `recover_log.sh` (Этап 8). Обязательно поставить `retention.ms=-1` ДО восстановления, иначе retention удалит восстановленные `.log` снова.
+
+    **Кластер `test-downgrade7` (2026-08-11, run1 — БЕЗ Method A, сработала грабля #18):** `test-*`/`test2-*`/`test3-*` `.log` обнулены на broker.kc и broker.pc (2 из 3 брокеров). На broker.hc данные сохранились (retention не успел сработать). Восстановлено: `retention.ms=-1` + `recover_log.sh` с broker.hc на broker.kc/pc. `consumer-group3/test3:1` потеряны records 0..157 (LOG-END-OFFSET уже сместился на 158 до восстановления).
+
+    **Кластер `test-downgrade3-mdbdev-kafka` (2026-08-09):** `test-2` (172 records от 4.3) обнулён retention через 30 сек после старта. Восстановлено копированием `.log` + `.index` + `.timeindex` + `leader-epoch-checkpoint` с broker kc + `retention.ms=-1` на топике `test`.
+
+    **Кластер `test-downgrade5` (2026-08-11, run3 — Method A, УСПЕХ без retention.ms=-1):** грабля #18 НЕ сработала. Удалены `.index`/`.timeindex`/`.snapshot`/`leader-epoch-checkpoint` на Этапе 6 → Kafka сделала полный log recovery → `largestRecordTimestamp` восстановлен из records → retention не сработал. `kafka-dump-log` подтвердил records с реальными `CreateTime` (2026-08-06), не 1970.
 
     **Симптом потери:** `kafka-get-offsets --topic test` показывает `test:2:172` (как в 4.3), но `ls -la /mnt/data/log/test-2/` показывает `00000000000000000172.log` размером 0 байт. `kafka-get-offsets` показывает log-end-offset (starting offset файла), а НЕ количество records. Реальная проверка — `kafka-dump-log.sh --files .../test-2/*.log` (должны быть records) или `ls -la` (размер .log > 0).
-
-    **Фикс:** `--config retention.ms=-1` ко всем бизнес-топикам при `--create` (Этап 5) и **оставить навсегда**. Возвращать `retention.ms` обратно нельзя — retention снова удалит сегменты с `largestRecordTimestamp=0`. Если данные больше не нужны — лучше удалить топик целиком, чем возвращать `retention.ms`. `__consumer_offsets` имеет `cleanup.policy=compact` — retention по времени на нём не работает, `retention.ms=-1` не нужен.
-
-    **Почему 1970 год:** `largestRecordTimestamp` в `LogSegment` хранится в памяти и персистится через `.snapshot` файл (producer state). После удаления `.snapshot` Kafka 3.8 при log recovery не восстанавливает timestamp из `.log`/`.timeindex` → считает = 0. Простого пути «исправить» `largestRecordTimestamp=0` нет — `kafka-dump-log` читает, но не пишет; патч `.timeindex` вручную опасен (бинарный формат). Надёжный обходной путь — `retention.ms=-1`.
-
-    **Можно ли НЕ удалять `.snapshot`?** Теоретически да — тогда `largestRecordTimestamp` восстановится и retention не сработает. НО `.snapshot` содержит producer state от 4.3 (epoch/batch info) который может ломать log recovery на 3.8. Проверялось — на broker kc (где .snapshot был удалён, но retention не успел сработать из-за быстрого `retention.ms=-1`) `.log` сохранился корректно. Решение: удалять `.snapshot` + ставить `retention.ms=-1` и не трогать дальше.
 
 19. **`kafka-consumer-groups.sh --reset-offsets --to-offset N` НЕ работает, если N > log end offset.** После обнуления `.log` (грабля #18) log end offset = 0 (или starting offset пустого файла), и reset к офсету из бэкапа выдаёт «New offset (149) is higher than latest offset for topic partition test-1. Value will be set to 0». Единственный путь восстановить офсеты — поднять `.log` файлы `__consumer_offsets` с сохранёнными `.index`/`.timeindex` от 4.3.
 
@@ -693,6 +702,8 @@ vector.service                   loaded active running Vector service for produc
 - `test-downgrade7.md` — даунгрейд 2026-08-10; данные сохранены без `retention.ms=-1`; впервые восстановлены SCRAM users и ACLs
 - `test-downgrade6.md` — даунгрейд 2026-08-10; данные сохранены без `retention.ms=-1`; кластер без cruise-хоста (процедура не трогала cruise)
 - `test-downgrade6_run2.md` — повторный даунгрейд 2026-08-10; грабля #18 сработала на 2 из 3 брокеров (hc, pc), данные восстановлены копированием .log с broker.kc; подтверждение что грабля #18 недетерминирована
+- `test-downgrade7_run2.md` — повторный даунгрейд 2026-08-11; грабля #18 сработала на broker.kc и broker.pc (2 из 3), данные восстановлены через `retention.ms=-1` + `recover_log.sh` с broker.hc; потеряны records 0..157 в `consumer-group3/test3:1`
+- `test-downgrade5_run3.md` — даунгрейд 2026-08-11; **Method A (удаление `.index`/`.timeindex`/`.snapshot`)** — грабля #18 НЕ сработала, retention.ms=-1 НЕ нужен; `kafka-dump-log` подтвердил records с реальными `CreateTime` (2026-08-06), не 1970
 
 ## Чек-лист результата
 
@@ -710,4 +721,4 @@ vector.service                   loaded active running Vector service for produc
 - [ ] `host-check.timer` active на всех 6 хостах (3 broker + 3 controller), в `/mnt/logs/system/host-checker.log` свежие репорты с role/status
 - [ ] В UI облака кластер AVAILABLE, все хосты AVAILABLE с корректными ролями (broker=observer, controller=leader/follower). Cruise-хост не проверяем.
 
-⚠️ **Бизнес-данные сохраняются НЕ ВСЕГДА.** Грабля #18 (обнуление `.log` при log recovery) сработала на `test-downgrade3` для partition с 172 records (потеряны), но не на `test-downgrade2` для partition с 69 records (сохранены). Гарантий нет. `kafka-get-offsets` показывает log-end-offset, а НЕ количество records — реальная проверка через `kafka-dump-log.sh` или `ls -la` (размер .log > 0).
+⚠️ **Бизнес-данные сохраняются НЕ ВСЕГДА — есть проблема с разметкой timestamps (грабля #18).** По умолчанию применяется **Method A** (удаление `.index`/`.timeindex`/`.snapshot` на Этапе 6) — Kafka делает полный log recovery, `largestRecordTimestamp` восстанавливается из records, `retention.ms=-1` НЕ нужен. Подтверждено на `test-downgrade5` 2026-08-11 (run3). Если Method A применить нельзя (прод с большими segment-ами, слишком медленный старт) — применяется Method B (оставить `.index`/`.timeindex`, `retention.ms=-1` навсегда). Реактивный фикс при срабатывании грабли #18 — `recover_log.sh` с непострадавшего брокера (Этап 8).
