@@ -80,6 +80,11 @@ kafka_config, db_params, criticality_level, datacenters, hardware_presets, log_t
    - аналитических запросов (средние, перцентили, сравнение до/после) — одним запросом;
    - сбора seed-данных по кластеру — одним запросом по шаблону ниже.
    Никаких нескольких `;`-разделённых запросов в одном блоке — только один `SELECT jsonb_build_object(...)`. Если нужно собрать разнородные данные, вкладывай каждый подзапрос как отдельный ключ в `jsonb_build_object`.
+   - ⚠️ **`ORDER BY` в `jsonb_agg` — только внутри скобок агрегата**, не снаружи подзапроса. Иначе Postgres падает с `column "v.create_ts" must appear in the GROUP BY clause or be used in an aggregate function`.
+     - ❌ `SELECT jsonb_agg(to_jsonb(v)) FROM ... ORDER BY v.create_ts DESC` — ORDER BY относится ко всему SELECT, конфликтует с агрегацией.
+     - ✅ `SELECT jsonb_agg(to_jsonb(v) ORDER BY v.create_ts DESC) FROM ...` — ORDER BY внутри агрегата, корректно.
+   - Альтернатива (как в шаблоне ниже): подзапрос с `ORDER BY ... LIMIT N` во `FROM`, и `jsonb_agg(t)` без ORDER BY снаружи — тоже рабочий вариант.
+   - ⚠️ **Скалярный подзапрос `to_jsonb(t) FROM ... WHERE cluster_id=...` падает с `more than one row returned by a subquery used as an expression`**, если у таблицы уникальность по `(cluster_id, <другая колонка>)`, а не по одному `cluster_id`. Типичный пример — `one_cloud_meta` (UNIQUE по `(cluster_id, params_type)`, у кластера есть строки `params_type='db-service'`, `'kafka'`, …). Для таких таблиц ВСЕГДА используй `jsonb_agg(to_jsonb(t) ORDER BY t.<колонка>)`, не скалярный `to_jsonb`. Перед написанием подзапроса проверяй индексы через `\d <table>` на удалённой БД — если видим multi-column unique index по `cluster_id + X`, агрегируй.
 5. **Экранирование** — при вставке данных экранируй одинарные кавычки в строках (`'` → `''`).
 6. **Sequences** — после вставки с явными id сбрасывай sequence: `SELECT setval('<table>_id_seq', (SELECT MAX(id) FROM <table>));`
 7. **Русский язык** — все пояснения на русском, лаконично.
