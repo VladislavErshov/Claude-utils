@@ -350,7 +350,7 @@
           "refId": "G"
         }
       ],
-      "title": "Brokers Info",
+      "title": "Hosts Info",
       "transformations": [
         {
           "id": "joinByField",
