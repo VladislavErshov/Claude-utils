@@ -112,6 +112,56 @@ Vault-путь `zkv/data/mdb/mdbdev/kafka/<fullQueue>/super` не существ
 
 **Важно**: это не баг workflow, а окружение. PMS-изменения уже применились до vault-запроса — для проверки PMS это не помеха.
 
+### 2a. Vault-секрет для downscale-controller — что нужно (подтверждено 2026-08-13 на test-modify3)
+
+Downscale-controller workflow на activity `kafka_host_getLeaderId` (после `removeControllerFromQuorum`) читает superuser-пароль Kafka из vault. В local-профиле vault-клиент mdb-processing настроен на **локальный** контейнер `mdb-processing-vault` (`http://localhost:8200`, token `root`, namespace `infra`), а не на реальный `vault.cloud.vk.team`. В локальном vault секрета для кластера нет — 404 с пустым телом `{"errors":[]}` (не путать с прод-404 `no handler for route`).
+
+**Параметры секрета**:
+- mount: `zkv` (KV v2)
+- путь: `zkv/mdb/mdbdev/kafka/<fullQueue>/super`
+  - для test-modify3: `zkv/mdb/mdbdev/kafka/test-modify3-mdbdev-kafka.mdbdev.db.production.mdb.prod/super`
+- ключ: `password` (DEFAULT_KEY в `CachedVaultPasswordService` / `BaseVaultPasswordService`)
+- значение: реальный superuser-пароль Kafka (взять с прода: `vault kv get -field=password zkv/mdb/mdbdev/kafka/<fullQueue>/super`)
+
+**Залить в локальный vault**:
+```bash
+docker exec mdb-processing-vault sh -c \
+  'VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=root vault kv put \
+  zkv/mdb/mdbdev/kafka/<fullQueue>/super password=<PASSWORD> permissions=[]'
+```
+
+Также по тому же пути в проде есть секреты: `cruise`, `kafka_exporter`, `keystore-password`, `super`, `truststore-password`. Для downscale-controller достаточно `super` (пароль superuser). Остальные могут понадобиться для других шагов workflow — если упадёт дальше, тащить по тому же шаблону.
+
+**Важно**: после заливки секрета workflow ходит на **реальные** прод-kafka-brokers (`1.broker.<cluster>.<dc>.one-infra.ru:9092`) под этим паролем. Пароль должен быть актуальным — иначе упадём уже на `KafkaAdminClient.getLeaderId` с auth error, не на vault.
+
+### 2b. SSL keystore/truststore пароли для `kafka_host_getLeaderId` (SASL_SSL)
+
+После заливки `super` workflow проходит vault-шаг, но `KafkaHostActivityImpl.getLeaderId` всё равно падает на `KafkaAdminClientFactoryImpl.createClient` — клиент перебирает `[SASL_SSL, SASL_PLAINTEXT]` и оба падают:
+
+- **SASL_SSL**: `Failed to create new KafkaAdminClient` → `Failed to load PEM SSL keystore` / `Is a directory`. Root cause — клиенту нужны пароли `keystore-password` и `truststore-password` из того же vault-пути.
+- **SASL_PLAINTEXT**: `TimeoutException: Timed out waiting for a node assignment. Call: listNodes` — брокеры не слушают plaintext на 9092, этот протокол не работает.
+
+**Секреты для заливки в локальный vault** (путь `zkv/mdb/mdbdev/kafka/<fullQueue>/`):
+- `keystore-password` → key `password`
+- `truststore-password` → key `password`
+
+Взять с прода:
+```bash
+vault kv get -field=password zkv/mdb/mdbdev/kafka/<fullQueue>/keystore-password
+vault kv get -field=password zkv/mdb/mdbdev/kafka/<fullQueue>/truststore-password
+```
+
+Залить в локальный vault:
+```bash
+for s in keystore-password truststore-password; do
+  docker exec mdb-processing-vault sh -c \
+    "VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=root vault kv put \
+    zkv/mdb/mdbdev/kafka/<fullQueue>/$s password=<VALUE>"
+done
+```
+
+Если после заливки паролей `SASL_SSL` всё равно падает на `Failed to load PEM SSL keystore` — значит локально отсутствуют PEM-файлы truststore/keystore (путь берётся из `kafkaConnectionProperties.getNamespaces().get(...).sslTruststoreLocation()`, см. `KafkaConnectionPropertiesConverter.java:65`). Это уже отдельная проблема окружения — нужен SSL-контент из prod-vault (секреты `cruise`/`kafka_exporter` тоже могут содержать PEM).
+
 ### 3. `kafka.layout` не очищается при downscale
 
 В `DownscaleKafkaControllerWorkflowImpl` нет activity `removeDcFromLayout` / `upsertKafkaLayout` — только `removeControllerFromQuorum`. После сценария C `kafka.layout` остался `hc,kc,pc,dc,zc`, хотя controller в zc удалён из quorum. Если это намеренно (layout описывает ДЦ кластера, а не controller-voter) — ОК. Если должно чиститься — баг. Стоит уточнить у команды mdb-processing.

@@ -12,6 +12,8 @@ allowed-tools: [bash]
 
 **Перед началом** — проверь папку `history/` на наличие готовых seed-файлов для текущей задачи.
 
+⚠️ Также смотри `history/gotchas-remote-schema.md` — каталог известных расхождений схемы удалённой БД (например, `db_versions.version` не существует).
+
 ```bash
 ls .claude/skills/db-seed/history/
 ```
