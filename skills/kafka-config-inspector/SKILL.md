@@ -91,6 +91,36 @@ Web-интерфейс PMS для проверки namespace хоста:
 `controller.<queue>.clouds` для controller). Параметр `a=mdb` — application,
 почти всегда `mdb`.
 
+### ⚠️ Грабля: PMS-ключи для controller-хостов разбиты на два
+
+Для controller-хостов PMS-переменные **разнесены по двум PMS-ключам**:
+
+| PMS-ключ | Какие переменные там лежат |
+|---|---|
+| `controller.<queue>.clouds` | **только** `kafka.sysconfig` (heap/jolokia/jmx/prometheus javaagent) |
+| `<queue>.clouds` (брокерский ключ) | **все остальные** controller-настройки: `kafka.controller.properties`, `kafka.layout`, `kafka.controller.quorum`, `kafka.ssl.enabled`, `kafka.keystore.password.vault.path`, `kafka.truststore.password.vault.path`, `kafka.log4j.properties`, `kafka.tools.log4j.properties`, `kafka.users`, и т.д. |
+
+Если дёргать `controller.<queue>.clouds` для всего списка переменных через
+`pms-read.sh ... "" infra mdb` — почти все строки покажутся `<NOT_SET>`, хотя
+на самом деле они лежат на брокерском ключе `<queue>.clouds`. Это не ошибка
+PMS, а особенность шаблона mdb-data.
+
+Правильный паттерн для controller-хоста:
+```bash
+# 1. sysconfig — с controller-ключа
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh "controller.<queue>.clouds" kafka.sysconfig infra mdb
+# 2. Все остальные controller-настройки — с брокерского ключа
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh "<queue>.clouds" kafka.controller.properties infra mdb
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh "<queue>.clouds" kafka.controller.quorum    infra mdb
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh "<queue>.clouds" kafka.layout               infra mdb
+~/.claude/skills/kafka-config-inspector/bin/pms-read.sh "<queue>.clouds" kafka.ssl.enabled          infra mdb
+```
+
+Подтверждено на кластере `dsp-notices-msk-adtech-kafka` (2026-08-14):
+`controller.dsp-notices-msk-adtech-kafka.clouds` отдаёт только `kafka.sysconfig`,
+а `kafka.controller.properties` / `kafka.layout` / `kafka.controller.quorum` /
+`kafka.ssl.enabled` — все лежат на `dsp-notices-msk-adtech-kafka.clouds`.
+
 Признаки дзен-кластера: FQDN `<N>.<role>.<queue>.<dc>.idzn.ru` (вместо
 `one-infra.ru`), PMS-ключ вида `<queue>.clouds` в namespace `dzen`. На хосте
 `cloud_hierarchy` в `/proc/1/environ` содержит `...front.db.production.mdb.prod`

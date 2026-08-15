@@ -70,6 +70,33 @@ rtk proxy npx prettier@3.6.2 --write --single-quote --print-width 80 --end-of-li
 - Type check: `pnpm run check`.
 - Перед коммитом убедись, что `pnpm run check` и `pnpm run lint` проходят на изменённых файлах.
 
+### 🔄 Регенерация API для новых эндпоинтов
+Когда на бэке появился новый эндпоинт и его уже добавили в swagger-схему, нужно регенерировать контракты через `pnpm run api-codegen`. Грабли: codegen регенерит **все** модули сразу (mdb, mdb-alerts, mdb-health, vkone) с `cleanOutput: true` — это даёт огромный diff из-за дрейфа бэкенда, который не относится к задаче.
+
+**Правильный алгоритм для MR по новой ручке:**
+
+1. Создать `.env` (в `.gitignore`) из `.env.example` — нужны `MDB_SWAGGER_URL`, `MDB_SWAGGER_ALERTS_URL` и т.п. Без них codegen молча ничего не сгенерит (фильтр по `swaggerUrl`).
+2. Обойти `engines.node: ^22`:
+   ```bash
+   export PATH="/opt/homebrew/opt/node/bin:$PATH"  # Node 25
+   export npm_config_engine_strict=false            # обойти .npmrc engine-strict=true
+   pnpm run api-codegen
+   ```
+3. Codegen затронет много файлов. Откатить всё к HEAD и оставить только нужное:
+   ```bash
+   git checkout HEAD -- src/shared/api/__generated__/ src/shared/api/mdb-alerts/__generated__/ src/shared/api/vkone/__generated__/
+   git ls-files --others --exclude-standard | grep "__generated__" | xargs rm
+   ```
+4. Точечно перенести из регенерированной версии **только** изменения под текущую задачу:
+   - новый метод в соответствующий `*-controller.ts` (скопировать из регенерированного вывода)
+   - новые типы в `data-contracts.ts` (в правильное алфавитное место — codegen использует `sortTypes: true`)
+   - новые импорты в начале файла контроллера
+5. Проверить `pnpm run check` и `pnpm exec prettier --check` на изменённых `__generated__/` файлах.
+
+**Почему не оставить весь регенерированный вывод:** большой несвязанный дифф ломает ревью, может скрыть unintended-изменения и конфликтует с другими MR. Полная регенерация — отдельный коммит/MR, когда нужен sync со всем бэкендом.
+
+**Почему ручное редактирование `__generated__/` разрешено в этом случае:** это исключение из общего правила. Цель — scope MR, а не обход codegen. В коммите оставляем только то, что относится к задаче; полный sync делается отдельно.
+
 ## 📋 Алгоритм работы
 1. Прочитай ТЗ. Если есть двусмысленность — задай вопрос.
 2. Найди целевые файлы (Grep/Glob). Для широкого поиска используй агент Explore.
