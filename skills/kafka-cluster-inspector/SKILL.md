@@ -48,6 +48,28 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
 
 Пользователь даёт список хостов. Скилл не угадывает хосты — только работает с тем, что дал юзер.
 
+## Broker / controller IDs
+
+Внутренние `broker.id` / `node.id` в Kafka-кластере — **5-значные**, не совпадают с порядковым номером в hostname. Формат: `<dc-prefix><host-index>`.
+
+| Роль хоста                     | broker.id / node.id | Примеры                          |
+|--------------------------------|---------------------|----------------------------------|
+| broker в DC                    | 2`<dc>`0`<idx>`     | 1.broker.dc → 20001, 2.broker.dc → 20002 |
+| broker в IC                    | 21`<idx>`           | 1.broker.ic → 21001              |
+| broker в UC                    | 22`<idx>`           | 1.broker.uc → 22001              |
+| broker в PC                    | 23`<idx>`           | 1.broker.pc → 23001, 2.broker.pc → 23002 |
+| controller в DC                | 10`<idx>`           | 1.controller.dc → 10001          |
+| controller в IC                | 11`<idx>`           | 1.controller.ic → 11001          |
+| controller в UC                | 12`<idx>`           | 1.controller.uc → 12001          |
+
+Для DC-префикса берётся код из таблицы `one_cloud_meta` / PMS (dc → `20000`, hc → `24000`, и т.д.) — но **точные значения нужно уточнять через `describeCluster` или `kafka-broker-api-versions.sh`**, если IDs нужны для `alterPartitionReassignments` / `unregisterBroker`. Передача неправильных IDs падает с `InvalidReplicaAssignmentException: The manual partition assignment includes broker X, but no such broker is registered`.
+
+Узнать реальные IDs:
+```bash
+mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
+  'kafka-broker-api-versions.sh --bootstrap-server localhost:9092 --command-config /etc/kafka/kafka-console-consumer.properties 2>/dev/null | grep -oE "id: [0-9]+" | sort -u'
+```
+
 ## Подчинённые скиллы
 
 Работа с хостами и логами вынесена в отдельные скиллы — вызывай их напрямую:

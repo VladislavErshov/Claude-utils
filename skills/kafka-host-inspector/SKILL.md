@@ -53,6 +53,62 @@ mdb-data. Не содержит диагностики — только мето
 | Prometheus JMX | `/opt/prometheus/` (kafka-2_0_0.yml, cruise-control.yml) |
 | Cruise Control | `/opt/cruise-control/` (config/, libs/, dependant-libs/) |
 
+## Грабли: Porto-контейнер, nproc и CPU-метрики
+
+Kafka-хосты под mdb-data запущены **внутри Porto-контейнера** (контейнерная система VK), поверх
+которого работает libpod/podman + systemd. Это влияет на интерпретацию системных метрик.
+
+### `nproc` показывает хостовые ядра, не контейнерные
+
+`nproc` и `/proc/cpuinfo` возвращают **физические ядра хоста** (например, 64), а не квоту
+контейнера (часто 4 ядра). mdb-data ограничивает CPU через Porto, не через `cpu.cfs_quota_us`
+на cgroup systemd — поэтому:
+
+- `systemctl show kafka-broker.service -p CPUQuotaPerSecUSec` → `infinity` (не означает, что
+  квоты нет — квота выставлена на уровне Porto, наружу не видна).
+- `nproc` бесполезен для оценки «сколько ядер реально доступно брокеру».
+- `loadavg` выше `nproc` — норма, если `nproc` показывает хостовые ядра. Сравнивать `loadavg`
+  надо с **Porto-квотой** (узнавать у пользователя или через mdb-data API), а не с `nproc`.
+
+**Как оценить реальную квоту CPU:**
+- По mdb-data API / UI mdb-data (параметр `resources.cores` или аналог) — это канон.
+- CPU% в UI mdb-data уже посчитан относительно Porto-квоты — им можно верить.
+- Если очень нужно на хосте — `/proc/<kafka_pid>/cgroup` показывает Porto-путь
+  `/porto/<host>/pids-prod/libpod-<id>`, но лимит CPU в Porto-конфиге, не в cgroup.
+
+### Cgroup v1, не v2
+
+На Kafka-хостах **cgroup v1** (hybrid). `/sys/fs/cgroup/cpu.stat` (v2 root) **пустой или
+отсутствует** — не делайте вывод об отсутствии throttling по пустому файлу.
+
+Реальный путь cgroup процесса kafka-broker:
+```
+/sys/fs/cgroup/cpu/porto/<host>/pids-prod/libpod-<id>/cpu.stat
+/sys/fs/cgroup/cpu/porto/<host>/pids-prod/libpod-<id>/cpu.cfs_quota_us
+/sys/fs/cgroup/cpu/porto/<host>/pids-prod/libpod-<id>/cpu.cfs_period_us
+```
+
+Получить путь для конкретного процесса:
+```bash
+PID=$(systemctl show -p MainPID --value kafka-broker.service)
+cat /proc/$PID/cgroup
+# строка вида "2:cpu,cpuacct:/porto/<host>/pids-prod/libpod-<id>"
+# → реальный путь /sys/fs/cgroup/cpu + это значение
+```
+
+Но throttling-метрики в cgroup могут быть неинформативны, если Porto управляет CPU иначе —
+для диагностики «CPU throttling» в первую очередь **смотрите метрики Kafka через Jolokia**
+(скилл [`kafka-metrics-investigator`](../kafka-metrics-investigator/SKILL.md)):
+`BytesInPerSec`, `BytesOutPerSec`, `MessagesInPerSec`, `RequestHandlerAvgIdlePercent`,
+`ProduceThrottleRate`, `FetchThrottleRate`.
+
+### `ps %CPU` — это доля одного ядра
+
+`ps -o pcpu` показывает **процент одного ядра** (0-100% = 0-1 ядро), не общий CPU. На 4-ядерной
+Porto-квоте java-процесс с `pcpu=115%` занимает ~1.15 ядра из 4 — это ~29% квоты, не 115%.
+Для оценки «сколько всего ядер жрёт брокер» складывайте `pcpu` по всем java-процессам и top-тредам
+(`ps -L -p <pid> -o lwp,pcpu --sort=-pcpu`), либо смотрите CPU% в UI mdb-data.
+
 ## Структура скилла
 
 - `SKILL.md` — этот файл.

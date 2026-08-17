@@ -23,6 +23,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 - **Классы:** все новые классы — `final` или `abstract`.
 - **Переменные:** `final var` для локальных внутри методов.
 - **Null-безопасность:** `@NullMarked` (package-level или class-level), `@Nullable` из `org.jspecify.annotations` для отдельных полей/параметров.
+  - **Правило:** всегда вешай `@NullMarked` на новый код. Если создаёшь новый класс/интерфейс/record — `@NullMarked` на тип. Если добавляешь новые методы в существующий класс/интерфейс — предпочтительно повесить `@NullMarked` на сам тип (класс/интерфейс), если это не ломает существующий код. После добавления запусти `./gradlew check` — если NullAway выдаёт ошибки `@Nullable` → `@NonNull` в чужих вызовах, откатай `@NullMarked` с типа на отдельные новые методы. Если ошибок нет — оставляй на типе, это правильнее.
 - **Lombok:** `@RequiredArgsConstructor`, `@Slf4j`, `@Builder` для records через `@Jacksonized`.
 - **Коллекции:** Stream API в бизнес-логике, неизменяемые коллекции (`List.of`, `.toList()`, `Collections.emptyList()`).
 - **Checkstyle:** Google Java Style, длина строк ≤120, лексикографический порядок импортов. Запуск `./gradlew check` перед завершением.
