@@ -9705,7 +9705,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Утилизация CPU процессом Kafka (ядра*сек).\n\n🟢 < 70% | 🟠 70-85% | 🔴 > 85%.",
+          "description": "Утилизация CPU процессом Kafka, в ядрах.",
           "fieldConfig": {
             "defaults": {
               "color": {

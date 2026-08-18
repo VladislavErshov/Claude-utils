@@ -121,6 +121,56 @@ tail -10 /mnt/logs/dbms/share-group-lag-exporter.err.log
 
 `max by (group, topic, partition)` схлопывает дубликаты с разных инстансов (лаг одинаковый).
 
+## Грабля: `nproc`/`/proc/cpuinfo`/`lscpu` через mcc — это ядра миньона, не хоста Kafka
+
+⚠️ **Команды `nproc`, `lscpu`, `cat /proc/cpuinfo`, `cat /proc/uptime`, `cat /proc/loadavg`,
+выполненные через `mcc sshexec`/`mcc ssh` на Kafka-хосте, возвращают ресурсы mcc-миньона
+(прокси-узла), а не самого Kafka-хоста.** Это приводит к ложным выводам — например, расчёт
+«средний CPU процесса = `process_cpu_seconds_total / uptime`» даст числа, привязанные к
+конфигурации миньона (64 ядра), а не реального брокера (часто 8–16 ядер).
+
+**Что НЕ работает для определения числа ядер Kafka-хоста через mcc:**
+- `nproc` — возвращает ядра миньона
+- `lscpu | grep CPU(s)` — то же
+- `cat /proc/cpuinfo | grep -c processor` — то же
+- `cat /proc/uptime` — uptime миньона, не Kafka-хоста
+- `cat /proc/loadavg` — loadaverage миньона
+
+**Что работает:**
+- **JMX-метрика** `process_start_time_seconds` на порту 8080 (только для elapsed-time процесса,
+  не для ядер) — но см. ниже граблю со стартовым временем.
+- **Prometheus/VictoriaMetrics метрика числа ядер** — обычно `count(count without(cpu, mode)
+  (node_cpu_seconds_total{instance=~"$instance"}))` или OneCloud `one_cloud_cpu_cores_value`.
+- **mdb-data spec / OneCloud API** — число vCPU из конфигурации кластера (через `mcc instances`
+  или PMS-API, см. скилл `kafka-cluster-inspector`).
+- **Grafana дашборд** — на панели «CPU Usage» (host-level) используется
+  `one_cloud_cpu_percent_value` — значение уже в % от общей мощности хоста, делить на число
+  ядер не нужно.
+
+**Правильный расчёт утилизации CPU процесса Kafka в % от хоста:**
+```promql
+100 * rate(process_cpu_seconds_total{mdb_kafka_cluster="$cluster",instance=~"$instance"}[$__rate_interval])
+  / on(instance) group_left()
+  count(count without(cpu, mode) (node_cpu_seconds_total{instance=~"$instance"}))
+```
+
+## Сопоставление имён графиков Grafana с метриками
+
+Если на дашборде Grafana виден график с человекочитаемым именем (`Kafka broker up`,
+`In-Flight requests`, `Share group lag`, `Under-replicated partitions` и т.п.) и нужно
+понять, какую именно метрику он рисует и с какого exporter'а/порта приходит — используй
+скилл [`/grafana-plot-creator`](../../grafana-plot-creator/SKILL.md).
+
+Сценарии, когда это нужно:
+- В Grafana график пустой или ведёт себя странно — надо проверить, что выражение
+  ссылается на метрику, которая действительно отдаётся живым exporter'ом (таблица выше).
+- Нужно добавить новый график или поправить существующий — правила именования панелей,
+  размещения в dashboard JSON и форматов PromQL описаны в скилле `grafana-plot-creator`.
+- Имя панели на дашборде не совпадает с именем метрики (например, `Kafka broker up`
+  → `kafka_server_kafkaserver_brokerstate` или `up` для scrape-таргета) — сверка
+  имени и выражения идёт через `grafana-plot-creator`, а проверка живости самой
+  метрики на хосте — через этот скилл.
+
 ## Что НЕ покрывает скилл
 
 - Throughput / latency — к Prometheus/Grafana напрямую, не к хосту.

@@ -57,6 +57,12 @@ host_checker для проверки состояния брокера, не Pro
 
 - **Доступ к хостам** — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
   Специфика метрик — `commands/check_metrics.md`.
+- **Сопоставление имён графиков Grafana с метриками** — через скилл
+  [`grafana-plot-creator`](../grafana-plot-creator/SKILL.md). Если на дашборде Grafana
+  виден график с непонятным именем (`Kafka broker up`, `In-Flight requests`, `Share group lag`
+  и т.п.) и нужно понять, какую метрику он рисует и с какого порта/exporter'а приходит —
+  открывай `/grafana-plot-creator` и сверяй имя панели с Prometheus-выражением и списком
+  метрик из таблицы в `commands/check_metrics.md`.
 
 ## Структура скилла
 
