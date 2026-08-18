@@ -12,6 +12,7 @@ allowed-tools: [bash, read_file, edit_file, write_file]
 
 1. **Инфраструктура mdb-data** — команда `/setup-local-mdb-data` (postgres, redis, сам mdb-data).
 2. **mdb-processing + temporal** — обязателен для тестов, затрагивающих workflow (modify/resize/create кластеров). Команда `/setup-local-temporal` поднимает docker-compose (temporal, vault, kafka, wiremock) в `mdb-processing/localrun/`, затем запускает сам mdb-processing через `bootRun --args='--spring.profiles.active=local'`.
+3. **Backstage НЕ нужен** для базовых тестов modify-флоу. mdb-data сам стартует temporal workflow через processing. Backstage (`/setup-local-backstage`) поднимай только если тестируешь именно Backstage-слой (POST /version/, task chain generators, Redis-кеш проектов).
 
 ## Порты (важно!)
 
@@ -24,6 +25,70 @@ allowed-tools: [bash, read_file, edit_file, write_file]
 | wiremock (processing) | 8088 | docker-compose mdb-processing |
 
 mdb-data и mdb-processing оба по дефолту на 8080 — конфликт. Поэтому mdb-data запускать с `--server.port=8081`, а 8080 оставить под processing. В `application-local.yml` mdb-data уже есть `mdb-processing.base-url: http://localhost:8080` — это указывает на processing, не на сам mdb-data.
+
+## Auth отключён в local-профиле
+
+В `application-local.yml:59` стоит `mdb.auth.enabled: false`. **JWT/токен для запросов к mdb-data НЕ нужен** — шли прямые curl без `Authorization` заголовка. Проверено: `PATCH /api/v2/mdb/kafka/clusters/{id}/modify` без токена возвращает 202 и стартует temporal workflow.
+
+Таблица `services_auth` нужна только если включить auth (или для тестов Backstage, где JWT签ится с `serviceName` из этой таблицы). Для прямых запросов к mdb-data — не требуется.
+
+## Структура request body для PATCH /modify
+
+Эндпоинт: `PATCH http://localhost:8081/api/v2/mdb/kafka/clusters/{id}/modify`
+
+Тело — НЕ плоский `ModifyKafkaClusterParams`, а обёртка `ModifyKafkaClusterRequest`:
+```json
+{
+  "params": {
+    "acl": {}, "name": "...", "isWan": false,
+    "lanIn": 10, "lanOut": 15, "diskGb": 8, "diskType": "nvme",
+    "projectId": 160, "rootQueue": "prod",
+    "needLanIpv6": true, "needWanIpv4": false, "needWanIpv6": false,
+    "kafkaParams": {
+      "controller": { "controllerDcs": ["dc","hc","kc"], "controllerConfig": {"config": {}}, ... },
+      "brokerConfig": {"config": {}},
+      "jvmHeapSizeMb": 1024,
+      "cruiseControl": {"cruiseControlDc": "hc", "cruiseUserPassword": ""},
+      "tosAgent": true,
+      "socLogger": {"enabled": true}
+    }
+  },
+  "hardwarePresetId": 100,
+  "isNeedShards": false,
+  "hosts": [{"dc": "dc"}, {"dc": "hc"}, {"dc": "kc"}],
+  "type": "update_instances",
+  "attempts": 3
+}
+```
+
+Без `params`/`hardwarePresetId`/`attempts`/`hosts`/`type` на верхнем уровне → 400 "не должно равняться null".
+
+**Важно про baseline `cluster_params`**: перед modify в baseline `db_cluster_version` должны быть `kafkaParams.brokerConfig.config={}` и `kafkaParams.controller.controllerConfig.config={}` (пусть пустые). Иначе `KafkaClusterDiffDetector` падает с NPE на `currentParams.brokerConfig().config()`.
+
+## Mapping: request → temporal workflow input
+
+После 202 mdb-data стартует temporal workflow `modifyKafkaCluster`. Его input (декодируется через `history.events[0].workflowExecutionStartedEventAttributes.input.payloads[0].data` | base64 -d | jq) содержит секции, которые **могут быть null** — это нормально, если в запросе не было изменений:
+
+| Request field | Temporal input field | Когда null |
+|---|---|---|
+| `kafkaParams.tosAgent` | `updateBrokerConfigData.tosAgentEnabled` | поле не пришло в request |
+| `kafkaParams.socLogger` | `socLoggerData` | поле не пришло в request |
+| `kafkaParams.cruiseControl.autoRebalanceEnabled` | `cruiseUpdateConfigData.cruiseControl.autoRebalanceEnabled` | поле не пришло в request |
+| `kafkaParams.cruiseControl.autoRebalanceOnBrokerFailEnabled` | `cruiseUpdateConfigData.cruiseControl.autoRebalanceOnBrokerFailEnabled` | поле не пришло в request |
+| `kafkaParams.jvmHeapSizeMb` | `updateBrokerConfigData.heapSizeMB` | передаётся всегда (или когда brokerConfigDiff=true) |
+| `kafkaParams.controller.controllerJvmHeapSizeMb` | `updateControllerConfigData.heapSizeMB` | controllerHeap не изменился → processing-side mapper опускает **весь** `updateControllerConfigData` |
+| `kafkaParams.controller.controllerConfig` | `updateControllerConfigData.parameters` | controllerConfigDiff=false → весь блок null |
+| `kafkaParams.brokerConfig` | `updateBrokerConfigData.parameters` | brokerConfigDiff=false → параметры пустые, но блок остаётся |
+
+**Следствие**: `updateControllerConfigData: null` целиком — норма, если controller heap и controllerConfig не поменялись. `socLoggerData: null` — норма, если в запросе не было socLogger. Не путать с "propagation сломалось".
+
+**Toggle-фичи (mdb-data `KafkaClusterModificationValidator`)**:
+- `tosAgent=true` → требует docker ≥ 2.4.0
+- `socLogger.enabled=true` → требует docker ≥ 2.3.3
+- `cruiseControl.autoRebalanceEnabled` / `autoRebalanceOnBrokerFailEnabled` — без docker-чеков, можно свободно toggling
+- Выключение (`false`) — без проверок
+
+Для проверки каждой toggle-фичи нужен **отдельный** modify-запрос, меняющий только нужное поле. Комбинировать можно, но тогда в temporal input приедут все сразу.
 
 ## История тестов
 
@@ -78,7 +143,74 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
 
 ## Получение реальных данных кластера
 
-Используй `/db-seed`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их через `mcc ssh/psql`, результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
+Используй `/db-seed`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их на удалённом хосте (через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md), `mcc ssh` + `psql`), результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
+
+### Обязательный шаблон: один SQL через `jsonb_build_object`
+
+Данные кластера тянем **одним SQL-запросом** через `jsonb_build_object` — пользователь получает один JSON, не несколько выводов. Это касается и cruise-creation, и modify-тестов, и любых других сценариев, где нужны полные данные кластера.
+
+Шаблон (подставь свой `cluster_id`):
+
+```sql
+SELECT jsonb_build_object(
+  'db_cluster', (SELECT json_agg(t) FROM (SELECT * FROM db_cluster WHERE id='<CLUSTER_ID>') t),
+  'db_cluster_version', (SELECT json_agg(t ORDER BY create_ts DESC) FROM (SELECT * FROM db_cluster_version WHERE cluster_id='<CLUSTER_ID>' ORDER BY create_ts DESC LIMIT 3) t),
+  'host_state', (SELECT json_agg(t) FROM (SELECT * FROM host_state WHERE cluster_id='<CLUSTER_ID>') t),
+  'one_cloud_meta', (SELECT jsonb_agg(to_jsonb(t) ORDER BY t.params_type) FROM (SELECT * FROM one_cloud_meta WHERE cluster_id='<CLUSTER_ID>') t),
+  'projects', (SELECT json_agg(t) FROM (SELECT p.* FROM projects p JOIN db_cluster c ON c.project_id=p.id WHERE c.id='<CLUSTER_ID>') t),
+  'namespaces', (SELECT json_agg(t) FROM (SELECT n.* FROM namespaces n JOIN db_cluster c ON c.namespace_id=n.id WHERE c.id='<CLUSTER_ID>') t),
+  'hardware_presets', (SELECT json_agg(t) FROM (SELECT hp.* FROM hardware_presets hp WHERE hp.id IN (SELECT DISTINCT hardware_preset_id FROM db_cluster_version WHERE cluster_id='<CLUSTER_ID>')) t)
+);
+```
+
+⚠️ **`one_cloud_meta` обязательна для cruise-creation** — без записи `params_type='cruise-control-service'` workflow `createKafkaCruise` падает с `404` на `MdbDataKafkaHostsActivityImpl.savedCreatedKafkaCruiseInfo`. У таблицы UNIQUE-индекс по `(cluster_id, params_type)` — ВСЕГДА `jsonb_agg`, не скалярный `to_jsonb`.
+
+Правила из `/db-seed` (важно):
+- `ORDER BY` — только **внутри** `jsonb_agg(... ORDER BY col)`, не снаружи подзапроса.
+- Для таблиц с unique-индексом по `(cluster_id, <другая колонка>)` (например `one_cloud_meta` по `(cluster_id, params_type)`) — ВСЕГДА `jsonb_agg`, не скалярный `to_jsonb`, иначе `more than one row returned`.
+- `operations.created_ts` (с `d`), `db_cluster_version.create_ts` (без `d`) — имена различаются, проверяй через `\d <table>` на удалённой БД.
+
+### Cruise-creation: что достаём из полученного JSON
+
+Из засеянных данных собираешь `CreateCruiseControlRequest` (см. `history/MDBDEV-2882-create-cruise-control-*.md`). Соответствие полей:
+
+| Поле request | Источник в БД |
+|---|---|
+| `clusterId` | `db_cluster.id` |
+| `namespace` | `namespaces.name` → **uppercase** (`"INFRA"`, не `"infra"`) |
+| `queue` | `<db_cluster.name>-<project.name>-kafka` |
+| `fullQueue` | `<queue>.<project.name>.db.<environment>.mdb.prod` |
+| `rootQueue` | `cluster_params.rootQueue` |
+| `projectName` | `projects.name` |
+| `pmsHostName` | `<queue>.clouds` |
+| `certsHostName` | `cruise.<queue>.clouds` |
+| `serviceName` | `cruise.<queue>` |
+| `cruiseControlDc` | из задачи пользователя (например `rc`) — это DC, где будет поднят cruise |
+| `namespaceDomain` | константа `"mdb"` (часть PMS-пути, не из БД) |
+| `isWan` | `cluster_params.isWan` |
+| `cruiseControl.jvmHeapSizeMb` | `cluster_params.kafkaParams.cruiseControl.jvmHeapSizeMb` или дефолт `2048` |
+| `cruiseControl.autoRebalanceEnabled` | из задачи (обычно `true`) |
+| `brokerDcs` | `host_state` — список уникальных `params->>'dc'` для хостов с FQDN вида `*.broker.*` |
+| `brokerParameters` | `cluster_params.kafkaParams.brokerConfig.config` (например `{"num.io.threads":"8"}`) |
+| `brokerDiskGb` / `brokerLanInMb` / `brokerLanOutMb` | `cluster_params.diskGb` / `lanIn` / `lanOut` |
+| `dockerName` / `dockerTag` | docker-образ cruise-control (НЕ kafka-брокера!). Обычно `ubuntu20-mdb-cruisecontrol-2.5.147` / `1.0.2` — уточнять в PMS или через последний стабильный тест |
+| `cruiseUserPassword` | из задачи пользователя |
+| `workflowTtl` | константа `"PT1H"` (ISO-8601, **не** `3600`) |
+
+⚠️ **Cruise-creation workflow запускается напрямую через `tctl`**, не через mdb-data modify-эндпоинт (кодогенерации API пока нет). См. `history/MDBDEV-2882-create-cruise-control-2026-08-06.md`.
+
+## Проверка PMS-переменных (modify-флоу в mdb-processing)
+
+После modify-операции проверить, что флоу реально записал PMS-переменные (`kafka.soc.audit.*`, `kafka.sysconfig`, `kafka.cruisecontrol.*` и т.д.) — используй скилл **`kafka-config-inspector`**. Там же — сверка PMS с отрендеренными конфиг-файлами на хостах.
+
+⚠️ **ВНИМАНИЕ: local-профиль mdb-processing пишет в РЕАЛЬНЫЙ `pms.cloud.vk.team`, не в
+wiremock!** Bean `pmsRestClient` (`PmsAutoConfiguration.java:36`) берёт `baseUrl` из
+`backend.mdb.baseUrl=https://pms.cloud.vk.team`, а не из `external.api.namespaces.infra.pms.base-url`.
+mTLS-сертификат из `~/.mccloud/` работает — modify-флоу реально модифицирует прод-PMS.
+
+**Следствие**: тестируй только на dev-кластерах (`test-resize`, `test-update-resize1`,
+`test-sel-1` и т.п. — project 160, mdbdev). Никогда не запускай modify-флоу локально
+против прода. Снапшот PMS до modify помогает отличить изменения от нашего флоу vs. фоновых прод-операций.
 
 ## Правила
 

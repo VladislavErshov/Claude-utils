@@ -13,6 +13,8 @@ tasks
 **.iml
 **.xml
 **.jsonl
+.DS_Store
+**/.DS_Store
 
 history.jsonl
 
