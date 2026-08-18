@@ -162,6 +162,13 @@ redis-cli --user master --pass "$(awk '$1=="user" && $2=="master" { gsub(/^[^>]*
 случай можно предложить клиенту настроить `cluster-preferred-endpoint-type hostname` —
 тогда при редиректе нода будет возвращать имя хоста, а не IP.
 
+⚠️ **`cluster-preferred-endpoint-type=hostname` настраивается через UI** (через
+`cluster_to_template` + `zen.redis.conf` в PMS + update через UI с минимальным
+изменением), а не через `config set` в рантайме. `config set` — только для
+экстренного применения в рантайме, но без фиксации в шаблоне настройка слетит при
+следующем `confp --oneshot && systemctl restart redis`. См. раздел
+«Выставить параметр, которого нет в UI».
+
 Сабмитим в манифесте v4, v6. Далее для каждого шарда:
 
 ⚠️ Операции проводим на репликах! Когда нужно будет работать с мастером — переключим его.
@@ -169,23 +176,48 @@ redis-cli --user master --pass "$(awk '$1=="user" && $2=="master" { gsub(/^[^>]*
 1. На реплике: `cluster forget <replica_id>`, на всякий случай на всём кластере.
 2. Если нужно:
    - Добавить в PMS, в базе и на хосте `cluster-preferred-endpoint-type hostname`
-     (`config set cluster-preferred-endpoint-type hostname`).
+     (через UI — см. предупреждение выше; `config set` — только в рантайме).
    - Проверить, что возвращает `config get cluster-announce-hostname`.
-   - Если значение пустое — `config set cluster-Announce-hostname <instance_name>`.
+   - Если значение пустое — `config set cluster-announce-hostname <instance_name>`.
 3. От этой же реплики: `cluster meet <master_ip_v6>`.
 4. `cluster replicate <master_id>`.
 5. Ожидать, когда нальётся. Сделать со всеми репликами по очереди. Когда дойдём до
    мастера — переключить его перед операцией.
 
+⚠️ После `CLUSTER FORGET` ID ноды попадает в blacklist на ~60 сек, и gossip от неё
+игнорируется остальными. Поэтому после `MEET v6 + REPLICATE` на реплике нужно
+дополнительно сделать `CLUSTER MEET <replica_v6>` **с мастера** (и с остальных нод) —
+иначе реплика будет реплицировать по v6, но мастер её в `cluster nodes` не увидит,
+и failover на неё не произойдёт.
+
+⚠️ Для обновления endpoint'а уже известной ноды на v6 (без изоляции) достаточно
+`CLUSTER MEET <v6>` на остальных нодах — без `FORGET`. Это менее рискованно и
+работает, когда нода уже в кластере, просто видна по v4. Например, после `failover`
+бывший мастер остаётся видимым по v4 на других шардах — `CLUSTER MEET <v6>` на
+каждой ноде обновляет endpoint на v6 без даунтайма.
+
+⚠️ После `CLUSTER FAILOVER` бывший мастер автоматически становится slave'ом нового
+мастера и подключается к нему по v6 (если v6-endpoint'ы уже были в `cluster nodes`).
+Отдельный `FORGET + MEET + REPLICATE` для бывшего мастера не требуется — только
+`CLUSTER MEET <v6_бывшего_мастера>` на остальных нодах для обновления endpoint'а.
+
+`CLUSTER FAILOVER` отправляется **на реплику**, а не на мастер (на мастер вернёт
+`ERR You should send CLUSTER FAILOVER to a replica`).
+
 Если нужно постфактум прописать `cluster-preferred-endpoint-type hostname` на всём
-кластере — перебрать хосты × ДЦ через скилл
+кластере в рантайме — перебрать хосты × ДЦ через скилл
 [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
-`commands/sshexec.md` для шаблона перебора). Команды на хосте:
+`commands/sshexec.md` для шаблона перебора). Это **две отдельные команды**, не одна
+(в старой версии runbook была опечатка со слитной строкой):
 
 ```
-redis-cli -c --user master -a <password> config set cluster-preferred-endpoint-type hostname cluster-Announce-hostname $HOST
+redis-cli -c --user master -a <password> config set cluster-preferred-endpoint-type hostname
+redis-cli -c --user master -a <password> config set cluster-announce-hostname $HOST
 redis-cli -c --user master -a <password> config REWRITE
 ```
+
+После применения в рантайме — обязательно зафиксировать в PMS (`zen.redis.conf`) и
+в `cluster_to_template`, иначе слетит при следующем `confp --oneshot` или update.
 
 Шаблон хоста: `1.shard${i}-db.<queue>.${dc}.one-infra.ru`. Поправить: `N` — количество
 шардов; список ДЦ; `queue` — имя очереди; `password` —

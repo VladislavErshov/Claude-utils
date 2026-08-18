@@ -221,6 +221,39 @@ curl -s 'http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,nam
 
 `Value > 0` — есть under-replicated партиции.
 
+## Растущий follower lag при UnderReplicatedPartitions=0 (ранняя стадия)
+
+**Симптом**: панель «Broker Max Lag» в Grafana (`kafka_server_replicafetchermanager_maxlag`)
+растёт на конкретном брокере, но `UnderReplicatedPartitions=0`, `IsrShrinksPerSec=0`,
+`NetworkProcessorAvgIdlePercent`/`RequestHandlerAvgIdlePercent` высокие (тред-пулы не
+исчерпаны). Лаг не упирается в сеть/CPU/memory.
+
+**Корень**: `num.replica.fetchers=1` (дефолт) — один fetcher-тред на пару (этот брокер →
+лидер X) последовательно обслуживает все партиции лидера X. При высокой нагрузке на
+топик fetcher не успевает обойти партию за `replica.fetch.wait.max.ms` — lag копится,
+реплика на грани выпадения из ISR (`replica.lag.time.max.ms`, 30s по умолчанию).
+
+**Проверка** (только через JMX exporter 8080, **не Jolokia** — MBean `ReplicaFetcherManager,name=MaxLag`
+через 7777 отдаёт `InstanceNotFoundException`):
+```bash
+# Общий MaxLag по брокеру:
+curl -s --max-time 15 http://localhost:8080/metrics | grep '^kafka_server_replicafetchermanager_maxlag'
+
+# Per-partition лаг (какие партии отстают):
+curl -s --max-time 15 http://localhost:8080/metrics \
+  | grep '^kafka_server_fetcherlagmetrics_consumerlag' | grep -v ' 0.0$' | sort -k2 -n -r | head -20
+
+# MinFetchRate — нижняя граница скорости fetcher'ов:
+curl -s --max-time 15 http://localhost:8080/metrics | grep '^kafka_server_replicafetchermanager_minfetchrate'
+```
+
+**Фикс**: в pms `kafka.broker.properties` поднять `num.replica.fetchers` (с 1 до 4 — рабочий
+случай, MDBSUP-4649), затем `confp --oneshot` + поочерёдный рестарт брокеров.
+
+Подробности и грабли (Jolokia vs JMX exporter, нумерация fetcher-тредов, шум mdb-tos) —
+`history/MDBSUP-4649.md`. Сопутствующие метрики и таблица типов лага —
+`kafka-metrics-investigator/commands/check_metrics.md` → «Follower lag» и «Дедупликация лагов».
+
 Если при этом ещё и min ISR пробит — статус "Has N partitions with min in-sync replicas" +
 `rank=RANK_PREFAIL`. Проверить:
 ```bash

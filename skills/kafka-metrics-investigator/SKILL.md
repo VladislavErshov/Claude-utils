@@ -104,6 +104,9 @@ host_checker для проверки состояния брокера, не Pro
 - **share-group-lag-exporter (23570) падает** — в env остались `KAFKA_OPTS` с `-javaagent` или `JMX_PORT=9000`.
 - **Fenced брокер** — `FencedBrokerCount > 0` на controller-хосте.
 - **Under-replicated partitions** — `UnderReplicatedPartitions > 0` на broker-хосте.
+- **Высокий CPU процесса Kafka (`process_cpu_seconds_total`)** — может быть вызван не самой Kafka,
+  а TOS agent (javaagent observability): у него были утечки памяти → частый GC → GC выжирал
+  все ядра. Подробности и диагностика — `commands/check_metrics.md`.
 
 ## Что НЕ покрывает скилл
 

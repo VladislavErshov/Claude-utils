@@ -77,6 +77,9 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
 - **`kafka-host-inspector`** — Kafka-специфика выполнения команд на хосте, путеводитель по
   путям (логи, конфиги, SSL, systemd, rscheck, host_checker, prometheus, cruise-control).
   Базовые паттерны `mcc ssh + expect`/`mcc scp` — в [`mcc-host-access`](../mcc-host-access/SKILL.md).
+  **Содержит собственную `history/`** с инцидентами хостового уровня (диагностика через логи
+  cruise-хоста, Porto-контейнер, cgroup и т.п.). Перед запуском диагностики кластера сверяйся
+  с `kafka-host-inspector/history/` — если симптом совпадает, делегируй в дочерний скилл.
 - **`kafka-log-investigator`** — скачивание и анализ логов broker/controller/cruise-control
   (`/mnt/logs/dbms/`), что грепать в `kafka-broker.out.log` / `kafka-controller.out.log` /
   `cruise-control.err.log`, маркеры старта/ошибок.
@@ -106,9 +109,14 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
   (создание, проверка, удаление).
 - `commands/known_issues.md` — каталог известных технических проблем (симптомы, причины,
   фиксы): Broker is dead, InvalidReplicationFactor, CruiseControlMetricsReporter и т.д.
-- `history/` — краткие разборы реальных инцидентов (симптом + фикс + грабли). Полные разборы
-  могут лежать в `kafka-reassign-partiotions/history/`. Перед диагностикой смотреть, нет ли
-  похожего случая.
+- `history/` — краткие разборы реальных инцидентов кластерного уровня (симптом + фикс + грабли).
+  Полные разборы могут лежать в `kafka-reassign-partiotions/history/`. Перед диагностикой смотреть,
+  нет ли похожего случая.
+- **`kafka-host-inspector/history/`** — разборы инцидентов **хостового уровня** (подключение к
+  хосту, пути к логам/конфигам, Porto-контейнер, cgroup, специфика выполнения команд). Родительский
+  скилл читает эту историю, чтобы понять, нужно ли делегировать в `kafka-host-inspector`. Если
+  симптом совпадает с инцидентом оттуда (например, `NotEnoughValidWindowsException` CC → нужно
+  грепать логи на cruise-хосте) — вызывай дочерний скилл, не разбирай вручную.
 
 ## Известные проблемы (кратко)
 

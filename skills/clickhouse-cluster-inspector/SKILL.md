@@ -97,6 +97,7 @@ Possibly it's overloaded, doesn't see leader or stale` — Raft-подсисте
 - `history/` — разборы реальных инцидентов (формат `incident_<YYYY-MM>_<краткое_описание>.md`). История для будущих разборов — что видели, чем лечили, что сработало.
   - `incident_2026_07_keeper_split.md` — sellgate-media-infra-ch: Keeper split-brain после остановки одного кипера в облаке, зависший Raft-state на pc, фикс через дроп диска + рестарт.
   - `incident_2026_07_mysql_port_9004.md` — uchiru-bi-dwh (MDBSUP-3886): включение MySQL emulation port 9004. Три шага: PMS `<mysql_port>` + манифест сервиса `'9004': 'lan,tcp'` + `confp --oneshot && systemctl restart mdb-clickhouse-server` (не `RELOAD CONFIG`).
+  - `incident_2026_08_mnt_logs_full.md` — uv-content-id-meta-dev-uv-ch (MDBSUP-4673): хост не поднимается, `Dependency failed for Clickhouse Server`. Корень — диск `/mnt/logs` (15G) забит на 100% файлом `clickhouse-syslog.err.log` (root-owned, не ротируется CH). `dir-init.service` не может создать `/mnt/logs/analytics/probes` → валит dependency CH-сервера. Фикс: `rm -rf /mnt/logs/{dbms,analytics,system,vector}/*` + `systemctl start mdb-clickhouse-server`.
 
 ## Известные проблемы (кратко)
 
@@ -108,6 +109,7 @@ Possibly it's overloaded, doesn't see leader or stale` — Raft-подсисте
 - **`Election Timer is never started but is requested to stop, protential a bug`** — известный баг ClickHouse Keeper 24.3, Raft-подсистема не стартует选举-таймер. Фикс — рестарт keeper.
 - **`TOO_MANY_SIMULTANEOUS_QUERIES` на CH** — обычно следствие недоступности Keeper: запросы висят на ZK-операциях и копятся. Чинить корень (Keeper), а не лимит.
 - **Хост не поднялся после работ в облаке** — `Task Instance ... is not scheduling on a minion, please start it first` → зайти в облако, нажать start. Если RUNNING но UNAVAILABLE долго — смотреть логи.
+- **`Dependency failed for Clickhouse Server` при старте** — `dir-init.service` упал (обычно `No space left on device` на `/mnt/logs`). Виновник часто — `/mnt/logs/dbms/clickhouse-syslog.err.log` (root-owned, не ротируется CH). Фикс: `rm -rf /mnt/logs/{dbms,analytics,system,vector}/*` + `systemctl start mdb-clickhouse-server`. См. `history/incident_2026_08_mnt_logs_full.md`.
 - **Part intersects previous part** — https://clickhouse.com/docs/knowledgebase/part_intersects_previous_part. Удалить проблемный парт (с бэкапом), проверить путь в Keeper, рестарт CH.
 - **Сломалась схема на реплике** — `Table target.X_local does not exist`, реплика пустая. Смотреть `/mnt/logs/system/restore_ch.log`, при `can't create table ... already exist` — `SYSTEM DROP REPLICA 'name' FROM ZKPATH 'path'`, перезапустить restore.
 

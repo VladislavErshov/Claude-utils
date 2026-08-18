@@ -70,6 +70,13 @@ curl -s 'http://localhost:7777/jolokia/list' | python3 -c "import json,sys; d=js
 | `kafka.server:type=ReplicaManager,name=IsrShrinksPerSec` | Сжатие ISR (реплика отстаёт) |
 | `kafka.cluster:type=Partition,topic=*,name=AtMinIsr,partition=*` | Партиции на границе min ISR |
 
+⚠️ **Грабля: не все MBean видны через Jolokia (7777)** — некоторые есть только через JMX
+exporter (8080) как Prometheus-метрики. Например `kafka.server:type=ReplicaFetcherManager,name=MaxLag`
+(follower lag, панель Grafana «Broker Max Lag») через Jolokia отдаёт `InstanceNotFoundException`,
+но через `curl http://localhost:8080/metrics | grep replicafetchermanager_maxlag` — есть.
+Если MBean «не нашёлся» через Jolokia, всегда проверяй второй порт. Подробности и список
+лаг-метрик по портам — `commands/check_metrics.md` → «Follower lag» и «Дедупликация лагов».
+
 ### На controller-хосте (process.roles=controller)
 
 | MBean | Что показывает |
