@@ -39,4 +39,4 @@ kafka-reassign-partitions.sh --bootstrap-server <fqdn>:9092 --command-config cli
 5. `grep "^Topic:"` не матчит строки партиций (табуляция перед `Topic:`). `grep "Replicas:.*<id>"`.
 6. tcl/expect + Python `[...]` ломается (command substitution). Python-скрипт отправлять через base64.
 
-Полный разбор — `kafka-reassign-partiotions/history/MDBSUP-4166.md`.
+Полный разбор — `kafka-reassign-partitions/history/MDBSUP-4166.md`.

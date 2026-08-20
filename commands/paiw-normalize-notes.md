@@ -1,0 +1,1 @@
+/Users/vl.ershov/.paiw/tools/system/commands/paiw-normalize-notes.md

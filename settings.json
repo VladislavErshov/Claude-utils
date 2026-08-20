@@ -1,29 +1,205 @@
 {
-  "model": "opus[1m]",
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "rtk hook claude"
-          }
-        ]
-      }
-    ]
-  },
+  "autoMemoryDirectory": "/Users/vl.ershov/.paiw/.claude-memory",
   "enabledPlugins": {
     "codex@openai-codex": true
+  },
+  "env": {
+    "ENABLE_TOOL_SEARCH": "true"
   },
   "extraKnownMarketplaces": {
     "openai-codex": {
       "source": {
-        "source": "github",
-        "repo": "openai/codex-plugin-cc"
+        "repo": "openai/codex-plugin-cc",
+        "source": "github"
       }
     }
   },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/skills/self-improvement/scripts/error-detector.mjs\"",
+            "statusMessage": "Paiw bash error learnings hint",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|Shell"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/after-tool-call.mjs\"",
+            "statusMessage": "Paiw PostTool file echo",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Write|Edit|Read|NotebookEdit"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/inbox-capture.mjs\"",
+            "statusMessage": "Paiw inbox auto-capture",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "TodoWrite"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/paiw-skill-usage.mjs\" --hook-name claude-skill-usage --mode tool",
+            "statusMessage": "Paiw skill usage telemetry (OTLP traces)",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Skill"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/paiw-write-guard.mjs\" post-tool-use",
+            "statusMessage": "Paiw write hint",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/send-ai-logs.mjs\"",
+            "statusMessage": "Paiw code telemetry (set AI_LOG_ENDPOINT)",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Write|Edit|NotebookEdit|Bash"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/skills/self-improvement/scripts/error-detector.mjs\"",
+            "statusMessage": "Paiw bash error learnings hint (failed tool)",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|Shell"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/paiw-skill-usage.mjs\" --hook-name claude-skill-usage --mode tool",
+            "statusMessage": "Paiw skill usage telemetry (OTLP traces, failed)",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Skill"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "rtk hook claude",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/paiw-write-guard.mjs\" pre-tool-use",
+            "statusMessage": "Paiw write guard",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|Shell|Exec|RunTerminalCmd|RunCommand|Execute|Command"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/paiw-write-guard.mjs\" session-start",
+            "statusMessage": "Paiw routing reminder",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/inbox-session-summary.mjs\"",
+            "statusMessage": "Paiw inbox session summary",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/notify-stop.mjs\"",
+            "statusMessage": "Paiw session stop notify",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/paiw-skill-usage.mjs\" --hook-name claude-slash-skill-usage --mode slash",
+            "statusMessage": "Paiw slash skill usage telemetry (OTLP traces)",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/skills/self-improvement/scripts/activator.mjs\"",
+            "statusMessage": "Paiw learnings + routing reminder",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/vl.ershov/.nvm/versions/node/v24.19.0/bin/node \"/Users/vl.ershov/.paiw/tools/system/hooks/claude/inbox-capture.mjs\"",
+            "statusMessage": "Paiw inbox auto-capture",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ]
+  },
+  "model": "opus[1m]",
   "permissions": {
     "allow": [
       "Bash(rtk *)",
@@ -64,6 +240,16 @@
       "Read(*)",
       "Read(//Users/vl.ershov/Documents/Git/mdb-processing/**)",
       "Read(//Users/vl.ershov/Documents/Git/mdb-data/**)"
+    ],
+    "deny": [
+      "Edit(//Users/vl.ershov/.paiw/identity/shared/**)",
+      "Edit(//Users/vl.ershov/.paiw/projects/shared/**)",
+      "Edit(//Users/vl.ershov/.paiw/areas/shared/**)",
+      "Edit(//Users/vl.ershov/.paiw/resources/shared/**)",
+      "Edit(//Users/vl.ershov/.paiw/comms/shared/**)",
+      "Edit(//Users/vl.ershov/.paiw/inbox/shared/**)",
+      "Edit(//Users/vl.ershov/.paiw/tools/system/**)",
+      "Edit(//Users/vl.ershov/.paiw/tools/shared/**)"
     ]
   }
 }

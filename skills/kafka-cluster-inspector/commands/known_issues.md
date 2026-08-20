@@ -324,7 +324,7 @@ sudo -u kafka /opt/kafka/bin/kafka-leader-election.sh \
 #### Этап 2: Убрать мёртвый broker id из Replicas через reassign
 
 После unclean election брокер остаётся в `Replicas` как мёртвая реплика (в Isr его уже нет).
-Полный разбор — скилл `kafka-reassign-partiotions`, `history/MDBSUP-4166.md`.
+Полный разбор — скилл `kafka-reassign-partitions`, `history/MDBSUP-4166.md`.
 
 Кратко:
 1. `kafka-topics --describe | grep "Replicas:.*<dead_broker_id>"` — собрать все партиции.

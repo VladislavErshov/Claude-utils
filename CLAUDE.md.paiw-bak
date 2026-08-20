@@ -87,7 +87,3 @@ These guidelines are working if: fewer unnecessary changes in diffs, fewer rewri
 - Используй `mcc scp/ssh host_name`
 
 @RTK.md
-
-<!-- BEGIN PAIW MANAGED BLOCK -->
-@/Users/vl.ershov/.paiw/CLAUDE.md
-<!-- END PAIW MANAGED BLOCK -->

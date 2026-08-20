@@ -85,7 +85,7 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
   `cruise-control.err.log`, маркеры старта/ошибок.
 - **`kafka-metrics-investigator`** — метрики (JMX 8080, Jolokia 7777, kafka-exporter 23569,
   share-group-lag-exporter 23570), Jolokia MBean'ы, диагностика "Broker is dead" через MBean'ы.
-- **`kafka-reassign-partiotions`** — ручное перераспределение партиций через
+- **`kafka-reassign-partitions`** — ручное перераспределение партиций через
   `kafka-reassign-partitions.sh` по заданной схеме размещения реплик. Предлагай, когда
   пользователь даёт **явную схему** (какие партиции на какие брокеры), хочет вывести брокер
   из кластера, видит дисбаланс дисковой нагрузки между ДЦ и хочет перекинуть партиции вручную.
@@ -110,7 +110,7 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
 - `commands/known_issues.md` — каталог известных технических проблем (симптомы, причины,
   фиксы): Broker is dead, InvalidReplicationFactor, CruiseControlMetricsReporter и т.д.
 - `history/` — краткие разборы реальных инцидентов кластерного уровня (симптом + фикс + грабли).
-  Полные разборы могут лежать в `kafka-reassign-partiotions/history/`. Перед диагностикой смотреть,
+  Полные разборы могут лежать в `kafka-reassign-partitions/history/`. Перед диагностикой смотреть,
   нет ли похожего случая.
 - **`kafka-host-inspector/history/`** — разборы инцидентов **хостового уровня** (подключение к
   хосту, пути к логам/конфигам, Porto-контейнер, cgroup, специфика выполнения команд). Родительский
@@ -132,6 +132,12 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
   через минуту.
 - **CC не запускается** — `UnsupportedClassVersionError` (Java 11 vs 17). Фикс — обновить Java в
   `ubuntu20-mdb-cruisecontrol-base`.
+- **CC после пересоздания хоста долбит localhost:9092** (MDBSUP-4739) — конфиги pms лежат под
+  неправильным hostname (`cruise-control.<cluster>.clouds` вместо `cruise.<cluster>.clouds`) →
+  confp не рендерит `cruisecontrol.properties`, остаётся сток образа с
+  `bootstrap.servers=localhost:9092`. Фикс — переложить конфиги в pms под правильный hostname,
+  затем `confp --oneshot && systemctl restart cruise-control` (первый confp-прогон может упасть
+  на vault-pki — повторить). Разбор — `history/MDBSUP-4739.md`.
 - **CruiseControlMetricsReporter не подключается** — JAR несовместим с версией Kafka (CC 2.5.141
   vs Kafka 4.x требует 2.5.147+), либо auth-проблема. Отдельный случай: `ClassNotFoundException:
   CruiseControlMetricsReporter` — брокер падает при старте, JAR репортера отсутствует в образе.
@@ -150,7 +156,7 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
   `Replicas: <dead_broker>,... Isr: <dead_broker>`. Хост удалён из mdb-data, но остался в
   metadata Kafka как preferred leader. Фикс — unclean leader election (`kafka-leader-election.sh
   --admin.config --election-type unclean --all-topic-partitions`) + reassign для убирания
-  мёртвого broker id из Replicas (скилл `kafka-reassign-partiotions`). Детали — `known_issues.md`.
+  мёртвого broker id из Replicas (скилл `kafka-reassign-partitions`). Детали — `known_issues.md`.
 
 ## Что НЕ покрывает скилл
 
