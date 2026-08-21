@@ -138,6 +138,19 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
   `bootstrap.servers=localhost:9092`. Фикс — переложить конфиги в pms под правильный hostname,
   затем `confp --oneshot && systemctl restart cruise-control` (первый confp-прогон может упасть
   на vault-pki — повторить). Разбор — `history/MDBSUP-4739.md`.
+- **CC в crash-loop: `cannot find the metrics reporter topic [__CruiseControlMetrics]`**
+  (bilmigrated-datatransfer-kafka, 2026-08-21) — create_additional_service записал блок
+  `metric.reporters` в PMS, но: (1) рендер на брокеры не дошёл — файлы старше PMS-изменения,
+  (2) в PMS-переменной забыли импорт `{% import "/etc/misc/utils.j2" as utils -%}` → confp
+  падает `UndefinedError: 'utils' is undefined`, весь рендер broker.properties блокируется.
+  Фикс — импорт в PMS первой строкой, затем поочерёдно confp+restart на брокерах.
+  Разбор — `history/bilmigrated_cc_crashloop_no_utils_import.md`.
+- **`NotEnoughValidWindowsException` на свежеподнятом CC** (MDBSUP-4761) — remove_broker
+  запущен до прогрева (нужно 5 окон по 5 мин после старта CC). Конфиг при этом валидный —
+  сначала смотреть `GET /user_tasks` и `/state`: возможно, повтор операции уже прошёл успешно
+  (в тикете — прошёл на следующий день, вмешательство не потребовалось). Разовый OOM в
+  HTTP-Dispatcher в err.log — побочный эффект упавшего запроса, не падение CC.
+  Разбор — `history/MDBSUP-4761.md`.
 - **CruiseControlMetricsReporter не подключается** — JAR несовместим с версией Kafka (CC 2.5.141
   vs Kafka 4.x требует 2.5.147+), либо auth-проблема. Отдельный случай: `ClassNotFoundException:
   CruiseControlMetricsReporter` — брокер падает при старте, JAR репортера отсутствует в образе.

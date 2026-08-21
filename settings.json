@@ -4,6 +4,7 @@
     "codex@openai-codex": true
   },
   "env": {
+    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1",
     "ENABLE_TOOL_SEARCH": "true"
   },
   "extraKnownMarketplaces": {

@@ -251,7 +251,11 @@ curl -s --max-time 15 http://localhost:8080/metrics | grep '^kafka_server_replic
 случай, MDBSUP-4649), затем `confp --oneshot` + поочерёдный рестарт брокеров.
 
 Подробности и грабли (Jolokia vs JMX exporter, нумерация fetcher-тредов, шум mdb-tos) —
-`history/MDBSUP-4649.md`. Сопутствующие метрики и таблица типов лага —
+`history/MDBSUP-4649.md`. Второй подтверждённый кейс — MDBSUP-4737 (`auction-realtime-adtech-kafka`,
+2026-08-21): «застрявший remove broker» при видимых ~70 Мбит/с приняли за троттлинг CC, но
+throttle был пуст, reassignment завершён, kc-брокеры уже освобождены (0 replicas) — URP был
+хроническим lag'ом от `num.replica.fetchers=1`. Разбор-чеклист «как отличить троттлинг CC от
+fetcher-бутылочного-горлышка» — `history/MDBSUP-4737.md`. Сопутствующие метрики и таблица типов лага —
 `kafka-metrics-investigator/commands/check_metrics.md` → «Follower lag» и «Дедупликация лагов».
 
 Если при этом ещё и min ISR пробит — статус "Has N partitions with min in-sync replicas" +
