@@ -12,12 +12,12 @@ Jolokia — JMX over HTTP на порту 7777. Используется:
 
 ## Доступ
 
-Скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (команда `ssh`) не принимает
+Скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (команда `ssh`) не принимает
 аргументы с пробелами/пайпами. Поэтому команды с curl нужно выполнять **в интерактивной
 сессии** на хосте:
 
 ```bash
-# Подключиться к хосту через скилл mcc-host-access (команда ssh):
+# Подключиться к хосту через скилл mcc-host-worker (команда ssh):
 #   host = 1.broker.<cluster>.<dc>.one-infra.ru
 # затем на хосте:
 curl -s 'http://localhost:7777/jolokia/read/<mbean>'

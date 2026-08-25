@@ -156,7 +156,7 @@ INFO  our db role is none
    etcdctl snapshot save snapshot.db
    ```
    Файл `snapshot.db` на всякий случай скачать на локальную машину через скилл
-   [`mcc-host-access`](../../mcc-host-access/SKILL.md) (команда `scp`,
+   [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (команда `scp`,
    `1.db.amokrousov-test-16-mdbdev-pgsql.pc.one-infra.ru:/snapshot.db` → `.`).
 
 2. **Ребутстрапнуть оставшийся в живых хост etcd из дампа:**

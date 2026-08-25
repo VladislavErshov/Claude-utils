@@ -1,6 +1,6 @@
 ---
 name: clickhouse-cluster-inspector
-description: Инспекция MDB ClickHouse кластеров (версии 24.x) — архитектура shard+replica+Keeper, разбор Raft quorum / Keeper leader election, каталог известных проблем (broken parts, Keeper split-brain, нет кворума, "Keeper server rejected the connection during the handshake", TOO_MANY_SIMULTANEOUS_QUERIES, Part intersects previous part, сломалась схема на реплике). Список хостов задаёт пользователь (формат 1.shard{N}-db.<cluster>.<dc>.one-infra.ru / 1.keeper.<cluster>.<dc>.one-infra.ru). Используй когда нужно понять состояние кластера, найти причину почему CH-хост или Keeper не стартует / не входит в Raft quorum, разобраться с репликацией / broken parts / зависшими запросами. Работа с хостами — через скилл `mcc-host-access` (`mcc ssh` + expect), SQL через `clickhouse-client --user backup-admin` (пароль в `/etc/rscheck/checkclickhouse.conf`).
+description: Инспекция MDB ClickHouse кластеров (версии 24.x) — архитектура shard+replica+Keeper, разбор Raft quorum / Keeper leader election, каталог известных проблем (broken parts, Keeper split-brain, нет кворума, "Keeper server rejected the connection during the handshake", TOO_MANY_SIMULTANEOUS_QUERIES, Part intersects previous part, сломалась схема на реплике). Список хостов задаёт пользователь (формат 1.shard{N}-db.<cluster>.<dc>.one-infra.ru / 1.keeper.<cluster>.<dc>.one-infra.ru). Используй когда нужно понять состояние кластера, найти причину почему CH-хост или Keeper не стартует / не входит в Raft quorum, разобраться с репликацией / broken parts / зависшими запросами. Работа с хостами — через скилл `mcc-host-worker` (`mcc ssh` + expect), SQL через `clickhouse-client --user backup-admin` (пароль в `/etc/rscheck/checkclickhouse.conf`).
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
@@ -14,7 +14,7 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 (запуск, Raft quorum, rscheck, репликация, broken parts) и каталог известных проблем.
 
 > Работа с хостами (ssh + expect, scp, sshexec) — через скилл
-> [`mcc-host-access`](../mcc-host-access/SKILL.md). Ниже — только специфика ClickHouse.
+> [`mcc-host-worker`](../mcc-host-worker/SKILL.md). Ниже — только специфика ClickHouse.
 
 ## Документация
 
@@ -51,7 +51,7 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 **К CH-серверу** (пароль `backup-admin` лежит в `/etc/rscheck/checkclickhouse.conf`):
 ```bash
 # Достать пароль неинтерактивно (НЕ используем \$() внутри expect — Tcl ломается на скобках,
-# пишем скрипт на хост через heredoc — см. mcc-host-access/commands/pitfalls.md)
+# пишем скрипт на хост через heredoc — см. mcc-host-worker/commands/pitfalls.md)
 cat /etc/rscheck/checkclickhouse.conf | grep -oP 'password:\s*\K[^ ]+' | head -1
 clickhouse-client --user backup-admin --password '<pass>' --query 'SELECT 1'
 ```

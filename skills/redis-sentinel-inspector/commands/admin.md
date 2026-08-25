@@ -137,7 +137,7 @@ Default-клиент позволяет подключиться к Redis без
    `maxMemory`). Либо запускать таски оператора на каждый шард (если кластер
    шардированный).
 4. Альтернативный вариант — запустить рестарт скриптом: перебрать хосты × ДЦ через
-   скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+   скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc sshexec`, см.
    `commands/sshexec.md` для шаблона перебора). Команда на хосте:
    `confp --oneshot; systemctl restart redis`. Шаблон хоста:
    `1.shard${i}-db.mdb-health-mdb-redis.${dc}.one-infra.ru` (`i=1..3`, `dc=hc,kc,pc`).

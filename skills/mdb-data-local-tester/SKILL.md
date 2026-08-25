@@ -90,6 +90,10 @@ mdb-data и mdb-processing оба по дефолту на 8080 — конфли
 
 Для проверки каждой toggle-фичи нужен **отдельный** modify-запрос, меняющий только нужное поле. Комбинировать можно, но тогда в temporal input приедут все сразу.
 
+## Смежные скиллы
+
+- **`upscale-kafka-controller-tester`** — тестирование upscale Kafka-контроллеров (MDBDEV-3180): seed test-modify3, симуляция падений из прод-Temporal, планы T1–T7.
+
 ## История тестов
 
 Перед написанием новых запросов проверяй готовые сценарии:
@@ -143,7 +147,7 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
 
 ## Получение реальных данных кластера
 
-Используй `/db-seed`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их на удалённом хосте (через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md), `mcc ssh` + `psql`), результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
+Используй `/db-seed`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их на удалённом хосте (через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md), `mcc ssh` + `psql`), результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
 
 ### Обязательный шаблон: один SQL через `jsonb_build_object`
 

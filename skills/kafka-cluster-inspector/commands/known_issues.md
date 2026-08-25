@@ -292,7 +292,7 @@ Topic: hashCalculationResult Partition: 6  Leader: none  Replicas: 22026,20012,2
 и **только он в `Isr`**. Этот broker:
 - preferred leader для всех проблемных партиций;
 - единственная ISR-реплика — другие реплики ранее выпали из ISR;
-- **недоступен** (хост удалён из mdb-data, `mcc` через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) не подключается с `NamespaceMissingException`).
+- **недоступен** (хост удалён из mdb-data, `mcc` через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) не подключается с `NamespaceMissingException`).
 
 Так как `unclean.leader.election.enable=false` (default в Kafka 3.x) и `min.insync.replicas=2`,
 controller не может выбрать лидера из не-ISR реплик → партиции висят `Leader: none`.
@@ -359,7 +359,7 @@ Reassign проходит мгновенно, т.к. мёртвый брокер
 6. **tcl/expect + Python `[...]`**: `expect -c '...'` интерполирует `[...]` как tcl command
    substitution. List comprehensions ломаются. Решение — base64-кодировать python-скрипт
    локально, отправить через `echo '<b64>' | base64 -d > /tmp/script.py`.
-   Подробнее про грабли Tcl/expect — [`mcc-host-access/commands/pitfalls.md`](../../mcc-host-access/commands/pitfalls.md).
+   Подробнее про грабли Tcl/expect — [`mcc-host-worker/commands/pitfalls.md`](../../mcc-host-worker/commands/pitfalls.md).
 
 ### Похожий сценарий — Cruise Control не убирает мёртвый брокер
 

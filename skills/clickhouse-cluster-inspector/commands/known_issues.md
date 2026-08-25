@@ -71,7 +71,7 @@ systemctl restart mdb-clickhouse-server
 ```
 
 **Почистить весь кластер** — перебрать хосты × ДЦ через скилл
-[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc sshexec`, см.
 `commands/sshexec.md` для шаблона перебора). Команда на хосте:
 `find /var/lib/clickhouse/1/store -path '*/detached/*' -delete`. Параметры шаблона:
 `cluster_name="zen-events-log"`, `project="zinfra"`, `clouds=("rc" "pc")`,
@@ -81,7 +81,7 @@ systemctl restart mdb-clickhouse-server
 ## Хост не поднялся после работ в облаке
 
 **Симптом**: хост в UI `unknown`/`UNAVAILABLE`, подключение через скилл
-[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`) возвращает:
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc ssh`) возвращает:
 ```
 *** ERROR (ServiceValidationException): Task Instance <host> is not scheduling on a minion,
 please start it first
@@ -180,7 +180,7 @@ timeout 3 bash -c "echo > /dev/tcp/<peer>/<raft_port>"       # L4 к raft_port 9
 
 ### Релоад конфигов на всём кластере
 
-Перебрать хосты × ДЦ через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+Перебрать хосты × ДЦ через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
 (команда `sshexec`, см. `commands/sshexec.md` для шаблона перебора). Команда на хосте:
 `confp --oneshot; clickhouse-client --user backup-admin --password $(grep -oP 'password:\s*\K[^ ]+' /etc/rscheck/checkclickhouse.conf) --query 'SYSTEM RELOAD CONFIG'`.
 Шаблон хоста: `1.shard${shardN}-db.<cluster>-${project}-ch.$cloud.one-infra.ru`

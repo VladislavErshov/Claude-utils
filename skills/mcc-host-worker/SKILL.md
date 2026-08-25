@@ -1,5 +1,5 @@
 ---
-name: mcc-host-access
+name: mcc-host-worker
 description: Работа с mcc (внутренний CLI доступа к хостам MDB) — mcc ssh + expect-обёртки (промпт `/# `), mcc scp (копирование файлов с граблями dest-директории), mcc sshexec (неинтерактивный запуск, требует `-n infra`), mcc instances/status/log-streams/logs (интроспекция без ssh), mcc tp-port-forward (проброс порта на localhost через Teleport), JVM-диагностика (jstack/jmap/profile/perf), lifecycle (start/stop/restart), mcc ops (проверка one-cloud-ops), известные грабли (SSL Handshake is not finished, NamespaceMissingException, Tcl/expect `[...]`/`$VAR`, EOF на tar header, ANSI-коды, self-update без --local). Список хостов задаёт пользователь. Используй когда нужно подключиться к хосту, выполнить команду, скачать/залить файл, перечислить хосты кластера, проверить статус, пробросить порт, снять thread/heap dump, запустить команду на нескольких хостах — особенно в контексте Kafka/Redis/ClickHouse/PostgreSQL/mdb-data-хостов. Все остальные инспекторы ссылаются сюда для базовых паттернов mcc.
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---

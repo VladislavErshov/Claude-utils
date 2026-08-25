@@ -1,6 +1,6 @@
 ---
 name: redis-sentinel-inspector
-description: Инспекция и дежурство по Redis Sentinel-кластерами (mdb-data, cfs-redis) — known-peers, забытые хосты, спам "Failed to resolve hostname" в redis-sentinel.log, SENTINEL RESET, вечная переливка реплик, закончился диск, битый AOF, смена мастера, ACL-пользователи, миграция 7→8. Список хостов даёт пользователь (формат 1.db.<cluster>-cfs-redis.<dc>.one-infra.ru). Конфиги и логи читаются через скилл `mcc-host-access` (`mcc scp`/`mcc sshexec`). Используй когда нужно проверить состояние Sentinel-кластера, найти зомби-хост, остановить переливку, починить битый AOF, поменять ACL, провести failover. Для шардированного Redis Cluster — см. скилл `redis-cluster-inspector`.
+description: Инспекция и дежурство по Redis Sentinel-кластерами (mdb-data, cfs-redis) — known-peers, забытые хосты, спам "Failed to resolve hostname" в redis-sentinel.log, SENTINEL RESET, вечная переливка реплик, закончился диск, битый AOF, смена мастера, ACL-пользователи, миграция 7→8. Список хостов даёт пользователь (формат 1.db.<cluster>-cfs-redis.<dc>.one-infra.ru). Конфиги и логи читаются через скилл `mcc-host-worker` (`mcc scp`/`mcc sshexec`). Используй когда нужно проверить состояние Sentinel-кластера, найти зомби-хост, остановить переливку, починить битый AOF, поменять ACL, провести failover. Для шардированного Redis Cluster — см. скилл `redis-cluster-inspector`.
 allowed-tools: [bash, read_file, write_file, edit_file]
 ---
 
@@ -122,7 +122,7 @@ sentinel-хосте кластера. Команда сбрасывает known-
 replication stream. Further accumulation may occur on master side.`
 
 **Быстрое решение**: поднять сеть на OUT у мастера, на IN у реплики, зайти на мастер
-через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (`mcc ssh`) и через
+через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md) (`mcc ssh`) и через
 `redis-cli` увеличить параметры репликации:
 
 ```
@@ -166,7 +166,7 @@ config set client-output-buffer-limit "replica 2GB 1GB 180"
 **Решение**: если это реплика и мастер в порядке — проще почистить диск, реплика
 синхронизируется заново. Если это единственный мастер:
 
-1. Сделать копии повреждённых файлов (через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md),
+1. Сделать копии повреждённых файлов (через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md),
    команда `scp`) — всю папку `/mnt/appendonlydir`.
 2. `systemctl stop redis`.
 3. `redis-check-aof /mnt/redis/appendonlydir/appendonly.aof.manifest` — найти повреждённый файл.
@@ -240,7 +240,7 @@ Default-пользователя выдаём, когда клиент/прил�
      (пример: `zkv/mdb/mdbdev/redis/redis-cluster-nd1-mdbdev-redis.mdbdev.db.production.mdb.prod/users/` — у старых кластеров путь может отличаться, смотреть в админке)
    - `vault_password_key`: `password`
    - `user_settings`: `{"username": "default"}`
-3. (Опционально) Зайти на хост через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md),
+3. (Опционально) Зайти на хост через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md),
    `redis-cli`, `auth master <password>`,
    `acl list` — убедиться, что у `default` стоит то, что в vault в `permission`.
 
@@ -280,7 +280,7 @@ Default-пользователя выдаём, когда клиент/прил�
 3. Запустить update через UI с минимальным изменением (например +1 байт в `maxMemory`),
    либо таски оператора на каждый шард (если кластер шардированный).
 4. Альтернатива — рестарт скриптом: перебрать хосты × ДЦ через скилл
-   [`mcc-host-access`](../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+   [`mcc-host-worker`](../mcc-host-worker/SKILL.md) (`mcc sshexec`, см.
    `commands/sshexec.md` для шаблона перебора). Команда на хосте:
    `confp --oneshot; systemctl restart redis`. Шаблон хоста:
    `1.shard${i}-db.mdb-health-mdb-redis.${dc}.one-infra.ru` (`i=1..3`, `dc=hc,kc,pc`).
@@ -347,10 +347,10 @@ save 1 43200     # изменение хотя бы одной записи за
 1. Проверить, что конфигурации совместимы: RAM (включая запас на фрагментацию, буферы,
    CoW), место на диске под дамп.
 2. Получить бэкап на каждом мастере кластера — скачать `/mnt/redis/dump.rdb` через
-   скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (`mcc scp`, см.
+   скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md) (`mcc scp`, см.
    `commands/scp.md` для шаблона массового скачивания).
 3. Скопировать rdb на соответствующие мастера таргетного кластера — через скилл
-   [`mcc-host-access`](../mcc-host-access/SKILL.md) (`mcc scp`, dest = `/mnt/redis`).
+   [`mcc-host-worker`](../mcc-host-worker/SKILL.md) (`mcc scp`, dest = `/mnt/redis`).
 4. `systemctl restart redis` — при рестарте подтянется `/mnt/redis/dump.rdb`.
 
 ### Провести учения по отключению инстанса Redis
@@ -390,7 +390,7 @@ save 1 43200     # изменение хотя бы одной записи за
 ## Работа с хостами
 
 Подключение к хосту, выполнение команд и скачивание файлов — через скилл
-[`mcc-host-access`](../mcc-host-access/SKILL.md). Специфика Redis — ниже по тексту скилла.
+[`mcc-host-worker`](../mcc-host-worker/SKILL.md). Специфика Redis — ниже по тексту скилла.
 
 ## Структура скилла
 

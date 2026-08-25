@@ -7,7 +7,7 @@
 ### Брокеры и контроллеры
 
 Скачать `/mnt/logs/dbms/` со всех хостов — через скилл
-[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc scp`, см. `commands/scp.md`
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc scp`, см. `commands/scp.md`
 для шаблона массового скачивания). Шаблоны хостов:
 
 ```
@@ -26,7 +26,7 @@ CONTROLLERS=(
 ### Cruise Control (если есть в кластере)
 
 Скачать `/mnt/logs/dbms/` с cruise-хоста — через скилл
-[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc scp`). Шаблон хоста:
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc scp`). Шаблон хоста:
 `1.cruise.<cluster>.hc.one-infra.ru`.
 
 ⚠️ Путь именно `/mnt/logs/dbms` (с 's' в `logs`). Опечатка `/mnt/log/dbms` даёт

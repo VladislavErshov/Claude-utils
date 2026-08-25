@@ -43,7 +43,7 @@ $EDITOR ubuntu20-kafka-base/rootfs/etc/host_checker/checks/check_kafka.py
 
 ## Шаг 2: залить на хост
 
-Доступ к хосту — через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md).
+Доступ к хосту — через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md).
 
 Специфика hot-deploy чекера: dest **всегда директория** (`/etc/host_checker/checks/`),
 а перед заливкой нужно удалить старый файл (и возможную случайную директорию, если ранее
@@ -54,16 +54,16 @@ HOST=1.broker.test-<cluster>-mdbdev-kafka.dc.one-infra.ru
 FILE=ubuntu20-kafka-base/rootfs/etc/host_checker/checks/check_kafka.py
 
 # 2a. Удалить старый файл (и случайную директорию, если ранее scp создал её).
-#     Зайти на хост через скилл mcc-host-access (команда ssh) и выполнить:
+#     Зайти на хост через скилл mcc-host-worker (команда ssh) и выполнить:
 rm -rf /etc/host_checker/checks/check_kafka.py
 
-# 2b. Скопировать через скилл mcc-host-access (команда scp, dest = директория!):
+# 2b. Скопировать через скилл mcc-host-worker (команда scp, dest = директория!):
 #     scp "$FILE" "$HOST:/etc/host_checker/checks/"
 ```
 
 ## Шаг 3: верификация + рестарт rscheck
 
-Зайти на хост через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+Зайти на хост через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
 и выполнить:
 
 ```bash
@@ -120,6 +120,6 @@ git commit -m "<MDBDEV-XXXX> <краткое описание>"
 ## Связанные команды
 
 - `/kafka-cluster-inspector` `commands/run_commands.md` — выполнение команд на хостах через
-  скилл `mcc-host-access` (`mcc ssh`), сложные команды с кавычками, heredoc-трюк.
+  скилл `mcc-host-worker` (`mcc ssh`), сложные команды с кавычками, heredoc-трюк.
 - `/kafka-config-inspector` — сверка что PMS-API значения физически применились в
   `/opt/kafka/config/` (не для чекеров, но полезно после передеплоя образа).

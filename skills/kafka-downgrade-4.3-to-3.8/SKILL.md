@@ -1,6 +1,6 @@
 ---
 name: kafka-downgrade-4.3-to-3.8
-description: Даунгрейд MDB Kafka кластера с 4.3 до 3.8 (KRaft) с сохранением бизнес-данных и офсетов consumer-групп. Прямой даунгрейд metadata.version невозможен — метод состоит в сбросе KRaft-метаданных, ре-формате кластера и переименовании 4.3-папок из stray обратно в canonical с переписыванием partition.metadata новым topic_id. .log файлы остаются на диске, не копируются через mcc scp. Бэкап скачивается только KRaft metadata с контроллеров (для отката). Процедура без остановки кластера перед бэкапом — бэкап KRaft meta-log делается на живом кластере. Используй когда нужно откатить кластер с 4.3 (включая share groups KIP-932) до 3.8. Docker-образ переключает пользователь через изменение манифеста хоста в админке облака (НЕ mdb-data, НЕ PMS напрямую). Work с хостами — `kafka-host-inspector` + `mcc-host-access`, анализ логов — `kafka-log-investigator`.
+description: Даунгрейд MDB Kafka кластера с 4.3 до 3.8 (KRaft) с сохранением бизнес-данных и офсетов consumer-групп. Прямой даунгрейд metadata.version невозможен — метод состоит в сбросе KRaft-метаданных, ре-формате кластера и переименовании 4.3-папок из stray обратно в canonical с переписыванием partition.metadata новым topic_id. .log файлы остаются на диске, не копируются через mcc scp. Бэкап скачивается только KRaft metadata с контроллеров (для отката). Процедура без остановки кластера перед бэкапом — бэкап KRaft meta-log делается на живом кластере. Используй когда нужно откатить кластер с 4.3 (включая share groups KIP-932) до 3.8. Docker-образ переключает пользователь через изменение манифеста хоста в админке облака (НЕ mdb-data, НЕ PMS напрямую). Work с хостами — `kafka-host-inspector` + `mcc-host-worker`, анализ логов — `kafka-log-investigator`.
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
@@ -49,7 +49,7 @@ KRaft-only, broker и controller на разных хостах. Сброс meta
 
 ⚠️ **Cruise-хост (`1.cruise.<cluster>.<dc>.one-infra.ru`) НЕ ТРОГАТЬ.** Не запускать/не проверять cruise-control.service, не включать cruise-хост в host-check. Если пользователь упоминает cruise-хост в списке — игнорировать его на протяжении всей процедуры.
 
-Список хостов даёт пользователь. Доступ через `mcc --local -n infra sshexec -n infra <fqdn> "<cmd>"` и `mcc scp` (подробнее — `mcc-host-access`).
+Список хостов даёт пользователь. Доступ через `mcc --local -n infra sshexec -n infra <fqdn> "<cmd>"` и `mcc scp` (подробнее — `mcc-host-worker`).
 
 ### Хелпер `mcc_retry` — auto-retry для SSL "Too early" (грабля #6)
 
@@ -750,7 +750,7 @@ vector.service                   loaded active running Vector service for produc
 
 - `kafka-cluster-inspector` — архитектура, формат хостов, каталог проблем
 - `kafka-host-inspector` — путеводитель по путям на хосте
-- `mcc-host-access` — паттерны `mcc ssh`/`mcc scp` с expect
+- `mcc-host-worker` — паттерны `mcc ssh`/`mcc scp` с expect
 - `kafka-log-investigator` — что грепать в логах
 - `kafka-metrics-investigator` — проверка через MBean/JMX
 

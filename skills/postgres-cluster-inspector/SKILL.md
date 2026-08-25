@@ -5,7 +5,7 @@
 ⚠️ Скилл проверяет **состояние процессов postgres + stolon + etcd + pgbouncer** (запуск, роль, replication, rscheck) через **логи и stolonctl/etcdctl**. Не покрывает: throughput / latency, настройки пользователей / баз, производительность — это к Prometheus/Grafana и mdb-data API.
 
 > Доступ к хостам и грабли Tcl/SSL/Namespace — в скилле
-> [`mcc-host-access`](../mcc-host-access/SKILL.md). Ниже — только специфика PostgreSQL.
+> [`mcc-host-worker`](../mcc-host-worker/SKILL.md). Ниже — только специфика PostgreSQL.
 
 ## Документация
 
@@ -40,7 +40,7 @@
 
 ## Что нужно
 
-- **Доступ к хостам** — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+- **Доступ к хостам** — через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
   Специфика PostgreSQL-хостов — `commands/connection.md`.
 
 ## Хосты и пути

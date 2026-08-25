@@ -1,6 +1,6 @@
 ---
 name: kafka-config-inspector
-description: Инспекция конфиг-файлов Kafka-хостов — сверка PMS-переменных (pms.cloud.vk.team API) с отрендеренными конфиг-файлами на хостах (broker.properties, controller.properties, cruisecontrol.properties, capacity.json, sysconfig, jaas.conf, log4j.properties, tools-log4j.properties). Список хостов берётся из БД pg_backstage_plugin_mdb, файлы читаются через скилл mcc-host-access. Используй когда нужно проверить, что PMS-API значения физически применились в /opt/kafka/config/ после modify-флоу. Скилл проверяет только property-файлы — он НЕ проверяет здоровье кластера (ISR, replication, partition balance и т.п.). Поддерживает два namespace: infra (one-infra.ru) и dzen (idzn.ru) — для дзена передавай `ns=dzen` в pms-read.sh.
+description: Инспекция конфиг-файлов Kafka-хостов — сверка PMS-переменных (pms.cloud.vk.team API) с отрендеренными конфиг-файлами на хостах (broker.properties, controller.properties, cruisecontrol.properties, capacity.json, sysconfig, jaas.conf, log4j.properties, tools-log4j.properties). Список хостов берётся из БД pg_backstage_plugin_mdb, файлы читаются через скилл mcc-host-worker. Используй когда нужно проверить, что PMS-API значения физически применились в /opt/kafka/config/ после modify-флоу. Скилл проверяет только property-файлы — он НЕ проверяет здоровье кластера (ISR, replication, partition balance и т.п.). Поддерживает два namespace: infra (one-infra.ru) и dzen (idzn.ru) — для дзена передавай `ns=dzen` в pms-read.sh.
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
@@ -16,11 +16,11 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 брокеры в ISR, replication factor, partition balance, leader election, consumer lag — всё это
 за пределами области действия. Только сверка «PMS-API ↔ отрендеренный файл на хосте».
 
-> Доступ к хостам и копирование файлов — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+> Доступ к хостам и копирование файлов — через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
 > Ниже — только специфика сверки PMS-API ↔ конфиг-файлы Kafka.
 
 Список хостов берётся из локальной БД `pg_backstage_plugin_mdb` (`host_state` по
-`cluster_id`). Файлы скачиваются через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+`cluster_id`). Файлы скачиваются через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
 
 ## Когда применять
 
@@ -36,9 +36,9 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 - **mTLS-сертификаты** в `~/.mccloud/` (`client.cert`, `client.key`, `ca.crt`) — для
   PMS-API (использует `bin/pms-read.sh`, это НЕ доступ к хостам — прямой curl+mTLS к
   `https://pms.cloud.vk.team/api/conf/values.do`).
-- **Доступ к хостам** — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+- **Доступ к хостам** — через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
   Грабли scp (dest-директория, `EOF на tar header` для файлов без
-  расширения, `NamespaceMissingException`) — в скилле `mcc-host-access`.
+  расширения, `NamespaceMissingException`) — в скилле `mcc-host-worker`.
 - **Локальная БД** `pg_backstage_plugin_mdb` в docker-контейнере `pg_backstage_plugin_mdb`
   (порт 6434) — для списка хостов.
 
@@ -71,6 +71,14 @@ PMS-API (`pms.cloud.vk.team`) хранит свойства в простран�
 `12.broker.events-front-kafka.dc.idzn.ru`) нужно явно передавать `namespace=dzen`:
 без него PMS вернёт пустые значения / `<NOT_SET>` для всех переменных, хотя они
 есть в `dzen`.
+
+**Для vkontakte-кластеров** (FQDN `.vkcl.ru`, например
+`1.broker.core-blacklists-p-vkontakte-kafka.ic.vkcl.ru`) — `namespace=vkontakte`
+(НЕ `vkcl` — тот даёт HTTP 400). Правильный namespace лежит в БД:
+`SELECT ns.name, ns.config FROM db_cluster dc JOIN namespaces ns ON ns.id = dc.namespace_id WHERE dc.id = '<cluster_id>'`
+(config содержит `{"domain": "vkcl"}`). ⚠️ На запись в `vkontakte` у обычного
+mdb-аккаунта прав нет — update.do отвечает `ACCESS_DENIED` (чтение при этом
+работает). Права запрашивать в web-UI PMS.
 
 `pms-read.sh` принимает namespace третьим аргументом, application — четвёртым:
 
@@ -144,13 +152,44 @@ PMS, а особенность шаблона mdb-data.
 ~/.claude/skills/kafka-config-inspector/bin/pms-read.sh <host> kafka.cruisecontrol.properties <namespace> <application>
 ```
 
-⚠️ PMS-API — **read-only**. Менять PMS-файлы через `POST /api/conf/update.do` /
-`DELETE /api/conf/delete.do` запрещено. PMS модифицируется только modify-флоу
-mdb-processing.
+### Запись в PMS (update.do) — только после явного разрешения пользователя
+
+⚠️ **ПРАВИЛО: перед КАЖДОЙ записью в PMS — покажи пользователю что, куда и какое
+значение, и дождись явного подтверждения.** Без подтверждения — только SELECT-ы
+(values.do). Рутинный путь изменения kafka.*-переменных — modify-флоу mdb-processing;
+ручная запись — для миграций/копий ключей (пример: перенос `vault-pki.certs` с
+legacy-ключа `cruise-control.<queue>.clouds` на `cruise.<queue>.clouds`).
+
+API записи (mTLS + `x-namespace`, как у чтения):
+
+```bash
+curl -s --cert ~/.mccloud/client.cert --key ~/.mccloud/client.key --cacert ~/.mccloud/ca.crt \
+  -H "x-namespace: <infra|dzen>" -H "Content-Type: application/json" \
+  -X POST "https://pms.cloud.vk.team/api/conf/update.do" \
+  -d '{
+    "applicationName": "ok-pyvault",
+    "hostName": "cruise.<queue>.clouds",
+    "propertyName": "vault-pki.certs",
+    "propertyValue": "<точное значение>",
+    "userComment": "что и зачем копируем"
+  }'
+# HTTP 200 + тело "0" = успех. Обязательно верифиций повторным values.do (байт-в-байт через cmp).
+```
+
+Поля: `applicationName`, `hostName` (PMS-ключ), `propertyName`, `propertyValue`;
+опционально `userComment`, `updateId`, `jiraTaskKey`.
+
+Грабли:
+- Копируй значение **байт-в-байт**: `values.do` → `jq -j '.["<key>"]'` (`-j` — без
+  завершающего \n), затем в тело через `jq -n --rawfile val <file>`.
+- PMS ловит rate-limit на серию запросов — отвечает HTML (429/5xx). При верификации
+  делай ОДИН values.do на namespace и разбирай ключи локально jq-ем, не дёргай по
+  разу на каждый ключ.
+- zsh не сплитит `$var` в `set -- $var` — массовые циклы гоняй через bash-скрипт.
 
 ## Шаг 3: файлы на хостах
 
-Доступ к хостам и копирование файлов — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+Доступ к хостам и копирование файлов — через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
 Здесь — только Kafka-специфика путей.
 
 ### Скачать конфиги broker/controller (файлы в `/opt/kafka/config/` + `/etc/sysconfig/kafka`)
@@ -161,7 +200,7 @@ mdb-processing.
 
 Скачать `/opt/kafka/config/` целиком (одним tarball — обходит баг с файлами без расширения) и
 `/etc/sysconfig/kafka` отдельно (destination — директория, не файл!) — через скилл
-[`mcc-host-access`](../mcc-host-access/SKILL.md) (команда `scp`, namespace `infra`).
+[`mcc-host-worker`](../mcc-host-worker/SKILL.md) (команда `scp`, namespace `infra`).
 
 Пример (для хоста `1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru`):
 - `mkdir -p /tmp/kafka-inspect/$HOST/sysconfig`
@@ -175,11 +214,11 @@ mdb-processing.
 `cruisecontrol-sysconfig` рендерится в **`/etc/sysconfig/cruise-control`**.
 
 Скачать `/opt/cruise-control/config/` и `/etc/sysconfig/cruise-control` — через скилл
-[`mcc-host-access`](../mcc-host-access/SKILL.md) (команда `scp`, namespace `infra`).
+[`mcc-host-worker`](../mcc-host-worker/SKILL.md) (команда `scp`, namespace `infra`).
 
 ⚠️ Одиночный `scp` файла без расширения (`sysconfig`, `jaas.conf`) падает с
 `failed to read downloaded archive header: EOF` — баг. Качать всю директорию целиком.
-Подробнее — скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+Подробнее — скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
 Для `sysconfig` принципиально качать с `/etc/sysconfig/kafka`, не из `/opt/kafka/config/`.
 
 ### Структура путей по типу хоста
@@ -307,11 +346,13 @@ PMS-переменная была удалена, но файл остался.
 
 - Доступ к хостам и грабли scp (dest-директория, `EOF на tar header` для файлов без расширения,
   `NamespaceMissingException` → `-n infra`, trailing `/` для директорий) —
-  в скилле [`mcc-host-access`](../mcc-host-access/SKILL.md).
+  в скилле [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
 - Хосты в `host_state` — это **прод-FQDN**, локально не резолвятся. Доступ только
-  через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
-- **Не модифицируй** файлы на хостах — только читаешь (через скилл mcc-host-access).
-- **Не пиши в PMS** — PMS-API только читаем. Меняется только modify-флоу mdb-processing.
+  через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
+- **Не модифицируй** файлы на хостах — только читаешь (через скилл mcc-host-worker).
+- **Не пиши в PMS без разрешения** — запись через `update.do` возможна (см. секцию
+  «Запись в PMS» выше), но каждый раз сначала спрашивай пользователя: что, куда,
+  какое значение. PMS-API по умолчанию — только читаем.
 
 ## Пример: инспекция после modify broker heap
 
@@ -324,7 +365,7 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -tA -c \
 ~/.claude/skills/kafka-config-inspector/bin/pms-read.sh 1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru kafka.sysconfig | grep KAFKA_HEAP_OPTS
 
 # 3. Скачать /opt/kafka/config/ целиком + /etc/sysconfig/kafka отдельно (dest — директория!)
-#    через скилл mcc-host-access (команда scp, namespace infra).
+#    через скилл mcc-host-worker (команда scp, namespace infra).
 HOST=1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru
 mkdir -p /tmp/kafka-inspect/$HOST/sysconfig
 # scp "$HOST:/opt/kafka/config/"   → /tmp/kafka-inspect/$HOST/

@@ -118,14 +118,14 @@
 
 ## Инструменты и нюансы выполнения
 
-> **Сначала читай [`/mcc-host-access`](../../mcc-host-access/SKILL.md)** — все паттерны
+> **Сначала читай [`/mcc-host-worker`](../../mcc-host-worker/SKILL.md)** — все паттерны
 > доступа к хостам (ssh/sshexec/scp/expect), грабли Tcl/expect, ANSI-коды, base64-загрузка
 > файлов собраны там. Ниже — только специфика reassign.
 
 - **ANSI-коды в выводе** — `grep` подсвечивает совпадения цветом, что ломает парсинг.
   Фильтровать через `sed -E 's/\x1b\[[0-9;]*[mK]//g'`.
 - **Загрузка reassign.json на хост** — `mcc scp` либо молча падает, либо создаёт
-  директорию вместо файла (см. `mcc-host-access/commands/scp.md`). Рабочие варианты:
+  директорию вместо файла (см. `mcc-host-worker/commands/scp.md`). Рабочие варианты:
   - `mcc scp /tmp/reassign.json <host>:/tmp/` (dest **директория** с trailing `/`).
   - При нестабильном scp — base64 поверх `mcc ssh + expect`. **Важно:** `mcc sshexec`
     падает с `414 URI Too Long` уже на ~8KB base64 (команда уходит в URL). Поэтому

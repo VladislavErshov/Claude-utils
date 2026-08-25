@@ -5,7 +5,7 @@
 `administration.md`.
 
 Базовые паттерны доступа к хостам и грабли Tcl/SSL —
-скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md). Специфичные для Kafka скрипты на expect
+скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md). Специфичные для Kafka скрипты на expect
 (например `runner.exp` для очистки `*-stray` партиций) — ниже.
 
 Каталог известных инцидентов и технических багов (Broker is dead, InvalidReplicationFactor,
@@ -165,7 +165,7 @@ systemctl restart kafka-exporter
 
 ### Случай 1: прерывание ребаланса Cruise Control или reassign → остались `-stray` партиции
 
-Перебрать хосты × ДЦ через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+Перебрать хосты × ДЦ через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
 (команда `ssh`). Шаблон хоста: `$i.broker.<cluster>.<dc>.one-infra.ru`
 (`i=1..75`, `dc=hc,kc,pc`). На каждом хосте выполнить:
 
@@ -221,7 +221,7 @@ systemctl restart kafka-broker
 Скорее всего, docker-образ с багом логротейта.
 
 Сначала чистим логи, перезапускаем кафку. С забитым диском логов кафка может не подняться
-на новом образе. Зайти на хост через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+на новом образе. Зайти на хост через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
 и выполнить:
 
 ```bash

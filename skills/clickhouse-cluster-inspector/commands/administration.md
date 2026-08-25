@@ -19,7 +19,7 @@
    смотреть в документации CH, куда её ставить.
 2. Обновить значение в PMS.
 3. Релоад конфигов — кнопка в UI mdb-data на вкладке «хосты», либо вручную через
-   скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`).
+   скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc sshexec`).
    Команда на хосте:
    `confp --oneshot; clickhouse-client --user backup-admin --password $(grep -oP 'password:\s*\K[^ ]+' /etc/rscheck/checkclickhouse.conf) --query 'SYSTEM RELOAD CONFIG'`
    Либо `python3 /usr/scripts/reload-config.py` на хосте.
@@ -117,11 +117,11 @@ SYSTEM RELOAD DICTIONARY my-dictionary;
 ## Добавить словари геобаз
 
 1. Получить от пользователей файлы словарей.
-2. Перенести на хосты через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+2. Перенести на хосты через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
    (команда `scp`, см. `commands/scp.md`). Файлы — `regions_hierarchy.txt` и
    `regions_names_<ru/en/...>.txt`, путь назначения — `/var/lib/clickhouse/1/regions`
    (на эту папку настроен rsync на случай потери диска). Загружать в директорию, не
-   по пути-файлу (см. грабли `scp` в `mcc-host-access`).
+   по пути-файлу (см. грабли `scp` в `mcc-host-worker`).
 
 3. В PMS `zen.clickhouse.additional_config.xml`:
 ```xml

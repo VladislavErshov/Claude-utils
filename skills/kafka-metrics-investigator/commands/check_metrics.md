@@ -3,7 +3,7 @@
 Kafka-брокер отдаёт метрики через **четыре** независимых exporter'а на разных портах.
 Если в Grafana пропали метрики — нужно проверить каждый порт отдельно.
 
-Доступ к хосту — через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`).
+Доступ к хосту — через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc ssh`).
 Здесь — только специфика проверки метрик.
 
 ## Порты
@@ -19,7 +19,7 @@ JMX (8080) — основной источник метрик. Если он м�
 
 ## Быстрая проверка всех портов
 
-Зайти на хост через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`)
+Зайти на хост через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc ssh`)
 и выполнить:
 
 ```bash
@@ -43,7 +43,7 @@ port 23570: 200     # share-group-lag-exporter — жив
 
 ## Проверка статуса сервисов
 
-На хосте (через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md), `mcc ssh`):
+На хосте (через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md), `mcc ssh`):
 
 ```bash
 systemctl is-active kafka-broker kafka-exporter share-group-lag-exporter

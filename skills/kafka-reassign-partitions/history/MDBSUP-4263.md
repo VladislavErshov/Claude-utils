@@ -171,6 +171,6 @@ mcc --local sshexec -n infra 1.broker.uv-stat-prod-uv-kafka.ec.one-infra.ru \
 ## Что обновлено в скилле
 
 - `SKILL.md` → «Инструменты и нюансы выполнения»: добавлен явный callout читать
-  `/mcc-host-access` первым, плюс готовый chunked-base64 паттерн загрузки JSON.
+  `/mcc-host-worker` первым, плюс готовый chunked-base64 паттерн загрузки JSON.
 - `SKILL.md` → «Что покрывает скилл, но неочевидно»: добавлен раздел про снижение RF
   через reassign (с исправлением прежнего неверного утверждения про `kafka-configs.sh`).

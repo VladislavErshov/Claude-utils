@@ -72,7 +72,7 @@ PY
 ## ERR Slot 10922 is already busy при создании кластера
 
 Нужно сделать `FLUSHALL` и `CLUSTER RESET SOFT` на всех нодах, перезапустить операцию.
-Перебрать хосты × ДЦ через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+Перебрать хосты × ДЦ через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
 (команда `sshexec`, см. `commands/sshexec.md` для шаблона перебора). Команды на хосте:
 
 ```
@@ -95,13 +95,13 @@ redis-cli --user master --pass "$(awk '$1=="user" && $2=="master" { gsub(/^[^>]*
 ## Удалить ноду в шардированном Redis (подробный алгоритм)
 
 1. На ноде, которую удаляем — подключиться через скилл
-   [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`), затем:
+   [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc ssh`), затем:
    ```
    redis-cli
    auth master <password>
    cluster myid          # скопировать полученный id
    ```
-2. На реплике-хосте (мастере шарда) — так же через скилл mcc-host-access:
+2. На реплике-хосте (мастере шарда) — так же через скилл mcc-host-worker:
    ```
    redis-cli
    auth master <password>
@@ -123,7 +123,7 @@ redis-cli --user master --pass "$(awk '$1=="user" && $2=="master" { gsub(/^[^>]*
 По умолчанию при создании кластера Redis все мастера попадают в 1 ДЦ, иногда просят
 распределить их равномерно. Отслеживать распределение по ДЦ можно в Мониторинге.
 
-Перебрать хосты × ДЦ через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+Перебрать хосты × ДЦ через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
 (команда `sshexec`, см. `commands/sshexec.md` для шаблона перебора). Команда на хосте:
 `redis-cli -c --user master -a <password> cluster failover`. Шаблон хоста:
 `1.shard${i}-db.<queue>.<dc>.one-infra.ru`.
@@ -206,7 +206,7 @@ redis-cli --user master --pass "$(awk '$1=="user" && $2=="master" { gsub(/^[^>]*
 
 Если нужно постфактум прописать `cluster-preferred-endpoint-type hostname` на всём
 кластере в рантайме — перебрать хосты × ДЦ через скилл
-[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc sshexec`, см.
 `commands/sshexec.md` для шаблона перебора). Это **две отдельные команды**, не одна
 (в старой версии runbook была опечатка со слитной строкой):
 
@@ -320,7 +320,7 @@ Default-клиент позволяет подключиться к Redis без
 3. Запустить update через UI с минимальным изменением параметров (например +1 байт в
    `maxMemory`). Либо запускать таски оператора на каждый шард (кластер шардированный).
 4. Альтернативный вариант — запустить рестарт скриптом: перебрать хосты × ДЦ через
-   скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc sshexec`, см.
+   скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc sshexec`, см.
    `commands/sshexec.md` для шаблона перебора). Команда на хосте:
    `confp --oneshot; systemctl restart redis`. Шаблон хоста:
    `1.shard${i}-db.mdb-health-mdb-redis.${dc}.one-infra.ru` (`i=1..3`, `dc=hc,kc,pc`).

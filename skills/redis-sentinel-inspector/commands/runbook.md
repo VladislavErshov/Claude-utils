@@ -17,7 +17,7 @@
 
 **Быстрое решение**:
 1. Поднять сеть на OUT у мастера, на IN у реплики.
-2. Зайти на мастер через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md),
+2. Зайти на мастер через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md),
    через `redis-cli`:
 
 ```
@@ -96,7 +96,7 @@ OK
 Если это единственный мастер:
 
 1. Делаем копии повреждённых файлов и сохраняем их к себе (через скилл
-   [`mcc-host-access`](../../mcc-host-access/SKILL.md), `mcc scp`) — всю папку
+   [`mcc-host-worker`](../../mcc-host-worker/SKILL.md), `mcc scp`) — всю папку
    `/mnt/appendonlydir`.
 2. `systemctl stop redis`.
 3. `redis-check-aof /mnt/redis/appendonlydir/appendonly.aof.manifest` — найти повреждённый

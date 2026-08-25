@@ -12,7 +12,7 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 
 ⚠️ Скилл описывает **состояние процессов Kafka + Cruise Control** на уровне кластера
 (запуск, регистрация в quorum, rscheck) и каталог известных проблем. Конкретные операции:
-- **работа с хостами** (mcc ssh/scp, пути) — [`mcc-host-access`](../mcc-host-access/SKILL.md)
+- **работа с хостами** (mcc ssh/scp, пути) — [`mcc-host-worker`](../mcc-host-worker/SKILL.md)
   (база) + `kafka-host-inspector` (Kafka-специфика)
 - **анализ логов** broker/controller/cruise — `kafka-log-investigator`
 - **метрики, MBean'ы, диагностика "Broker is dead"** — `kafka-metrics-investigator`
@@ -76,7 +76,7 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
 
 - **`kafka-host-inspector`** — Kafka-специфика выполнения команд на хосте, путеводитель по
   путям (логи, конфиги, SSL, systemd, rscheck, host_checker, prometheus, cruise-control).
-  Базовые паттерны `mcc ssh + expect`/`mcc scp` — в [`mcc-host-access`](../mcc-host-access/SKILL.md).
+  Базовые паттерны `mcc ssh + expect`/`mcc scp` — в [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
   **Содержит собственную `history/`** с инцидентами хостового уровня (диагностика через логи
   cruise-хоста, Porto-контейнер, cgroup и т.п.). Перед запуском диагностики кластера сверяйся
   с `kafka-host-inspector/history/` — если симптом совпадает, делегируй в дочерний скилл.
@@ -161,6 +161,14 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
   при старте (`node id XXXX must be included in the set of voters`), broker не может
   зарегистрироваться (`Shutting down because we were unable to register with the controller quorum`).
   Фикс — синхронизировать voters на всех хостах. Детали — `known_issues.md`.
+- **Controller crash-loop: node.id-свалка** (I48592) — два симптома: `Stored node id X
+  doesn't match previous node id Y in meta.properties` (конфликт диск vs конфиг) и
+  `leader ... epoch N inconsistent with current leader empty and epoch 1` (дубликат
+  node.id — id уже занят другим voter'ом). Корень — рассинхрон PMS: `kafka.layout`
+  противоречит `kafka.controller.quorum` (node.id рендерится по позиции ДЦ в layout:
+  `10000 + dc_id*1000 + instance_id`). Вайп дисков НЕ чинит, пока PMS неверен; «active»
+  после вайпа ≠ в кворуме. Фикс — исправить layout в PMS → confp → вайп данных
+  контроллера при конфликте meta.properties. Разбор — `history/I48592.md`.
 - **Fenced брокер** — `FencedBrokerCount > 0` на controller-хосте (проверка через `kafka-metrics-investigator`).
 - **Under-replicated partitions** — `UnderReplicatedPartitions > 0` на broker-хосте (проверка через `kafka-metrics-investigator`).
 - **Offline partitions из-за удалённого брокера в Replicas** (MDBSUP-4166) — в Grafana

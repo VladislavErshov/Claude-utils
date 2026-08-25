@@ -47,6 +47,26 @@ submitted/updated. Полезно перед ssh — понять, жив ли �
 `--type` (namespace/service/storage/shard/…) обычно автодетектится, `-p 1min|5min|15min` —
 период утилизации.
 
+Грабли:
+- `mcc status "<FQDN-хоста>"` падает EntityNotFoundException — status принимает имя **сервиса**
+  (`controller.<cluster>`), не FQDN. По FQDN хоста используй `mcc instances "<полный FQDN>"`
+  (с `%`-паттерном или без) — покажет state/outcome/outcome_text конкретного инстанса.
+- `mcc status "<service>"` может показывать сервис целиком (state STARTING и пр.), а не
+  конкретные хосты — для состояния хостов бери `instances`.
+
+## Маркеры лежащего хоста (LOST_MINION)
+
+`mcc instances` по конкретному FQDN:
+
+```
+state=FINISHED  outcome=LOST_MINION  outcome_text="Unreported by minions"
+               или "rejected required storage's minion: not running"
+```
+
+Миньон (VM) умер, диск/сервис остались в облаке. В UI MDB симптомы — метрики хоста
+`unknown`. Лечение — миграция: удалить storage (диск) через withdraw и пересоздать хост
+(см. portforward.md «Lifecycle», порядок в скилле jira-mdbsup-solver history/MDBSUP-4827).
+
 ## `mcc log-streams` / `mcc logs` — логи контейнера через master
 
 Без ssh/scp достать логи. Сначала список потоков:

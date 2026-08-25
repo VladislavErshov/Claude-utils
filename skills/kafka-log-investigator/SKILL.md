@@ -1,6 +1,6 @@
 ---
 name: kafka-log-investigator
-description: Скачивание и анализ логов MDB Kafka (broker / controller / cruise-control) — каталог что грепать в kafka-broker.out.log / kafka-controller.out.log / cruise-control.err.log, маркеры успешного старта брокера (Successfully registered broker, Kafka Server started), ошибки InvalidReplicationFactorException, <unresolved> controller hostname, CruiseControlMetricsReporter, UnsupportedClassVersionError, KRaft quorum/voters. Логи читаются через скилл `mcc-host-access` из `/mnt/logs/dbms/`. Список хостов задаёт пользователь. Используй когда нужно скачать логи с Kafka-хостов и найти в них причину проблемы (брокер не стартует, CC не запускается, регистрация в quorum не прошла, metrics reporter падает).
+description: Скачивание и анализ логов MDB Kafka (broker / controller / cruise-control) — каталог что грепать в kafka-broker.out.log / kafka-controller.out.log / cruise-control.err.log, маркеры успешного старта брокера (Successfully registered broker, Kafka Server started), ошибки InvalidReplicationFactorException, <unresolved> controller hostname, CruiseControlMetricsReporter, UnsupportedClassVersionError, KRaft quorum/voters. Логи читаются через скилл `mcc-host-worker` из `/mnt/logs/dbms/`. Список хостов задаёт пользователь. Используй когда нужно скачать логи с Kafka-хостов и найти в них причину проблемы (брокер не стартует, CC не запускается, регистрация в quorum не прошла, metrics reporter падает).
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
@@ -11,7 +11,7 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 
 ## Что делает скилл
 
-- Скачивает логи сервисов с хостов через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md)
+- Скачивает логи сервисов с хостов через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md)
   (команда `scp`, путь `/mnt/logs/dbms/`).
 - Подсказывает структуру скачанных логов (какой файл за что отвечает).
 - Даёт готовые `grep`-команды для типичных проблем: старт брокера, InvalidReplicationFactor,
@@ -21,7 +21,7 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ## Подчинённые скиллы
 
 - Работа с хостами (команды `scp`, `ssh + expect`) — см.
-  [`mcc-host-access`](../mcc-host-access/SKILL.md). Этот скилл использует команду `scp`
+  [`mcc-host-worker`](../mcc-host-worker/SKILL.md). Этот скилл использует команду `scp`
   для скачивания логов из `/mnt/logs/dbms/`.
 - Каталог известных проблем кластера (симптомы/причины/фиксы) — см. `kafka-cluster-inspector`,
   `commands/known_issues.md`. Этот скилл фокусируется на **поиске маркеров в логах**, а не на

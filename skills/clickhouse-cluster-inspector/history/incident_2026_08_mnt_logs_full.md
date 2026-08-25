@@ -94,4 +94,4 @@ mcc --local sshexec -n infra 1.shard2-db.uv-content-id-meta-dev-uv-ch.kc.one-inf
 ## Ссылки
 
 - Скилл `clickhouse-cluster-inspector/SKILL.md` — пути на хосте (`/mnt/logs/dbms/`).
-- `mcc-host-access/commands/sshexec.md` — неинтерактивный запуск команд на CH-хосте.
+- `mcc-host-worker/commands/sshexec.md` — неинтерактивный запуск команд на CH-хосте.
