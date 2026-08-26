@@ -1,0 +1,6 @@
+{
+  "workflowType": {"name": "upscaleKafkaControllerInCluster"},
+  "taskQueue": {"name": "kafka-activities-queue"},
+  "input": {"payloads": [{"metadata": {"encoding": "anNvbi9wbGFpbg=="}, "data": "eyJjbHVzdGVySWQiOiI5ZmM0N2MxYi0wMTFkLTRhYWEtYjQxMS1kZTUzNDVhMDIwNGUiLCJxdWV1ZUluZm8iOnsicXVldWVOYW1lIjoidGVzdC1tb2RpZnkzLW1kYmRldi1rYWZrYS5tZGJkZXYuZGIucHJvZHVjdGlvbi5tZGIucHJvZCIsInByb2R1Y3RJZCI6Ijc1MTQiLCJxdWV1ZVNob3J0TmFtZSI6InRlc3QtbW9kaWZ5My1tZGJkZXYta2Fma2EiLCJwbXNIb3N0IjoidGVzdC1tb2RpZnkzLW1kYmRldi1rYWZrYS5jbG91ZHMiLCJuYW1lc3BhY2UiOiJpbmZyYSJ9LCJjb250cm9sbGVyc1BlckRjIjp7ImtjIjoyLCJpYyI6MSwiaGMiOjIsImRjIjoyfSwiYnJva2VyRGNzIjpbImRjIiwiaGMiLCJrYyJdLCJoYXJkd2FyZVByZXNldElucHV0RGF0YSI6eyJhbGxvYyI6eyJjb3JlcyI6IjIiLCJtZW0iOiIyZyIsImxhbkluIjoiMTAiLCJsYW5PdXQiOiIxMCJ9LCJ2b2x1bWVzQWxsb2MiOlt7InNpemUiOiIxMGciLCJ0eXBlIjoiTlZNRSIsIm5hbWUiOiJkYXRhIiwic3BpbmRlbHMiOm51bGwsImR1cmFiaWxpdHkiOiJwZXJzaXN0In1dfSwid29ya2Zsb3dUdGwiOjEwODAwLjAwMDAwMDAwMH0="}]},
+  "workflowExecutionTimeout": "10800s"
+}

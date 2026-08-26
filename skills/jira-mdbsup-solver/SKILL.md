@@ -114,9 +114,26 @@ mcc --local -n infra withdraw "<namespace-path>/<role>"     # вывести sto
 
 ### Миграция лежащего хоста (LOST_MINION)
 
-Если хост FINISHED/LOST_MINION: диск привязан к мёртвому миньону, пересоздание = удалить диск
-(withdraw storage) и дать облаку создать хост заново. Перед удалением проверить в прод-БД, что
-нет RUNNING-операций по кластеру (иначе заблокируются «Already has unapplied operation»).
+Хост FINISHED/LOST_MINION = миньон (VM) умер, его volumes (диск) остались в облаке в состоянии
+LOST и не дают пересоздаться хосту. **Storage общий на все реплики роли — удалять весь storage
+НЕ надо**, удаляем только volumes мёртвого хоста:
+
+1. Посмотреть volumes мёртвого хоста:
+   `mcc --local -n infra status "<queue>/<role>" -f table` (storage) или
+   `mcc --local -n infra minion_storage <minion>` — найти LOST-тома с умершего миньона.
+2. Удалить диски мёртвого хоста:
+   `mcc --local -n infra delete "<queue>/<role>" --state LOST` (или по списку UUID volumes;
+   `--volume <name>` — если надо только конкретный том; default state = BOOTSTRAPPING — указывать явно!).
+3. Дождаться, когда volumes/хост станут `NEW`/`EMPTY`:
+   `mcc --local -n infra wait "<storage|shard|volume>" --state ...` / мониторить `mcc status`.
+4. Запустить сервис заново:
+   `mcc --local -n infra start "<service>"` — облако заскейлит инстанс на живой миньон
+   и аллоцирует новые volumes по манифесту storage.
+5. Верификация: `mcc instances "<FQDN>"` → RUNNING; ssh — `systemctl is-active kafka-<role>`;
+   в UI MDB метрики хоста уходят из unknown.
+
+⚠️ Перед удалением проверить в прод-БД, что нет RUNNING-операций по кластеру
+(иначе заблокируются «Already has unapplied operation»).
 
 ## История
 

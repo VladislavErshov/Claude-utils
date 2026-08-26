@@ -62,5 +62,16 @@ mcc --local -n infra restart "<pattern>" [-m <min_running>] [-p <pause>]
   `-p/--pause` — пауза между репликами. Применяется только к текущей операции.
 - `stop --now` — форс без graceful shutdown; для Kafka/БД предпочтителен обычный `stop`.
 
+## `mcc delete` — удаление volumes (дисков) хоста
+
+```bash
+mcc --local -n infra delete "<storage_or_shard | uuid-list>" [--volume <name>] --state <state>
+```
+
+- Удаляет volumes, не весь storage целиком (storage общий на реплики роли — не трогать!).
+- `--state`: MIGRATING/EMPTY/BOOTSTRAPPING/NORMAL/CORRUPT/LOST; **default BOOTSTRAPPING** —
+  для мёртвого миньона указывать `--state LOST` явно.
+- Для лежащего LOST_MINION-хоста: delete LOST-volumes → дождаться NEW/EMPTY → `start` сервиса.
+
 > ⚠️ start/stop/restart и `jstack --force`/`perf` — операции с побочными эффектами на
 > живой сервис. Согласовывай с пользователем перед запуском на прод-хостах.

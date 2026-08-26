@@ -64,8 +64,9 @@ state=FINISHED  outcome=LOST_MINION  outcome_text="Unreported by minions"
 ```
 
 Миньон (VM) умер, диск/сервис остались в облаке. В UI MDB симптомы — метрики хоста
-`unknown`. Лечение — миграция: удалить storage (диск) через withdraw и пересоздать хост
-(см. portforward.md «Lifecycle», порядок в скилле jira-mdbsup-solver history/MDBSUP-4827).
+`unknown`. Лечение — удалить только LOST-volumes мёртвого хоста
+(`mcc delete "<storage>" --state LOST`), дождаться NEW/EMPTY и `mcc start "<service>"`
+(полный флоу — скилл jira-mdbsup-solver, раздел «Миграция лежащего хоста»).
 
 ## `mcc log-streams` / `mcc logs` — логи контейнера через master
 

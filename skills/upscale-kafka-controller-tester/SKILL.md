@@ -189,6 +189,31 @@ curl -s "http://localhost:8233/api/v1/namespaces/default/workflows/$WID/history"
 | T5 Downscale guard | PASS 25.08 | history/2026-08-25-T5-downscale-guard.md |
 | T6 Новый ДЦ | PASS (частично) | history/2026-08-25-T6-queue-in-new-dc.md |
 | Cleanup downscale ×3 | PASS 25.08 | history/2026-08-25-cleanup-downscale-all.md |
+| T17/T18 Upscale в новый ДЦ ic (баг discovery) | PASS после фикса | history/2026-08-25-T17-new-dc-discovery-fix.md |
+| T19 Повторный upscale в новый ДЦ | PASS 25.08 | history/2026-08-25-T19-repeat-new-dc.md |
+| T10 Terminate child в waitInstance → PARTIAL_UPSCALE_FAILURE | PASS + БАГ 5 | history/2026-08-25-T10-partial-wait-instance.md |
+| T11 Terminate в controller reload + рестарт | PASS 25.08 | history/2026-08-25-T11-terminate-in-controller-reload.md |
+| T12 Частичный отказ broker reload (RELOAD_FAILED) | PASS 25.08 | history/2026-08-25-T12-partial-broker-reload.md |
+| T13 Ретрай opId при существующих children | PASS 25.08 | history/2026-08-25-T13-child-already-exists.md |
+| T14 Reconcile: облако опережает host_state | PASS 25.08 | history/2026-08-25-T14-reconcile-cloud-ahead.md |
+| T7 Контракт mdb-data ↔ processing | PASS 25.08 | history/2026-08-25-T7-contract-mdb-data-processing.md |
+| T15 Save-fallback (mdb-data недоступен при save) | PASS 25.08 | history/2026-08-25-T15-save-fallback.md |
+
+## Найденные баги (сводка)
+
+1. **БАГ 5 (T10, 25.08)**: `KafkaHostReloadHelper.executeReloadCycle` бесконечно ждёт
+   non-RUNNING хост (instance в DEPLOYING → takeNext никогда его не отдаёт, выхода нет).
+   Прод-паттерн `85169290`. **Фиксится в ветке** `ershov/MDBDEV-2375-skip-offline-Kafka-hosts-in-config-update-reload`
+   (коммит f6a06aec): offline-хосты фильтруются один раз ДО цикла и скипаются (конфиг применится
+   при следующем старте), workflow завершается COMPLETED. ⚠️ Остаточный пробел: хост, упавший
+   в оффлайн ПОСЛЕ начального фильтра (середина reload-цикла), всё ещё даёт бесконечное ожидание —
+   упомянуть в ревью MDBDEV-2375. См. T10 history.
+2. **T10-симптом (T14-кейс)**: downscale при рассинхроне облако/host_state строит цель
+   2→0 → INVALID_REPLICAS_COUNT. Лечить upscale-reconcile'ом, не downscale.
+3. Minor (T11): terminated reload-child пробрасывается в parent без типизированного
+   failure type (type=null) — сообщение в mdb-data неинформативно.
+
+Конфиги и шаблоны запусков — `configs/` (README + direct-start шаблоны).
 
 ## Верификация кластера ДО и ПОСЛЕ каждого сценария
 
