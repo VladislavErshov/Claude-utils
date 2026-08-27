@@ -57,9 +57,10 @@ import pexpect, sys
 cmd = 'mcc --local -n infra -c <dc> delete <uuid1>,<uuid2> -f yaml'
 p = pexpect.spawn('/bin/zsh', ['-c', cmd], timeout=60, encoding='utf-8')
 p.logfile_read = sys.stdout
-p.expect(r'attempt 0/3\): (\d+)([-+*/])(\d+)')
+p.expect(r'attempt 0/3\): (\d+)\s*(mod|[-+*/%])\s*(\d+)')   # бывает и `N mod M` (MDBSUP-4923)
 a, op, b = p.match.groups()
-p.sendline(str(int(eval(f"{a}{op}{b}"))))
+ans = int(a) % int(b) if op == 'mod' else int(eval(f"{a}{op}{b}"))
+p.sendline(str(ans))
 p.expect(pexpect.EOF, timeout=90)
 ```
 

@@ -62,6 +62,20 @@ submitted/updated. Полезно перед ssh — понять, жив ли �
 - `mcc status "<service>"` может показывать сервис целиком (state STARTING и пр.), а не
   конкретные хосты — для состояния хостов бери `instances`.
 
+## Мусорные progress-сообщения облака (НЕ диагностический признак)
+
+`progress`/`reported_progress` у инстанса и вытекающие `availability=RESERVED/PREFAIL` могут
+нести plait-предупреждения, которые **не отражают состояние хоста** — хост при этом жив:
+
+- `there are NNNNN subnets for peer plv6-i-sg_onecloud-infra_**.db.production.mdb.prod: recommended value is 5000`
+- `No IPs matched by pl-i-sg_ehot_balancer-...` / `pl*-*-sg_onecloud-dzen_vmagent...`
+
+Это шум plait (много субнетов у пира / нет IP в plait-группах). MDBSUP-4938: uc-контроллер
+с таким progress'ом был фактически жив — `state=RUNNING`, IP выданы (v4+v6), minion отвечал.
+Источник истины о живости хоста: `state`, `ip`/`network`, `minion`. На progress при
+диагностике зависших операций **не опираться** (но: waiter'ы mdb-processing могут сами
+ждать availability — тогда шум plait блокирует операцию, см. jira-mdbsup-solver).
+
 ## Маркеры лежащего хоста (LOST_MINION)
 
 `mcc instances` по конкретному FQDN:
