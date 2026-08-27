@@ -9,8 +9,12 @@
 
 ## Документация
 
+- **Дежурная инструкция (SSOT)**: [Дежурство MDB: Postgres](https://confluence.vk.team/pages/viewpage.action?pageId=1348619018)
+  — полный runbook дежурного (правила безопасной работы, пользователи/базы/подписки,
+  переналивка, etcd без кворума, pgbouncer и т.д.). Вики живая — копии в скилле не храним.
+- **Шардированный PostgreSQL (Citus)**: [Дежурство MDB: шардированный PostgreSQL](https://confluence.vk.team/pages/viewpage.action?pageId=2107500377)
+  — архитектура, pg_dist_*-диагностика, добавление БД, недоступность координатора/шарда.
 - https://docs.vk.team/mdb/docs/ — общая документация MDB
-- Runbook для дежурного — `commands/runbook.md` (полный текст, прислан дежурными)
 
 ## Архитектура кластера
 
@@ -66,7 +70,8 @@
 - `commands/host-paths.md` — путеводитель по путям на хосте.
 - `commands/diagnostics.md` — что проверять при разных симптомах (postgres is dead, etcd is dead, реплика не догоняет).
 - `commands/reinit_replica.md` — Переналивка реплики: Простой/Сложный/Самый сложный случаи.
-- `commands/runbook.md` — полный текст Runbook для дежурного (прислан дежурными, всё что есть).
+- `commands/runbook.md` — навигация: ссылки на вики-страницы дежурства (Postgres +
+  шардированный PostgreSQL).
 - `history/` — каталог разобранных инцидентов:
   - `history/2026-07-23-timeline-gap-shard1.md` — кейс timeline-gap после failover, переналивка через pg_basebackup.
 
@@ -84,7 +89,8 @@
 
 ## Известные проблемы (кратко)
 
-Подробности — `known_issues.md` и `commands/runbook.md`.
+Подробности — `known_issues.md` и
+[вики «Дежурство MDB: Postgres»](https://confluence.vk.team/pages/viewpage.action?pageId=1348619018).
 
 - **Timeline-gap после failover** — на мастере promote без попадания нужного WAL-сегмента в S3. Реплика не может переключиться на новую timeline. Лечится переналивкой (Простой случай). Разбор — `history/2026-07-23-timeline-gap-shard1.md`.
 - **`requested WAL segment ... has already been removed`** — реплика лежала дольше TTL архива (7 дней), либо wal-g не успел заархивировать. Лечится переналивкой.
@@ -93,12 +99,13 @@
 - **Crash-loop postgres после ребута хоста** — `/var/log/journal/` volatile-only, journal до ребута не сохраняется. Источник shutdown установить нельзя — копать mdb-data аудиты / логи соседних хостов.
 - **`stolon keeper is dead` в rscheck** — обычно следствие, не причина. Сначала проверить `stolon-keeper.service` и `stolon-keeper.log`.
 - **`pgbouncer-security-bootstrap` падает** — нормально для standby-реплики (не нужен), не причина.
-- **Replica не поднимается даже после полной переналивки** — в S3-бакете есть `.history` файл от timeline номер больше актуального. Удалить из S3 + форсировать повторную переналивку. Разбор — `commands/runbook.md` (раздел "Реплика не поднимается даже после полной переналивки").
+- **Replica не поднимается даже после полной переналивки** — в S3-бакете есть `.history` файл от timeline номер больше актуального. Удалить из S3 + форсировать повторную переналивку. Разбор — [вики «Дежурство MDB: Postgres»](https://confluence.vk.team/pages/viewpage.action?pageId=1348619018), раздел «Реплика не поднимается даже после полной переналивки».
 
 ## Что НЕ покрывает скилл
 
 - Throughput / latency / performance — к Prometheus/Grafana.
-- Настройка пользователей / баз / ACL — к mdb-data API и `commands/runbook.md`.
+- Настройка пользователей / баз / ACL — к mdb-data API и
+  [вики «Дежурство MDB: Postgres»](https://confluence.vk.team/pages/viewpage.action?pageId=1348619018).
 - Backup / restore — к mdb-data оператору.
 - Сетевые лимиты между ДЦ — к cloud-инфра.
 - Diskquota / memory — к хостовым чекерам.

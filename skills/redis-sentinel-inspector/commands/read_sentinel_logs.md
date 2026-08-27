@@ -4,7 +4,7 @@
 
 Пользователь даёт список хостов вида `1.db.<cluster>-cfs-redis.<dc>.one-infra.ru`.
 Скачать `/mnt/logs/dbms/` со всех хостов — через скилл
-[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc scp`, см. `commands/scp.md`
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc scp`, шаблон массового скачивания — в скилле mcc-host-worker
 для шаблона массового скачивания).
 
 Скачаются: `redis.log`, `redis-sentinel.log`, `redis-server-systemd-service.log`.

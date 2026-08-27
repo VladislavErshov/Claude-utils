@@ -7,8 +7,11 @@ allowed-tools: [bash, read_file, write_file, edit_file]
 # Скилл инспекции MongoDB-кластеров
 
 Скилл для дежурства по MongoDB-кластерам, управляемым mdb-data.
-Источник — страница дежурства «Дежурство MDB: MongoDB»
-(Confluence pageId=1348619045, v31) + тикеты MDBSUP.
+**Канон дежурной инструкции — Confluence «Дежурство MDB: MongoDB» (SSOT, v31)**:
+https://confluence.vk.team/pages/viewpage.action?pageId=1348619045
+— там полный runbook и администрирование; вики живая, процедуры править там.
+Здесь — архитектура, ключевые команды и **наши дополнения**, которых в вики нет
+(MDBSUP-кейсы, mcc-обёртки, грабли).
 
 ⚠️ **Все операции с mcc** (`ssh` / `sshexec` / `scp` / `instances` / `status`,
 промпт `/# `, `-n infra`, `--local` и грабли expect/Tcl) — брать из скилла
@@ -146,103 +149,29 @@ db.serverStatus()                # статус сервера (db.serverStatus(
 
 ## Администрирование
 
-### Сменить мастера
+### Справочные процедуры — канон в вики
 
-```js
-// на случайного:
-rs.stepDown()
+Одношаговые процедуры не дублируем, полный текст —
+[«Дежурство MDB: MongoDB»](https://confluence.vk.team/pages/viewpage.action?pageId=1348619045),
+секция «Администрирование»:
 
-// на конкретного:
-var cfg = rs.conf();
-cfg.members[<index>].priority = <наибольший приоритет>;
-rs.reconfig(cfg);
-```
-
-### Удалить ноду
-
-Руками:
-1. Удалить из PMS, проперти `zen.mongodb.hosts`.
-2. Удалить из конфига:
-   ```js
-   var cfg = rs.conf();
-   cfg.members.splice(<index>, 1);
-   rs.reconfig(cfg, { force: true });
-   ```
-
-Через оператор:
-```bash
-mcc op_start --address <operator> queue://<queue-name> mongodb.downscale-instances -- --cloud <облако> --replicas <кол-во реплик после downscale>
-```
-
-### Добавить ноду
-
-Руками:
-1. Добавить ноду в PMS, проперти `zen.mongodb.hosts`.
-2. Если инстанс ещё не поднят в облаке — просто поднять, сам добавится в конфиг.
-   Если уже поднят где-то:
-   ```js
-   var cfg = rs.conf();
-   cfg.members.push({
-       _id: <new-id>,   // на 1 больше текущего максимального, смотреть rs.status()
-       host: "<host>:<port>"
-   });
-   rs.reconfig(cfg);
-   ```
-
-Через оператор:
-```bash
-mcc op_start --address <operator> queue://<queue-name> mongodb.upscale-instances -- --cloud <облако> --replicas <кол-во реплик после upscale>
-```
-
-### Добавить пользователя в шардированную монгу
-
-Заходим на хост mongos, логинимся в mongosh:
-```js
-use stories   // база, в которой создаём пользователя
-db.createUser({
-  user: "stories-core-admin",
-  pwd: "<password>",
-  roles: [{ role: "dbAdmin", db: "stories" }]
-})
-```
-Пароль положить в vault.
-
-### Хотят сделать sh.shardCollection (нужен clusterManager)
-
-```js
-use admin
-db.grantRolesToUser("<user>", [{ role: "clusterManager", db: "admin" }])
-```
-
-### Узнать с каких ip подключения
-
-Подключиться к нужному хосту от admin:
-```js
-db.adminCommand({
-  aggregate: 1,
-  pipeline: [
-    { $currentOp: { allUsers: true, idleConnections: true } },
-    { $match: { client: { $exists: true } } },
-    { $project: { ip: { $trim: { input: { $cond: [
-        { $regexMatch: { input: "$client", regex: /^\[.*\]/ } },          // IPv6
-        { $arrayElemAt: [ { $split: ["$client", "]"] }, 0 ] },            // всё внутри []
-        { $arrayElemAt: [ { $split: ["$client", ":"] }, 0 ] }             // IPv4
-    ] }, chars: "[]" } } } },
-    { $group: { _id: "$ip", connections: { $sum: 1 } } },
-    { $sort: { connections: -1 } }
-  ],
-  cursor: {}
-})
-```
-
-### Пользователь не может указать число соединений больше разрешенного в пресете
-
-1. Удостовериться, что пользователю действительно нужно поднять соединения без
-   достаточных аппаратных ресурсов.
-2. Временно поднять лимит для пресета: таблица `hardware_presets`, поле
-   `databasePreset` → `mongodbPreset` → `maxValues`.
-3. Провести операцию.
-4. Опустить лимит обратно, если он слишком завышенный для данного пресета.
+- **Сменить мастера** — `rs.stepDown()` / `priority` в `rs.conf()` + reconfig.
+- **Удалить ноду** — PMS `zen.mongodb.hosts` + `cfg.members.splice` + `rs.reconfig({force:true})`,
+  либо оператор `mongodb.downscale-instances`.
+- **Добавить ноду** — PMS `zen.mongodb.hosts` + `cfg.members.push` + reconfig,
+  либо оператор `mongodb.upscale-instances`.
+- **Добавить пользователя в шардированную монгу** — `db.createUser` на mongos, пароль в vault.
+- **sh.shardCollection (нужен clusterManager)** — `db.grantRolesToUser("<user>",
+  [{role: "clusterManager", db: "admin"}])`.
+- **Узнать с каких ip подключения** — aggregate `$currentOp` с группировкой по ip.
+- **Лимит соединений в пресете** — таблица `hardware_presets` → `databasePreset` →
+  `mongodbPreset` → `maxValues` (поднять → провести операцию → опустить).
+- **Восстановить пользователя admin** — вход `__system` c `/var/lib/mongo/secret.key`,
+  затем `db.updateUser/createUser` c `root`.
+- **Проверить выбивание инстанса из кластера** — `systemctl kill -s SIGKILL mongod` →
+  `systemctl start mongod`.
+- **Включить ipv6** — rolling restart по схеме secondary → secondary → hidden → failover →
+  мастер, обновить `cluster_to_template`.
 
 ### Восстановление из резервной копии
 
@@ -313,21 +242,11 @@ db.adminCommand({
 2. Failover (`rs.stepDown()`).
 3. Изменение в манифесте для бывшего мастера.
 
-### Восстановить пользователя admin на кластере
+### Восстановить пользователя admin на кластере / включить ipv6 — см. вики
 
-Если admin был перезаписан или удалён:
-
-```bash
-# по ssh на primary host
-mongosh "mongodb://localhost:27017/?authSource=local" -u __system -p "$(cat /var/lib/mongo/secret.key)"
-
-# обновление:
-db.updateUser("admin", { pwd: "<admin-password-from-vault>", roles: [{ role: "root", db: "admin" }] })
-# или создание:
-db.createUser({ user: "admin", pwd: "<admin-password-from-vault>", roles: [{ role: "root", db: "admin" }] })
-```
-
-Выйти, подключиться обычным способом, проверить права (`show users`).
+Полный текст — [вики «Дежурство MDB: MongoDB»](https://confluence.vk.team/pages/viewpage.action?pageId=1348619045),
+секция «Администрирование» (вход `__system` + `/var/lib/mongo/secret.key`; ipv6 — rolling
+restart secondary → secondary → hidden → failover → мастер + `cluster_to_template`).
 
 ### Пользователи хотят проверить выбивание инстанса из кластера
 
@@ -397,6 +316,6 @@ nohup mongorestore --uri="mongodb://admin:<admin-user>@host1:27017,host2:27017,h
 
 ## Источники
 
-- Дежурство MDB: MongoDB — https://confluence.vk.team/pages/viewpage.action?pageId=1348619045
-  (обновлять скилл при изменении страницы).
+- Дежурство MDB: MongoDB (SSOT) — https://confluence.vk.team/pages/viewpage.action?pageId=1348619045
+  (живая вики; копии процедур в скилл не тащить — только наши дополнения и грабли).
 - MDBSUP-4902 — compact на хостах (диск 95%+ после удаления данных).

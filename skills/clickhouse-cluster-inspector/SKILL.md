@@ -18,11 +18,17 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 
 ## Документация
 
+- **Дежурная инструкция (SSOT)**: [Дежурство MDB: Clickhouse](https://confluence.vk.team/pages/viewpage.action?pageId=1348619034)
+  — известные проблемы (broken/detached parts, реплика долго переналивается, сброс пароля)
+  и административные задачи (настройки, макросы, словари, named_collections, обновление,
+  перенос кипера) с полными шаблонами. Вики живая; в скилле копии не храним —
+  `commands/` содержат ссылки + только наши дополнения (Raft-диагностика Keeper,
+  mcc-обёртки, разборы инцидентов).
 - https://docs.vk.team/mdb/docs/clickhouse/ch-intro.html — введение
 - https://docs.vk.team/mdb/docs/clickhouse/ch-administration.html — администрирование
 - https://docs.vk.team/mdb/docs/clickhouse/ch-integrations.html — интеграции (Kafka и др.)
 
-Доки лежат в соседнем репо `mdb-docs`. Дежурная дока «Дежурство MDB: Clickhouse» — в Confluence.
+Доки лежат в соседнем репо `mdb-docs`.
 
 ## Архитектура кластера
 
@@ -69,19 +75,19 @@ Possibly it's overloaded, doesn't see leader or stale` — Raft-подсисте
 
 ## Путеводитель по путям
 
-| Что | Путь на хосте |
-|---|---|
-| Логи CH-сервера | `/mnt/logs/dbms/clickhouse-server.log`, `.err.log` (старые кластеры: `/one/logs/clickhouse/`, совсем старые: `/var/log/clickhouse-server/`) |
-| Логи Keeper | `/mnt/logs/dbms/clickhouse-keeper.log`, `.err.log` |
-| Ротация логов | `.log.0.gz`, `.log.1.gz`, ... (по размеру; `.err.log` живёт дольше, иногда с момента старта сервиса) |
-| Конфиги CH | рендерятся из PMS через `confp --oneshot`: `zen.clickhouse.config.xml`, `zen.clickhouse.users.xml`, `zen.clickhouse.additional_config.xml`, `zen.clickhouse.macros.xml`, `zen.clickhouse-keeper.config.xml` |
-| Данные CH | `/var/lib/clickhouse/1/` (диск 1), `/var/lib/clickhouse/2/` (диск 2 на гибридах) |
-| Flags | `/var/lib/clickhouse/1/flags/force_restore_data` — пропустить проверку broken parts при старте |
-| Detached parts | `/var/lib/clickhouse/1/store/<hash>/<hash>/detached/` |
-| rscheck | `/etc/rscheck/checkclickhouse.conf` (пароль backup-admin), `/etc/rscheck/checkclickhouse-keeper.conf` |
-| host_checker | `/etc/host_checker/checks/check_ch-keeper.py` (помечает keeper UNAVAILABLE если `ruok != imok`) |
-| Systemd | `mdb-clickhouse-server`, `mdb-clickhouse-keeper` |
-| Скрипты | `/usr/scripts/reload-config.py` (релоад конфигов), `/usr/scripts/request_leadership.py` (попросить leadership у Keeper) |
+| Что               | Путь на хосте                                                                                                                                                                                               |
+|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Логи CH-сервера   | `/mnt/logs/dbms/clickhouse-server.log`, `.err.log` (старые кластеры: `/one/logs/clickhouse/`, совсем старые: `/var/log/clickhouse-server/`)                                                                 |
+| Логи Keeper       | `/mnt/logs/dbms/clickhouse-keeper.log`, `.err.log`                                                                                                                                                          |
+| Ротация логов     | `.log.0.gz`, `.log.1.gz`, ... (по размеру; `.err.log` живёт дольше, иногда с момента старта сервиса)                                                                                                        |
+| Конфиги CH        | рендерятся из PMS через `confp --oneshot`: `zen.clickhouse.config.xml`, `zen.clickhouse.users.xml`, `zen.clickhouse.additional_config.xml`, `zen.clickhouse.macros.xml`, `zen.clickhouse-keeper.config.xml` |
+| Данные CH         | `/var/lib/clickhouse/1/` (диск 1), `/var/lib/clickhouse/2/` (диск 2 на гибридах)                                                                                                                            |
+| Flags             | `/var/lib/clickhouse/1/flags/force_restore_data` — пропустить проверку broken parts при старте                                                                                                              |
+| Detached parts    | `/var/lib/clickhouse/1/store/<hash>/<hash>/detached/`                                                                                                                                                       |
+| rscheck           | `/etc/rscheck/checkclickhouse.conf` (пароль backup-admin), `/etc/rscheck/checkclickhouse-keeper.conf`                                                                                                       |
+| host_checker      | `/etc/host_checker/checks/check_ch-keeper.py` (помечает keeper UNAVAILABLE если `ruok != imok`)                                                                                                             |
+| Systemd           | `mdb-clickhouse-server`, `mdb-clickhouse-keeper`                                                                                                                                                            |
+| Скрипты           | `/usr/scripts/reload-config.py` (релоад конфигов), `/usr/scripts/request_leadership.py` (попросить leadership у Keeper)                                                                                     |
 
 ## Порты
 
@@ -91,8 +97,10 @@ Possibly it's overloaded, doesn't see leader or stale` — Raft-подсисте
 ## Структура скилла
 
 - `SKILL.md` — этот файл.
-- `commands/known_issues.md` — каталог известных проблем (симптомы, причины, фиксы).
-- `commands/administration.md` — административные задачи (настройки, макросы, словари, named_collections, обновление версии, перенос кипера).
+- `commands/known_issues.md` — известные проблемы: ссылка на вики + наши разборы
+  (Raft-диагностика Keeper, TOO_MANY_SIMULTANEOUS_QUERIES, mcc-переборы).
+- `commands/administration.md` — административные задачи: ссылка на вики + сводка
+  PMS-конфигов и mcc-обёртки.
 - `commands/queries.md` — полезные SQL-запросы для диагностики (system.replicas, system.parts, system.errors, system.processes, system.zookeeper_connection).
 - `history/` — разборы реальных инцидентов (формат `incident_<YYYY-MM>_<краткое_описание>.md`). История для будущих разборов — что видели, чем лечили, что сработало.
   - `incident_2026_07_keeper_split.md` — sellgate-media-infra-ch: Keeper split-brain после остановки одного кипера в облаке, зависший Raft-state на pc, фикс через дроп диска + рестарт.

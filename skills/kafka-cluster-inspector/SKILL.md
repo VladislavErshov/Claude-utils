@@ -22,6 +22,10 @@ rebalance execution, дисковое место, memory. Это к Prometheus/G
 
 ## Документация
 
+- **Дежурная инструкция (SSOT)**: [Дежурство MDB: Kafka](https://confluence.vk.team/pages/viewpage.action?pageId=1348619075)
+  — ранбук, проблемы, Cruise-control, администрирование. Живёт в Confluence и постоянно
+  обновляется; в скилле копии НЕ храним — команды-файлы содержат ссылку на вики + только
+  наши дополнения (mcc-обёртки, грабли, разборы инцидентов).
 - https://docs.vk.team/mdb/docs/kafka/kafka-intro.html — введение
 - https://docs.vk.team/mdb/docs/kafka/kafka.html — детали
 
@@ -102,19 +106,15 @@ Temporal — по operationId в Temporal будет пусто. Диагнос�
 ## Структура скилла
 
 - `SKILL.md` — этот файл.
-- `commands/runbook.md` — дежурный ранбук: доступность кластера, рестарт, логи, порты,
-  kafkactl, синхронизация kafka.sync, тайминги и ссылка на встречу.
-- `commands/troubleshooting.md` — каталог типовых проблем из дежурного ранбука (создание
-  топика, не могу подключиться, сэмпл сообщений, перевод на SASL_PLAINTEXT, место на
-  брокерах / в логах, Connection timed out, зависшие таски, обновление версии,
-  перераспределение партиций, переезд rc→hc, STARTING RESERVED, io/network треды,
-  ребалансировка consumer group, удаление брокера, новый listener, JoinGroup INCONSISTENT_GROUP_PROTOCOL).
-- `commands/cruise_control_ops.md` — операции с Cruise Control: диагностика (dead,
-  RUNNING UNAVAILABLE, нет метрик), актуализация конфига, поднятие CC на кластере, перенос
-  в другой ДЦ.
-- `commands/administration.md` — рутинное администрирование: проверка видимости брокеров,
-  удаление контроллера, unregister брокера, пользователи / топики / ACL / consumer groups
-  (создание, проверка, удаление).
+- `commands/runbook.md` — дежурный ранбук: ссылка на вики + наши дополнения (mcc, kafkactl).
+- `commands/troubleshooting.md` — типовые проблемы: ссылка на вики-секцию «Проблемы» +
+  дополнения (mcc-очистка `-stray` партиций, место в логах).
+- `commands/cruise_control_ops.md` — Cruise Control: ссылка на вики-секцию + полный разбор
+  «proposal are not ready» (поочерёдный рестарт брокеров).
+- `commands/one_cloud_ops.md` — оператор one-cloud-ops (операции вне Temporal): диагностика
+  `mcc ops`, что делает DownscaleKafkaBrokerTask, ручное выполнение downscale-broker,
+  `mcc op_stop`, грабли заливки файлов/414/Java-classpath.
+- `commands/administration.md` — администрирование: ссылка на вики + выжимка Unregister.
 - `commands/known_issues.md` — каталог известных технических проблем (симптомы, причины,
   фиксы): Broker is dead, InvalidReplicationFactor, CruiseControlMetricsReporter и т.д.
 - `commands/one_cloud_ops.md` — оператор one-cloud-ops (операции вне Temporal): диагностика

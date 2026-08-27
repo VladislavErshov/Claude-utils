@@ -27,7 +27,7 @@
 
 Скачать `/etc/redis/` (целиком директорию) с хоста — через скилл
 [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc scp`, см.
-`commands/scp.md` для шаблона). Шаблон хоста:
+шаблон массового скачивания — в скилле). Шаблон хоста:
 `1.db.<cluster>-cfs-redis.<dc>.one-infra.ru`.
 
 ## Вытащить master-name и sentinel-pass
