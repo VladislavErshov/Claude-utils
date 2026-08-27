@@ -61,6 +61,24 @@ sed -E 's/\x1b\[[0-9;]*[mK]//g'
 `failed to read downloaded archive header: EOF` — файл не существует по указанному
 пути, либо опечатка в пути (`/mnt/log/dbms` вместо `/mnt/logs/dbms`).
 
+## `mcc scp` (загрузка НА хост) молча не заливает файл
+
+Симптом: scp выходит без ошибок, но файла на хосте нет (проверено на прод-Kafka,
+MDBSUP-4899). Заливка — только base64 через `mcc ssh + expect`, чанками по ~800 символов
+(генератор expect-файла — history/MDBSUP-4899 в jira-mdbsup-solver).
+
+## `mcc sshexec` — `414 URI Too Long` на длинной команде
+
+sshexec кладёт команду в URL — base64-пейлоад уже на ~8KB отваливается
+(`expected 101 Switching Protocols, got 414 URI Too Long`). Для больших данных —
+только expect + mcc ssh.
+
+## Tcl expect — `[...]` в send = command substitution
+
+Квадратные скобки в команде (`grep -oE '[0-9,]+'`, `\x1b[[0-9;]`) роняют expect
+(`invalid command name "0-9,"`). Сложные команды — heredoc-скриптом на хосте
+(см. commands/ssh.md), не инлайн в send.
+
 ## `NamespaceMissingException`
 
 На scp/sshexec добавить `-n infra`. На dev-кластерах (mcc v0.29.0) scp обычно работает

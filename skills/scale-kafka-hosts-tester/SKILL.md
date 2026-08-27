@@ -1,10 +1,15 @@
 ---
-name: upscale-kafka-controller-tester
-description: Тестирование upscale Kafka-контроллеров (MDBDEV-3180) — новый код в mdb-processing (branch ershov/MDBDEV-3180-Kafka]-make-controller-upscale-idempotent-on-retry) + изменения контракта в mdb-data. Настройка локальной инфраструктуры, seed test-modify3 из прода, симуляция типовых ошибок из прод-Temporal, проверка идемпотентности при рестарте операции. Используй когда нужно локально прогнать upscaleKafkaController / upscaleKafkaControllerInDc и проверить сходимость после падений.
+name: scale-kafka-hosts-tester
+description: Локальное тестирование scale-операций с Kafka-хостами в mdb (upscale/downscale контроллеров и брокеров) — настройка инфраструктуры, seed dev-кластера из прода, симуляция падений по фазам workflow, проверка идемпотентности и контрактов mdb-data ↔ mdb-processing. Сейчас содержит секцию про upscale Kafka-контроллеров (MDBDEV-3180); остальные операции будут добавлены. Используй когда нужно локально прогнать scale-флоу Kafka и проверить сходимость после падений.
 allowed-tools: [bash, read_file, edit_file, write_file, grep, glob]
 ---
 
-# Скилл тестирования upscale Kafka Controller (MDBDEV-3180)
+# Скилл тестирования scale-операций Kafka-хостов
+
+Общие разделы (инфраструктура, seed, прод-Temporal, верификация) — ниже.
+Специфика операций — в секциях.
+
+# Секция: Upscale Kafka-контроллеров (MDBDEV-3180)
 
 ## Ограничение масштаба тестов (обязательно)
 
@@ -29,7 +34,7 @@ allowed-tools: [bash, read_file, edit_file, write_file, grep, glob]
 4. `reloadBrokersAndControllers` — reload с `parameters = null`;
 5. `saveUpscaledControllers` — сохранение полного списка в mdb-data.
 
-## Инфраструктура (порты)
+## Инфраструктура (порты) — общая для всех операций
 
 | Сервис | Порт | Запуск |
 |---|---|---|
@@ -42,7 +47,7 @@ allowed-tools: [bash, read_file, edit_file, write_file, grep, glob]
 Auth в mdb-data local-профиле отключён — curl без токена.
 ⚠️ local-профиль mdb-processing пишет в РЕАЛЬНЫЙ `pms.cloud.vk.team` (bean `pmsRestClient`, `PmsAutoConfiguration.java:36`). Только dev-кластеры (project 160, mdbdev). Снапшот PMS до/после обязателен.
 
-## Seed-кластер: test-modify3
+## Seed-кластер: test-modify3 — общая для всех операций
 
 - cluster_id: `9fc47c1b-011d-4aaa-b411-de5345a0204e`, project 160, kafka, namespace INFRA.
 - Хосты: brokers dc/hc/kc, controllers dc/hc/kc (по 1), cruise в ic. Цель upscale: `controllersPerDc {dc:2, hc:2, kc:2}`.
@@ -97,7 +102,7 @@ SELECT jsonb_build_object(
 Грабли: в проде у `one_cloud_meta` есть колонка `fake_id`, в локальной схеме её НЕТ — дропать при INSERT.
 Шаблон генерации SQL — python-скрипт из `history/2026-08-24-seed-test-modify3.md` (delete по cluster_id + INSERT ON CONFLICT DO NOTHING, порядок: namespaces → projects → hardware_presets → db_cluster → db_cluster_version → host_state → one_cloud_meta → operations → settings). Затем `docker cp` + `psql -f` (НЕ heredoc в stdin).
 
-## Прод-Temporal: откуда брать типовые ошибки
+## Прод-Temporal: откуда брать типовые ошибки — общая для всех операций
 
 UI: https://mdb-processing-temporal.common.mdb.one-infra.ru
 API-база: `https://mdb-processing-temporal.common.mdb.one-infra.ru/api/v1/namespaces/default`
@@ -131,7 +136,7 @@ curl -s "http://localhost:8233/api/v1/namespaces/default/workflows/$WID/history"
 
 Проверяем в input: `controllersPerDc` (абсолютные значения), `queueInfo`, `brokerDcs`, `hardwarePresetInputData`.
 
-## План тестирования
+## План тестирования (upscale-контроллеров)
 
 ### T1. Happy path
 1. Seed test-modify3, снапшот PMS (kafka.layout, kafka.controller.quorum).
@@ -199,7 +204,7 @@ curl -s "http://localhost:8233/api/v1/namespaces/default/workflows/$WID/history"
 | T7 Контракт mdb-data ↔ processing | PASS 25.08 | history/2026-08-25-T7-contract-mdb-data-processing.md |
 | T15 Save-fallback (mdb-data недоступен при save) | PASS 25.08 | history/2026-08-25-T15-save-fallback.md |
 
-## Найденные баги (сводка)
+## Найденные баги (upscale-контроллеров, сводка)
 
 1. **БАГ 5 (T10, 25.08)**: `KafkaHostReloadHelper.executeReloadCycle` бесконечно ждёт
    non-RUNNING хост (instance в DEPLOYING → takeNext никогда его не отдаёт, выхода нет).

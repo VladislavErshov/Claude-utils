@@ -12,7 +12,7 @@ allowed-tools: [bash]
 
 1. **Jira** — `generic_jira_get_issue`: из описания достать cluster_id, operationId, тип БД, суть проблемы
    (типовой тикет: «операция failed → блокирует следующую операцию "Already has unapplied operation"»).
-2. **Прод-БД** `backstage_plugin_mdb` (port-forward 53480, user `backstage`, пароль в SKILL.md db-seed;
+2. **Прод-БД** `backstage_plugin_mdb` (port-forward 53480, user `backstage`, пароль в SKILL.md db-worker;
    psql только из docker-контейнера `pg_backstage_plugin_mdb` через `host.docker.internal`):
    ```sql
    SELECT id, status, type, attempts_left, in_processing, created_ts, finished_ts, error_message
@@ -57,7 +57,7 @@ allowed-tools: [bash]
 - psql через `docker cp` файла + `psql -f` (stdin-heredoc молча не применяет DML!).
 - Оборачивать в BEGIN/COMMIT, после — верификационный SELECT обеих таблиц.
 - По завершении — обновить `history/` этого скилла (см. ниже) и при необходимости заметку в
-  `db-seed/history/MDBSUP-*.md`.
+  `db-worker/history/MDBSUP-*.md`.
 
 ## Шаблоны SQL
 
@@ -73,74 +73,65 @@ VALUES ('<cluster_id>', '<fqdn>', now(),
 ```
 (onecloud/grafana ссылки лучше копировать из строк соседних хостов кластера, заменяя dc/instance.)
 
-## Работа с облаком (one-cloud) через mcc — lifecycle хостов
+## Оператор one-cloud-ops (флоу, которых нет в Temporal)
 
-Диагностика лежащего хоста и операции удаления/миграции делаются через mcc (подробнее — скилл `mcc-host-worker`).
+Некоторые операции (например `get_kafka_downscale_broker_result`) выполняет **оператор
+one-cloud-ops** — в Temporal workflow по operationId будет ПУСТО. Признак из error_message:
+«Operator task <fullQueue> in progress [object Object]» — это наш
+`GetResultOperatorTaskProcessor` (mdb-backend): DONE он ставит только когда задача
+исчезает из `operators.<name>.tasks` в статусе оператора.
 
-### Диагностика лежащего хоста
+Код оператора: `~/Documents/Git/one-cloud-ops/one-cloud-ops-server/src/main/java/one/cloud/ops/impl/<dbtype>/`
+(Kafka: `tasks/DownscaleKafkaBrokerTask.java`, `DownscaleMdbReplicasTask.java`, `KafkaClusterInfo.java`).
 
-```bash
-# реальные инстансы сервиса + состояние (state/outcome/outcome_text) — без ssh
-mcc --local -n infra instances "%.controller.<cluster>%" -f table
-mcc --local -n infra status "<service>" -f table
-```
-
-Маркеры лежащего хоста: `state=FINISHED`, `outcome=LOST_MINION`, `outcome_text="Unreported by minions"`
-или `"rejected required storage's minion: not running"` — миньон (VM) умер, диск/сервис остались.
-Симптом в UI MDB: метрики хоста `unknown` (в т.ч. disk unknown).
-
-Грабли: `mcc status <FQDN-хоста>` падает EntityNotFoundException — по FQDN работает только
-`mcc instances "<полный FQDN>"` (паттерн `%`), status принимает имя *сервиса* (`controller.<cluster>`).
-
-### Lifecycle: start / stop / withdraw / rescale
+### Диагностика оператора
 
 ```bash
-mcc --local -n infra start   "<host-prefix|service>"        # поднять остановленный
-mcc --local -n infra stop    "<service>" [--now]            # --now = без graceful
-mcc --local -n infra restart "<pattern>" [-m <min_running>] # осторожно, паттерн!
-mcc --local -n infra withdraw "<service>"                   # вывести сервис (удалить из облака)
-mcc --local -n infra withdraw "<namespace-path>/<role>"     # вывести storage (= удаление диска)
+mcc --local -n infra -c <dc> ops "queue://<fullQueue>" -f json | jq '.[0] | {alerts, tasks: .operators.kafka.tasks}'
 ```
+- `alerts["kafka.watch[refreshAvailabilityState]"]` — реальное состояние по модели оператора
+  («No one primary» при живом кластере = протухшая модель, ghost-хосты удалённых нод);
+  сверять с Jolokia: `curl -s http://localhost:7777/jolokia/read/kafka.server:type=raft-metrics/current-state`.
+- `tasks.downscale-broker.state` — прогресс (`isWithdrawing`, `serviceWithdrawn`, `storageWithdrawn`).
+- `invoked` у задачи — последний экшен оператора (например `KafkaAdminAction` на хосте).
 
-Порядок удаления хоста с диском (см. history/MDBSUP-4827):
-1. `stop` сервиса (может требовать `-c <DC>` — без него EntityNotFoundException, облако не то).
-2. `withdraw` **сервиса** — пока сервис держит replicas, storage-withdraw падает
-   `ServiceValidationException: Cannot withdraw storage used by services`. `rescale 0` не работает.
-3. `withdraw` **storage** — это и есть удаление диска. Подтверждение `N mod M` — ответ подавать
-   через stdin: `echo "3" | mcc ... withdraw`.
-4. Пересоздание хоста (миграция на нового миньона): rescale сервиса обратно / операция в mdb-data —
-   поднять replicas, облако создаст новый хост с новым диском.
-5. Success-критерий: EntityNotFoundException по сервису/storage (сущность исчезла).
+### Ручное выполнение шагов downscale-broker (если precondition висит вечно)
 
-### Миграция лежащего хоста (LOST_MINION)
+1. BrokerId: `kafka-broker-api-versions.sh` (id в скобках, rack = ДЦ).
+2. **Reassignment партиций — использовать скилл `kafka-reassign-partitions`**
+   (генерация reassign.json под схему размещения, kafka-reassign-partitions.sh --execute/--verify,
+   throttle, base64-загрузка json на хост чанками, сохранение cross-DC redundancy 1 реплика/ДЦ).
+   Применять его всегда, когда нужно **переместить партиции или изменить их replicas/RF**
+   в Kafka-кластере (вывод брокера, ручная балансировка, снижение RF) — вместо самописных
+   Java-скриптов. Unregister брокера после drain — single-file Java:
+   `java -cp "/opt/kafka/libs/*" /tmp/X.java <bootstrap:9092> <brokerId>` с
+   `/opt/kafka/config/client.properties` (юзер `super`; скрипты-образцы в history/MDBSUP-4895).
+   После reassign проверять чекером DUP_RACK=0 (RackCheck.java, там же).
+3. Withdraw в облаке (последний брокер роли в ДЦ): `mcc stop <service>` → до FINISHED →
+   `mcc withdraw --type service <service>` → `mcc withdraw --type storage "<queue>/<role>"`
+   (уравнение — pexpect, см. mcc-host-worker/commands/lifecycle.md).
+4. Задачу в операторе остановить: `mcc op_stop "queue://<fullQueue>" kafka.downscale-broker`.
+5. Операцию в БД закрыть: UPDATE → done (шаблон в «Шаблоны SQL»).
 
-Хост FINISHED/LOST_MINION = миньон (VM) умер, его volumes (диск) остались в облаке в состоянии
-LOST и не дают пересоздаться хосту. **Storage общий на все реплики роли — удалять весь storage
-НЕ надо**, удаляем только volumes мёртвого хоста:
+## Работа с облаком (one-cloud) через mcc
 
-1. Посмотреть volumes мёртвого хоста:
-   `mcc --local -n infra status "<queue>/<role>" -f table` (storage) или
-   `mcc --local -n infra minion_storage <minion>` — найти LOST-тома с умершего миньона.
-2. Удалить диски мёртвого хоста:
-   `mcc --local -n infra delete "<queue>/<role>" --state LOST` (или по списку UUID volumes;
-   `--volume <name>` — если надо только конкретный том; default state = BOOTSTRAPPING — указывать явно!).
-3. Дождаться, когда volumes/хост станут `NEW`/`EMPTY`:
-   `mcc --local -n infra wait "<storage|shard|volume>" --state ...` / мониторить `mcc status`.
-4. Запустить сервис заново:
-   `mcc --local -n infra start "<service>"` — облако заскейлит инстанс на живой миньон
-   и аллоцирует новые volumes по манифесту storage.
-5. Верификация: `mcc instances "<FQDN>"` → RUNNING; ssh — `systemctl is-active kafka-<role>`;
-   в UI MDB метрики хоста уходят из unknown.
+**Вся работа с mcc — через скилл `mcc-host-worker`** (канон паттернов и граблей живёт там):
 
-⚠️ Перед удалением проверить в прод-БД, что нет RUNNING-операций по кластеру
+- диагностика хоста/сервиса: [mcc-host-worker/commands/query.md](../mcc-host-worker/commands/query.md) — `instances`, `status`, логи без ssh; маркеры лежащего хоста (LOST_MINION).
+- пересоздание хоста с новыми дисками: [mcc-host-worker/commands/lifecycle.md](../mcc-host-worker/commands/lifecycle.md) — полный флоу `stop` → `delete` volumes по UUID (уравнение-подтверждение, автосolv через pexpect) → `start` → **`purge all`** в storage для освобождения квот кластера. Использовать для битых конфигов на диске (пустой sysconfig) и LOST_MINION.
+- полное удаление сервиса+storage (`withdraw`): history/MDBSUP-4827.
+
+⚠️ Перед delete/withdraw проверить в прод-БД, что нет RUNNING-операций по кластеру
 (иначе заблокируются «Already has unapplied operation»).
 
 ## История
 
 Каждый разобранный тикет — файл `history/MDBSUP-<key>-<date>.md`: cluster_id, operationId, причина из
 Temporal, проверки хостов, применённые SQL, итог. Перед новым разбором смотреть `history/` и
-`/Users/vl.ershov/Documents/Git/backstage/.claude/skills/db-seed/history/MDBSUP-4752-add-hosts-stuck-ops.md`
-(эталонный разбор двух кейсов: ecom-fsa uc-контроллер, ads-kafka ec-контроллер).
+`/Users/vl.ershov/Documents/Git/backstage/.claude/skills/db-worker/history/MDBSUP-4752-add-hosts-stuck-ops.md`
+(эталонный разбор двух кейсов: ecom-fsa uc-контроллер, ads-kafka ec-контроллер), а также
+`history/MDBSUP-4832-2026-08-26.md` (PMS: пустой kafka.sysconfig у controller-ключей; запись в PMS
+только в application `mdb`; Temporal reset/restart workflow; mcc lifecycle для datatransfer-очередей).
 
 ## Грабли
 

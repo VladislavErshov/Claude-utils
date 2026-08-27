@@ -1,8 +1,16 @@
 # `mcc instances` / `status` / `logs` — интроспекция без ssh
 
 Эти команды читают состояние из cloud-master и **не требуют захода на хост** (нет
-expect, нет промпта `/# `). Все требуют namespace: без `-n <ns>` →
+expect, нет промпт `/# `). Все требуют namespace: без `-n <ns>` →
 `NamespaceMissingException`. Для MDB-хостов namespace — `infra`.
+
+⚠️ **Облака привязаны к ДЦ** (`~/.mccloud/clouds_info.json`, `defaultCloud` обычно `ic`):
+без `-c <dc>` `instances`/`status` ищут только в дефолтном облаке и падают
+`EntityNotFoundException: No instances found` для кластеров в других ДЦ.
+Для хостов в hc/kc/pc/rc/dc/ec/... всегда добавляй `-c <dc>`:
+```bash
+mcc --local -n infra -c rc instances "%.broker.<cluster>.rc%" -f yaml
+```
 
 ## `mcc instances` — перечисление хостов по паттерну
 
@@ -64,9 +72,7 @@ state=FINISHED  outcome=LOST_MINION  outcome_text="Unreported by minions"
 ```
 
 Миньон (VM) умер, диск/сервис остались в облаке. В UI MDB симптомы — метрики хоста
-`unknown`. Лечение — удалить только LOST-volumes мёртвого хоста
-(`mcc delete "<storage>" --state LOST`), дождаться NEW/EMPTY и `mcc start "<service>"`
-(полный флоу — скилл jira-mdbsup-solver, раздел «Миграция лежащего хоста»).
+`unknown`. Лечение — полный флоу пересоздания хоста: [commands/lifecycle.md](lifecycle.md).
 
 ## `mcc log-streams` / `mcc logs` — логи контейнера через master
 

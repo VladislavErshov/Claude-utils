@@ -196,6 +196,45 @@ the node id 11001 must be included in the set of voters controller.quorum.voters
 лидера кворума, не падение. `QuorumState` transitions `Leader → ResignedState → FollowerState`
 тоже норма.
 
+## Фантомный voter в controller.quorum.voters → потеря кворума при минусе одного ДЦ
+
+**Инцидент-референс**: INCALL-48972 (2026-08-25, кластер `maxb2b-console-notify-kafka`).
+Полный разбор — `history/INCALL-48972.md`. Вариация INCALL-42685: PMS уже починен,
+но файлы на части хостов — stale-рендер со старым значением.
+
+**Симптом**: кластер из 3 контроллеров (по одному на ДЦ) штатно работает, но при потере
+любого одного ДЦ лидер не переизбирается — `the leader is (none)` по кругу, кластер целиком
+недоступен. В `kafka-metadata-quorum describe --replication` виден voter с
+`LastFetchTimestamp=-1` и lag = весь лог (мёртвый voter, которого нет среди хостов кластера).
+
+**Причина**: `controller.quorum.voters` на части controller-хостов отрендерен из старого
+значения PMS `kafka.controller.quorum` (времени миграции ДЦ контроллеров): содержит voter
+выведенного ДЦ. Кворум фактически считается от N+1 голосующих → при минусе одного ДЦ живых
+N < majority(N+1) → выборы невозможны. В логе: `QuorumState ... voters=[10001, 12001, 11001, 13001]`,
+`CandidateState ... voteStates={10001=UNRECORDED, ...}` — кандидат набирает N голосов из N+1.
+
+**Диагностика**:
+1. Сравнить voters на ВСЕХ хостах (не только на одном):
+   `grep ^controller.quorum.voters /opt/kafka/config/controller.properties` (контроллеры)
+   и `.../broker.properties` (брокеры) — расхождение списков = маркер.
+2. `stat -c '%y'` конфигов: mtime старше последнего изменения `kafka.controller.quorum`
+   в PMS (проверить `pms-read.sh <queue>.clouds kafka.controller.quorum infra mdb`) = stale-рендер.
+3. `kafka-metadata-quorum describe --replication` — мёртвый voter с LastFetch=-1.
+
+**Фикс**: PMS НЕ трогать (он корректен). На каждом хосте со stale-конфигом по одному:
+`confp --oneshot` → проверить grep'ом (voters = актуальный PMS) → `systemctl restart
+kafka-controller`. Рестарт фолловера безопасен; после рестарта лидера — кратковременный
+metadata unavailable (секунды). Фантом исчезает из кворума, как только нода с 3-voter
+конфигом становится лидером. Верификация: `CurrentVoters` в `describe --status` = 3 voter'а.
+
+**Грабли**:
+- `kafka.layout` с «лишними» ДЦ (hc, rc при живых kc/pc/ec) — НЕ ошибка и НЕ трогать:
+  node.id рендерится по позиции ДЦ в layout, чистка layout сдвинет node.id всех живых
+  контроллеров (см. I48592).
+- В Kafka 3.8 `kafka-metadata-quorum.sh` принимает `--command-config` ТОЛЬКО до подкоманды
+  describe; конфиг — `/opt/kafka/config/client.properties` (`/etc/kafka/` пуст).
+- Скрипты Kafka на controller-хосте не в PATH — полный путь `/opt/kafka/bin/...`.
+
 ## Fenced брокер
 
 **Симптом**: брокер зарегистрировался, но controller его "заборнил" (fenced). В UI может
