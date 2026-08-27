@@ -65,13 +65,23 @@ sed -E 's/\x1b\[[0-9;]*[mK]//g'
 
 Симптом: scp выходит без ошибок, но файла на хосте нет (проверено на прод-Kafka,
 MDBSUP-4899). Заливка — только base64 через `mcc ssh + expect`, чанками по ~800 символов
-(генератор expect-файла — history/MDBSUP-4899 в jira-mdbsup-solver).
+(генератор expect-файла — [scp.md](scp.md) → «Заливка файла base64-чанками»; разборы —
+`kafka-cluster-inspector/history/MDBSUP-4895-2026-08-26.md`, `MDBSUP-4899-2026-08-27.md`).
 
 ## `mcc sshexec` — `414 URI Too Long` на длинной команде
 
 sshexec кладёт команду в URL — base64-пейлоад уже на ~8KB отваливается
 (`expected 101 Switching Protocols, got 414 URI Too Long`). Для больших данных —
-только expect + mcc ssh.
+expect + mcc ssh (генератор чанковой заливки — [scp.md](scp.md)).
+
+## Команды через mcc показывают ресурсы миньона, а не целевого хоста
+
+`nproc`, `lscpu`, `cat /proc/cpuinfo`, `cat /proc/uptime`, `cat /proc/loadavg`, выполненные
+через `mcc ssh`/`mcc sshexec` на хосте, возвращают ресурсы **mcc-миньона** (прокси-узла),
+а не самого хоста. Не считать по ним число ядер/uptime/load целевого хоста — брать их из
+метрик (Prometheus/VictoriaMetrics, `one_cloud_cpu_cores_value`), mdb-data spec /
+OneCloud API (`mcc instances`) или UI mdb-data. Как проявляется на Kafka —
+`kafka-metrics-investigator/commands/check_metrics.md` (грабля nproc).
 
 ## Tcl expect — `[...]` в send = command substitution
 

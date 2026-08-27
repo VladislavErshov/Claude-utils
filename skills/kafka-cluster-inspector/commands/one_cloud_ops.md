@@ -76,15 +76,15 @@ primary») — задача стоит вечно, операция в БД fail
 
 ## Грабли (из MDBSUP-4895/4899)
 
-- `mcc scp` (загрузка НА хост) молча не заливал файл (macOS-источник) — рабочий путь:
-  expect + `printf %s '<b64-chunk>' >> /tmp/x.b64` чанками по ~800 символов.
-- `mcc sshexec` с длинным аргументом (base64 в команде) → `414 URI Too Long`. Только expect-ssh.
+Общие mcc-грабли (молчаливый scp, `414 URI Too Long`, Tcl/expect-эскейпы, уравнение
+withdraw через pexpect) — канон в [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
+(`commands/pitfalls.md`, `commands/scp.md` — там же генератор base64-чанковой заливки,
+`commands/lifecycle.md` — withdraw). Специфика этого флоу:
+
 - `java Foo.java` (source-file mode) с kafka-классами: classpath обязателен —
   `java -cp "/opt/kafka/libs/*" Foo.java`.
 - `kafka-topics.sh --describe` БЕЗ `--topic` даёт только сводку; партиции — по каждому
   топику отдельно (`--describe --topic <t>` и `</dev/null` внутри while read).
-- Уравнение mcc withdraw не решить через echo stdin (меняется per-run); pexpect-обёртка —
-  в mcc-host-worker.
 
 ## Разборы
 

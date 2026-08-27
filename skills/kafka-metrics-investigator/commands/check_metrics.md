@@ -183,19 +183,13 @@ kafka_server_fetcherlagmetrics_consumerlag_clientid_replicafetcherthread_0_23001
 ## Грабля: `nproc`/`/proc/cpuinfo`/`lscpu` через mcc — это ядра миньона, не хоста Kafka
 
 ⚠️ **Команды `nproc`, `lscpu`, `cat /proc/cpuinfo`, `cat /proc/uptime`, `cat /proc/loadavg`,
-выполненные через `mcc sshexec`/`mcc ssh` на Kafka-хосте, возвращают ресурсы mcc-миньона
-(прокси-узла), а не самого Kafka-хоста.** Это приводит к ложным выводам — например, расчёт
-«средний CPU процесса = `process_cpu_seconds_total / uptime`» даст числа, привязанные к
-конфигурации миньона (64 ядра), а не реального брокера (часто 8–16 ядер).
+выполненные через `mcc sshexec`/`mcc ssh`, возвращают ресурсы mcc-миньона (прокси-узла),
+а не Kafka-хоста** (канон грабли — [`mcc-host-worker/commands/pitfalls.md`](../../mcc-host-worker/commands/pitfalls.md)).
+Это приводит к ложным выводам — например, расчёт «средний CPU процесса =
+`process_cpu_seconds_total / uptime`» даст числа, привязанные к конфигурации миньона
+(64 ядра), а не реального брокера (часто 8–16 ядер).
 
-**Что НЕ работает для определения числа ядер Kafka-хоста через mcc:**
-- `nproc` — возвращает ядра миньона
-- `lscpu | grep CPU(s)` — то же
-- `cat /proc/cpuinfo | grep -c processor` — то же
-- `cat /proc/uptime` — uptime миньона, не Kafka-хоста
-- `cat /proc/loadavg` — loadaverage миньона
-
-**Что работает:**
+**Что работает (число ядер / утилизация хоста):**
 - **JMX-метрика** `process_start_time_seconds` на порту 8080 (только для elapsed-time процесса,
   не для ядер) — но см. ниже граблю со стартовым временем.
 - **Prometheus/VictoriaMetrics метрика числа ядер** — обычно `count(count without(cpu, mode)

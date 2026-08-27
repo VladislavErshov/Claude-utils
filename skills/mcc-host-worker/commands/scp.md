@@ -89,6 +89,34 @@ for H in "${CLUSTER_HOSTS[@]}"; do
 done
 ```
 
+## Заливка файла на хост base64-чанками через expect (обход молчаливого scp и 414)
+
+Когда `mcc scp` не подходит (молча не заливает / нужны не-мусорные пути), а `mcc sshexec`
+падает `414 URI Too Long` (команда уходит в URL, лимит ~8KB) — заливаем base64-чанками
+по ~800 символов через `mcc ssh + expect`. Генератор expect-файла (пути и хост подставить):
+
+```bash
+python3 -c "
+import base64
+b64 = base64.b64encode(open('/tmp/local_file','rb').read()).decode()
+chunks = [b64[i:i+800] for i in range(0, len(b64), 800)]
+lines = ['set timeout 120', 'spawn mcc --local ssh <host>', 'expect \"/# \"',
+         'send \"rm -f /tmp/r.b64\\r\"', 'expect \"/# \"']
+for i, c in enumerate(chunks):
+    op = '>' if i == 0 else '>>'
+    lines.append(f'send \"printf %s \\'{c}\\' {op} /tmp/r.b64\\r\"')
+    lines.append('expect \"/# \"')
+lines += ['send \"base64 -d /tmp/r.b64 > /tmp/remote_file && wc -c /tmp/remote_file\\r\"',
+          'expect \"/# \"', 'send \"exit\\r\"', 'expect eof']
+open('/tmp/upload.exp','w').write('\\n'.join(lines)+'\\n')
+"
+expect -f /tmp/upload.exp 2>&1 | tail -20
+```
+
+`wc -c` в конце — сверка размера. Использовался в kafka-reassign-partitions (заливка
+reassign.json, 46 чанков на 27KB) и MDBSUP-4895/4899 — разборы в
+`kafka-cluster-inspector/history/`.
+
 ## SCP RDB-бэкап (Redis)
 
 ```bash

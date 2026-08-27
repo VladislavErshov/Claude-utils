@@ -118,35 +118,17 @@
 
 ## Инструменты и нюансы выполнения
 
-> **Сначала читай [`/mcc-host-worker`](../../mcc-host-worker/SKILL.md)** — все паттерны
+> **Сначала читай [`/mcc-host-worker`](../mcc-host-worker/SKILL.md)** — все паттерны
 > доступа к хостам (ssh/sshexec/scp/expect), грабли Tcl/expect, ANSI-коды, base64-загрузка
 > файлов собраны там. Ниже — только специфика reassign.
 
-- **ANSI-коды в выводе** — `grep` подсвечивает совпадения цветом, что ломает парсинг.
-  Фильтровать через `sed -E 's/\x1b\[[0-9;]*[mK]//g'`.
-- **Загрузка reassign.json на хост** — `mcc scp` либо молча падает, либо создаёт
-  директорию вместо файла (см. `mcc-host-worker/commands/scp.md`). Рабочие варианты:
-  - `mcc scp /tmp/reassign.json <host>:/tmp/` (dest **директория** с trailing `/`).
-  - При нестабильном scp — base64 поверх `mcc ssh + expect`. **Важно:** `mcc sshexec`
-    падает с `414 URI Too Long` уже на ~8KB base64 (команда уходит в URL). Поэтому
-    base64 нужно дробить на чанки по ~800 символов и собирать на хосте:
-    ```bash
-    python3 -c "
-    import base64
-    b64 = base64.b64encode(open('/tmp/reassign.json','rb').read()).decode()
-    chunks = [b64[i:i+800] for i in range(0, len(b64), 800)]
-    lines = ['set timeout 120', 'spawn mcc --local ssh <host>', 'expect \"/# \"',
-             'send \"rm -f /tmp/r.b64\\r\"', 'expect \"/# \"']
-    for i, c in enumerate(chunks):
-        op = '>' if i == 0 else '>>'
-        lines.append(f'send \"printf %s \\'{c}\\' {op} /tmp/r.b64\\r\"')
-        lines.append('expect \"/# \"')
-    lines += ['send \"base64 -d /tmp/r.b64 > /tmp/reassign.json && wc -c /tmp/reassign.json\\r\"',
-              'expect \"/# \"', 'send \"exit\\r\"', 'expect eof']
-    open('/tmp/upload.exp','w').write('\\n'.join(lines)+'\\n')
-    "
-    expect -f /tmp/upload.exp 2>&1 | tail -20
-    ```
+- **ANSI-коды в выводе** ломают парсинг — фильтр `sed -E 's/\x1b\[[0-9;]*[mK]//g'`
+  (канон — `mcc-host-worker/commands/pitfalls.md`).
+- **Загрузка reassign.json на хост** — `mcc scp /tmp/reassign.json <host>:/tmp/`
+  (dest **директория** с trailing `/`). Если scp молчит/не льёт или нужен не-мусорный
+  путь — base64-чанками через expect: готовый генератор в
+  [`mcc-host-worker/commands/scp.md`](../mcc-host-worker/commands/scp.md) →
+  «Заливка файла base64-чанками» (обходит и `414 URI Too Long` у sshexec).
 - **JMX-метрика размера лога** — `kafka_log_log_size{partition="N",topic="X",}` на порту 8080 broker-хоста. Используется для оценки дисковой нагрузки партиции.
 
 ## Структура скилла
