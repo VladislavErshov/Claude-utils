@@ -151,6 +151,12 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
   (в тикете — прошёл на следующий день, вмешательство не потребовалось). Разовый OOM в
   HTTP-Dispatcher в err.log — побочный эффект упавшего запроса, не падение CC.
   Разбор — `history/MDBSUP-4761.md`.
+- **`NotEnoughValidWindowsException` при живом CC — молчит один брокер** (onemekafkaauth38,
+  2026-08-27) — NumValidPartitions < 95% и недостающая доля ≈ 1/N брокеров: на одном хосте
+  контейнер с битым cgroup/mountinfo → JDK NPE при `getProcessCpuLoad()` → репортер CC
+  падает на CPU-метрике каждую минуту и молчит целиком. Рестарт не лечит. Фикс —
+  `mcc migrate --relocate` шарда инстанса на другой миньон. Разбор —
+  `history/2026-08-27_onemekafkaauth38-cc-notenoughvalidwindows-broken-container.md`.
 - **CruiseControlMetricsReporter не подключается** — JAR несовместим с версией Kafka (CC 2.5.141
   vs Kafka 4.x требует 2.5.147+), либо auth-проблема. Отдельный случай: `ClassNotFoundException:
   CruiseControlMetricsReporter` — брокер падает при старте, JAR репортера отсутствует в образе.

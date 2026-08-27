@@ -36,24 +36,32 @@
 5. `KafkaHostReloadHelper.assertReloadComplete` → non-retryable `RELOAD_FAILED`
    «Config reload failed for hosts: [все ~160 брокеров]» → родитель FAILED.
 
-## Ключевая аномалия: activity падает БЕЗ ретраев
+## Ключевая аномалия: в проде действует СТАРАЯ retry-политика (deploy-override)
 
-У `_update-broker-config_ec_5` (27.08): история 11 событий, ровно один
-`ACTIVITY_TASK_SCHEDULED/STARTED/FAILED`, при этом
-`retryState=RETRY_STATE_MAXIMUM_ATTEMPTS_REACHED` ⇒ эффективный maximumAttempts = 1.
+Фактическая политика из `activityTaskScheduledEventAttributes.retryPolicy` (проверено на
+3 per-host детях 27.08): `initial 10s / backoff 2.0 / max-interval 120s / maximumAttempts 3`.
 
-А в репо `application.yaml` → `temporal.activity-options.kafka-activity-options.retry`:
-initial 1s, backoff 2.0, max-interval 60s, **max-attempts: 8** (коммит 47cac8e5
-MDBDEV-1531 «increase timeout and retries»). Расхождение: либо прод-конфиг переопределяет,
-либо override в коде (проверяется — см. «Открытые вопросы»).
+А в `src/main/resources/application.yaml` (`kafka-activity-options`) с 01.07 (47cac8e5,
+MDBDEV-1531): `initial 1s / max-interval 60s / max-attempts 8`.
 
-Прогон 27.08 07:54–08:16: упали **все 140 из 140** — в тот момент proxy лежал системно
-(не единичные транзиенты); 8 ретраев с бэкоффом ~2 мин, вероятно, вытащили бы.
+**Причина:** прод-конфиг рендерится из `deploy/mdb-processing/templates/etc/application.yaml.j2`
+(внешний application.yaml перекрывает yaml из jar), и там секция `kafka-activity-options`
+осталась со старыми значениями `10 / 2.0 / 120 / 3` (строки ~45-52). При MDBDEV-1531
+deploy-шаблон не синхронизировали; при MDBDEV-3180 туда добавили новую очередь
+`kafka-metadata-version-activity-options` (10/2.0/120/6 — совпадает с репо), а старый блок
+не поправили — классический drift дублированного конфига (см. также ветку
+`ershov/Fix-duplicate-from-prod-yaml` — чистка дублей в этом же j2).
+
+Поправка к первичному разбору: попытки у activity БЫЛИ — 3 из 3 (финальный
+`ACTIVITY_TASK_STARTED.attempt = 3`, затем `MAXIMUM_ATTEMPTS_REACHED`); UI-API сворачивает
+промежуточные попытки в один Started. 3 попытки с бэкоффом 10s/20s (~2 мин) при системном
+лежании proxy не спасли: 27.08 упали все 140 из 140 хостов по 3 попытки.
 
 ## Проблемы кода mdb-processing (кандидаты)
 
-1. **Нет эффективных ретраев на `restartBrokerInstanceSsh`** (см. аномалию выше) —
-   транзиентный фейл proxy сразу роняет per-host child.
+1. **Drift deploy-шаблона**: `deploy/.../application.yaml.j2` держит старые retry
+   `kafka-activity-options` (3 попытки / 10s / 120s) — в проде действует она, а не 8 из
+   репо-yaml. Фикс: синхронизировать блок или убрать дубль из j2.
 2. **All-or-nothing**: один упавший хост → non-retryable `RELOAD_FAILED` всего
    `_update-broker-config` → падает вся операция; ретрай операции = полный повтор reload
    всех брокеров заново.
@@ -62,7 +70,11 @@ MDBDEV-1531 «increase timeout and retries»). Расхождение: либо 
    `_update-broker-config` ещё RUNNING, родитель считает reload «завершённым» и идёт в
    `saveUpscaledControllers` — операция может стать done, а reload потом упадёт.
 4. Per-host child `ReloadInstanceKafkaBrokerWorkflow` сам без RetryPolicy
-   (`RETRY_STATE_RETRY_POLICY_NOT_SET` у его фейла) — второй слой без ретраев.
+   (`RETRY_STATE_RETRY_POLICY_NOT_SET` у его фейла) — после исчерпания activity-ретраев
+   (3) child падает сразу, слоя ретраев на уровне workflow нет.
+5. По коду репо override retry для `restartBrokerInstanceSsh` НЕТ: интерфейс только
+   `@ActivityMethod(name=...)`, без `@MethodRetry`; бин `kafkaActivityOptions` один
+   (`ActivityOptionsFactory`); профилей нет. Override только deploy-j2 (п.1).
 
 ## Код-референсы
 
@@ -84,9 +96,32 @@ MDBDEV-1531 «increase timeout and retries»). Расхождение: либо 
 
 ## Открытые вопросы
 
-- [ ] Где теряются ретраи `kafka_host_restartBrokerInstanceSsh` в проде: внешний конфиг
-      воркера, override бина, аннотации? (проверка по коду — в процессе)
+- [x] Где теряются ретраи `kafka_host_restartBrokerInstanceSsh` в проде → **найдено**:
+      deploy-шаблон `application.yaml.j2` со старой политикой 3/10s/120s (закрыто 27.08).
 - [ ] Та ли причина у фейлов 26.08 16:34/17:02 (старые run'ы недоступны через API) —
       можно косвенно по operations.error_message в прод-БД.
 - [ ] Почему 20 per-host детей были ALREADY_EXISTS в прогоне 27.08 — остались живыми
       с прошлого run'а (16:34/17:02) или политика reuse.
+- [ ] Фикс: синхронизировать `kafka-activity-options` в deploy j2 с репо-yaml
+      (или убрать дубль); при необходимости поднять ретраи именно для reload-активностей
+      (3 попытки ~2 мин мало при системном лежании proxy).
+- [ ] Рассмотреть отказ от all-or-nothing в `KafkaHostReloadHelper.assertReloadComplete`
+      (частичные успехи / повтор только упавших хостов при ретрае операции).
+
+## Итог (ответ на «есть ли проблемы с кодом на нашей стороне»)
+
+Да, есть — но триггер падений внешний (транзиентная/системная ошибка one-cloud proxy
+`Invalid type of response received`), а не сходится операция из-за нас:
+
+1. **Главное (P1): drift deploy-конфига** — `deploy/.../application.yaml.j2` держит
+   старую retry-политику `kafka-activity-options` (3 попытки, 10s/120s) и перекрывает
+   репо-yaml (8/1s/60s с 01.07). Из-за этого транзиентные фейлы proxy не выживаются.
+   Фикс дешёвый: поправить/дедуплицировать блок в j2.
+2. **P2: all-or-nothing reload** — один хост из 160 роняет всю операцию; ретрай = полный
+   повтор reload. Вместе с P1 даёт 4 подряд фейла на eba4c8ec и 2 на ab0f4486.
+3. **P3: оптимистичный скип `runIgnoringAlreadyStarted`** — риск закрыть операцию как
+   done при ещё бегущем (и потенциально падающем) reload.
+
+Ответ на исходный вопрос про override retry: в java-коде override нет, фактическая
+политика задаётся deploy-шаблоном j2 (подтверждено `retryPolicy` из
+`activityTaskScheduledEventAttributes` прод-истории).

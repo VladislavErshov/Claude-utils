@@ -1,6 +1,6 @@
 ---
 name: jira-mdbsup-solver
-description: Разбор тикетов MDBSUP про зависшие/упавшие операции с кластерами MDB (Kafka и др.). Диагностика по цепочке Jira → прод-БД backstage_plugin_mdb → прод-Temporal → mcc-хосты, проверка реального состояния, предложение плана правок и выполнение ТОЛЬКО после явного одобрения пользователя. Используй при запросах вида «разбери MDBSUP-XXXX», «зависшая операция», «найди кластер и операции в темпорал».
+description: Разбор тикетов MDBSUP про зависшие/упавшие операции с кластерами MDB (Kafka, Redis и др.). Диагностика по цепочке Jira → прод-БД (db-worker) → прод-Temporal (temporal-worker) → mcc-хосты (mcc-host-worker; Redis — redis-cluster/redis-sentinel-inspector), проверка реального состояния, предложение плана правок и выполнение ТОЛЬКО после явного одобрения пользователя. Используй при запросах вида «разбери MDBSUP-XXXX», «зависшая операция», «найди кластер и операции в темпорал».
 allowed-tools: [bash]
 ---
 
@@ -12,24 +12,12 @@ allowed-tools: [bash]
 
 1. **Jira** — `generic_jira_get_issue`: из описания достать cluster_id, operationId, тип БД, суть проблемы
    (типовой тикет: «операция failed → блокирует следующую операцию "Already has unapplied operation"»).
-2. **Прод-БД** `backstage_plugin_mdb` (port-forward 53480, user `backstage`, пароль в SKILL.md db-worker;
-   psql только из docker-контейнера `pg_backstage_plugin_mdb` через `host.docker.internal`):
-   ```sql
-   SELECT id, status, type, attempts_left, in_processing, created_ts, finished_ts, error_message
-   FROM operations WHERE cluster_id='<uuid>' ORDER BY created_ts DESC LIMIT 10;
-   SELECT host, params FROM host_state WHERE cluster_id='<uuid>' ORDER BY host;
-   ```
-3. **Прод-Temporal** `https://mdb-processing-temporal.common.mdb.one-infra.ru` (UI локально не открывается — только API):
-   ```bash
-   curl -s --get ".../api/v1/namespaces/default/workflows" \
-     --data-urlencode "query=WorkflowId = '<operationId>'" | jq ...
-   # по кластеру (не все workflow пишут ClusterId):
-   curl -s --get ".../api/v1/namespaces/default/workflows" \
-     --data-urlencode "query=ClusterId = '<cluster_id>'" | jq ...
-   ```
-   Копать цепочку: родительский workflow → child (`_update-broker-config`, per-DC `<opId>_..._<dc>_<n>`) →
-   упавшая activity. Достать failure: `recurse(.cause? // empty) | .message` из
-   `WORKFLOW_EXECUTION_FAILED` / `CHILD_WORKFLOW_EXECUTION_FAILED` / `ACTIVITY_TASK_FAILED`.
+2. **Прод-БД** `backstage_plugin_mdb` — вся работа через скилл **`db-worker`**
+   (port-forward 53480, psql из docker-контейнера, диагностические SELECT'ы по operations/host_state,
+   шаблоны правок, грабли схемы и DML). Креды — в SKILL.md db-worker.
+3. **Прод-Temporal** — вся работа через скилл **`temporal-worker`** (поиск workflow по
+   operationId / ClusterId, история, failure-цепочки parent → child → activity, retry-политики).
+   Кратко: workflowId операции = operationId; упавший child/activity искать рекурсией cause.
    ⚠️ Проверить, нет ли сейчас RUNNING-ретрая той же операции (workflow с тем же workflowId, статус RUNNING).
 4. **mcc-хосты** — проверить, что хосты из операции реально существуют и живы:
    ```bash
@@ -54,24 +42,27 @@ allowed-tools: [bash]
 
 ## Фаза 3. Исполнение
 
-- psql через `docker cp` файла + `psql -f` (stdin-heredoc молча не применяет DML!).
-- Оборачивать в BEGIN/COMMIT, после — верификационный SELECT обеих таблиц.
+- DML в прод-БД — по правилам скилла `db-worker` (docker cp + `psql -f`, BEGIN/COMMIT,
+  верификационный SELECT после).
 - По завершении — обновить `history/` этого скилла (см. ниже) и при необходимости заметку в
   `db-worker/history/MDBSUP-*.md`.
 
-## Шаблоны SQL
+## Работа с Redis-кластерами (mdb-data)
 
-```sql
-UPDATE operations SET status='done', in_processing=false, finished_ts=now(), error_message=NULL
-WHERE id='<op_id>' AND status='failed';
+**Диагностика и починка Redis — только через скиллы-инспекторы** (там канон команд, ACL-подключение,
+каталог известных проблем и сценарии фиксов):
 
-INSERT INTO host_state (cluster_id, host, update_ts, onecloud_ui_link, grafana_dashboard_link, params, shard_id)
-VALUES ('<cluster_id>', '<fqdn>', now(),
-  'https://cloud.vk.team/cloud/<DC_UPPER>/ns/<ns>/service/<service_name>',
-  'https://goc.vk.team/d/deahz1a8c50xsb/kafka-cluster?orgId=1&var-cluster=<cluster_name>&var-instance=<fqdn>&var-vm_datasource=P1D7AE08E5B4F8828',
-  '{"dc": "<dc>"}'::jsonb, NULL);
-```
-(onecloud/grafana ссылки лучше копировать из строк соседних хостов кластера, заменяя dc/instance.)
+- **`redis-cluster-inspector`** — шардированные Redis Cluster (слоты, `cluster nodes/myid/meet`,
+  два мастера в шарде, `ERR Slot ... is already busy`, забытые/зачищенные ноды, resharding,
+  forget ноды, failover, перебалансировка по ДЦ, миграция 7→8).
+  Типовой кейс MDBSUP: после сфейлившегося change_primary/failover в шарде 2 мастера
+  (expected 1 MASTER, found 2) → слоты/роль чинить по каталогу скилла, затем закрывать операцию в БД.
+- **`redis-sentinel-inspector`** — Sentinel-кластеры (cfs-redis): known-peers, спам
+  "Failed to resolve hostname", SENTINEL RESET, вечная переливка реплик, битый AOF.
+
+Подключение к ноде: ACL-юзер из `/etc/redis/acl/users.acl` на хосте (юзер `master` с
+`masterauth`-паролем из `/etc/redis/redis.conf`; у юзера `default` пароль другой и прав нет).
+Хосты — через `mcc sshexec -n infra` (скилл `mcc-host-worker`).
 
 ## Оператор one-cloud-ops (флоу, которых нет в Temporal)
 
@@ -137,6 +128,5 @@ Temporal, проверки хостов, применённые SQL, итог. �
 
 - У table `operations` нет `updated_ts` — есть `created_ts/started_ts/finished_ts`.
 - `host_state` не имеет column `status` — состояние хоста только в облаке/mcc.
-- Temporal API: query обязательно через `--data-urlencode`, иначе `invalid query: malformed SQL`.
-- Порт продовой БД в port-forward: 53480 (7432 на хосте; в истории встречаются разные варианты —
-  проверять `lsof -iTCP:53480`).
+- Прод-БД: подключение, шаблоны правок и грабли схемы — в скилле `db-worker`.
+- Прод-Temporal: все паттерны запросов и грабли API — в скилле `temporal-worker`.

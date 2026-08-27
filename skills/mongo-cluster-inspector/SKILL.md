@@ -68,6 +68,17 @@ db.serverStatus()                # статус сервера (db.serverStatus(
 пересинхронизация ноды (см. «Починить отставшую ноду»): initial sync пишет данные
 заново без «дырок».
 
+**Опыт MDBSUP-4902 (27.08.2026)**:
+- compact на PRIMARY `coordinator.ContainerEntity` (9.3G storage + 13.2G indexes при
+  5.3G данных) отработал за 63 сек, **освободил 19.6G**, но спровоцировал failover
+  (election на secondary) — компакт на первичном держит локи, реплика отстаёт.
+- Признак «дыр»: на одной ноде файлы в разы больше, чем на других (у соседей
+  compact-состояние после пересинка). Индексы раздуты сильнее коллекции.
+- `compact` (4.4+) пересобирает и коллекцию, и её индексы — один runCommand на
+  коллекцию достаточен.
+- Проверить реальный размер данных: `db.getCollection(...).stats()` → `size` (данные)
+  vs `storageSize` + `totalIndexSize` (на диске).
+
 ### Починить отставшую ноду
 
 **Симптомы**: `rs.printSecondaryReplicationInfo()` — момент времени не двигается,
@@ -92,6 +103,17 @@ db.serverStatus()                # статус сервера (db.serverStatus(
 5. Если PRIMARY говорит что реплика недоступна — проверить сетевую доступность
    `telnet <replica-host> 27017` с PRIMARY. Часто нет доступа в одну из сторон —
    тогда мигрировать реплику или разбираться с доступами.
+
+**Грабли (опыт MDBSUP-4902)**:
+- `systemctl stop mongod` на mongo-хосте останавливает **весь контейнер** (mongod —
+  главный процесс): после wipe `systemctl start mongod` недоступен
+  («cannot exec into container that is not running»). Тогда стартовать сервис через
+  облако: `mcc --local -n infra -c <dc> start "<service>"` (state FINISHED/STOPPING →
+  DEPLOYING → RUNNING; скилл mcc-host-worker → commands/lifecycle.md).
+- Реальный лог mongod — `/mnt/logs/dbms/mongodb.log` (не mongod-service.log);
+  ротация: mongodb.log.1/.gz. Маркеры: `"Compact begin/end"`, `"freedBytes"`.
+- PMS `zen.mongodb.hosts` может не содержать hidden-хост (только 3 db-ноды) —
+  проверка «первая в списке» для hidden тривиально проходит.
 
 ### Сломалась поставка данных в Datatransfer (BSONObjectTooLarge) — INCALL-24091
 

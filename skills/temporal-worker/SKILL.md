@@ -62,10 +62,14 @@ jq -r '.history.events[] | select(.workflowExecutionFailedEventAttributes != nul
 
 **Реальные попытки activity:**
 
+- ⚠️ UI-API **сворачивает** промежуточные ретраи: в истории виден только последний
+  `ACTIVITY_TASK_STARTED` с полем `.attempt` = номер финальной попытки (attempt=3 → было
+  3 попытки). НЕ считать попытки по числу Started-событий.
 - `retryState` в `activityTaskFailedEventAttributes`:
   `RETRY_STATE_MAXIMUM_ATTEMPTS_REACHED` / `RETRY_STATE_NON_RETRYABLE_FAILURE_TYPE` / `RETRY_STATE_TIMEOUT`;
-- число попыток = число событий `ACTIVITY_TASK_STARTED` между SCHEDULED и финальным FAILED
-  (каждая попытка — отдельный Started; если Started один, ретраев не было);
+- **Фактическая retry-политика** — ground truth в
+  `activityTaskScheduledEventAttributes.retryPolicy` (то, что реально передал воркер;
+  может отличаться от yaml в репо — см. history/2026-08-27 про deploy-override);
 - `failure.applicationFailureInfo.type` — Java-класс исключения,
   `.nonRetryable: true` — флаг non-retryable.
 
