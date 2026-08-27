@@ -137,6 +137,10 @@ config set client-output-buffer-limit "replica 2GB 1GB 180"
 1. Проверить у какого из мастеров состояние кластера `fail` (команда `cluster info`).
 2. Выполнить действия из пункта «Зачистился диск на хосте шардированного редиса».
 
+Типовой кейс MDBSUP: после сфейлившегося change_primary/failover операция висит/падает с
+«expected 1 MASTER, found 2» — чинить слоты/роль по каталогу выше, затем закрывать операцию
+в прод-БД (скиллы `jira-mdbsup-solver` / `db-worker`).
+
 ### Some nodes have disconnected node
 
 Сообщение из оператора. Например:

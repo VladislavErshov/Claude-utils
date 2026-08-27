@@ -91,6 +91,14 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
   из кластера, видит дисбаланс дисковой нагрузки между ДЦ и хочет перекинуть партиции вручную.
   Не предлагай для автоматического ребаланса — это к Cruise Control (`commands/cruise_control_ops.md`).
 
+## Оператор one-cloud-ops (операции вне Temporal)
+
+Операции вида `get_kafka_downscale_broker_result` выполняет **оператор one-cloud-ops**, не
+Temporal — по operationId в Temporal будет пусто. Диагностика через `mcc ops`, ручное
+выполнение шагов задачи (reassign → unregister → withdraw → `mcc op_stop`) — в
+[commands/one_cloud_ops.md](commands/one_cloud_ops.md). Поиск/закрытие самой операции в
+прод-БД — скилл `jira-mdbsup-solver`.
+
 ## Структура скилла
 
 - `SKILL.md` — этот файл.
@@ -109,9 +117,15 @@ mcc --local -n infra ssh 1.broker.<cluster>.<dc>.one-infra.ru \
   (создание, проверка, удаление).
 - `commands/known_issues.md` — каталог известных технических проблем (симптомы, причины,
   фиксы): Broker is dead, InvalidReplicationFactor, CruiseControlMetricsReporter и т.д.
-- `history/` — краткие разборы реальных инцидентов кластерного уровня (симптом + фикс + грабли).
-  Полные разборы могут лежать в `kafka-reassign-partitions/history/`. Перед диагностикой смотреть,
-  нет ли похожего случая.
+- `commands/one_cloud_ops.md` — оператор one-cloud-ops (операции вне Temporal): диагностика
+  `mcc ops`, что делает DownscaleKafkaBrokerTask, ручное выполнение downscale-broker,
+  `mcc op_stop`, грабли заливки файлов/414/Java-classpath.
+- `history/` — разборы реальных инцидентов и MDBSUP-операций кластерного уровня
+  (modify/resize, downscale-broker, sysconfig, quorum, SCRAM; симптом + фикс + грабли).
+  Полные разборы MDBSUP-кейсов живут здесь; в `jira-mdbsup-solver/history/` — только
+  заглушки со ссылками сюда. Повторяющиеся паттерны в новых кейсах заменять ссылками на
+  старые разборы, не дублировать. Полные разборы reassign-кейсов могут лежать в
+  `kafka-reassign-partitions/history/`. Перед диагностикой смотреть, нет ли похожего случая.
 - **`kafka-host-inspector/history/`** — разборы инцидентов **хостового уровня** (подключение к
   хосту, пути к логам/конфигам, Porto-контейнер, cgroup, специфика выполнения команд). Родительский
   скилл читает эту историю, чтобы понять, нужно ли делегировать в `kafka-host-inspector`. Если
