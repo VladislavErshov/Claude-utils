@@ -55,3 +55,35 @@ Per-DC override hc=false продолжает выигрывать. Следую
 - macOS: `timeout` нет — фонить mcc logs, sleep, pkill, читать файл.
 - pms-read.sh конвертирует FQDN в кластерный ключ и НЕ видит per-DC ключи — для per-DC
   значений дёргать values.do напрямую и смотреть всю мапу.
+
+## 2026-08-28 — CC crash-loop: per-DC override kafka.broker.properties без cruise-блока
+
+**Симптом**: `1.cruise.events-front-kafka.pc.idzn.ru` availability UNAVAILABLE ("He's dead,
+Jim"), cruise-control.service crash-loop (exit 1 каждые ~70с):
+`IllegalStateException: Cruise Control cannot find the metrics reporter topic
+[__CruiseControlMetrics] in the Kafka cluster.`
+
+**Root cause**: при включении CC mdb-processing записал cruise-блок (metric.reporters +
+cruise.control.metrics.*) в `kafka.broker.properties` кластерного ключа
+`events-front-kafka.clouds`. Но per-DC override'ы `events-front-kafka.dc`/`.hc` (наследие
+ранбука rc→hc) ПЕРЕКРЫВАЮТ кластерный ключ — в них блока не было → confp рендерит без
+reporter'а → топик не создаётся → CC умирает на CruiseControlMetricsReporterSampler.configure.
+confp при этом пишет "does not need updating" (значение per-DC не менялось).
+
+**Фикс** (2 записи POST /api/conf/update.do, ns dzen, app mdb): в per-DC значения
+`kafka.broker.properties` добавлены (1) первой строкой `{% import "/etc/misc/utils.j2" as utils -%}`
+(нужен для vault() в jaas-строке — в per-DC версиях import отсутствовал), (2) в конец cruise-блок
+дословно из `.clouds`. Затем rolling-рестарт 24 брокеров (dc+hc по 12): confp --oneshot →
+проверка metric.reporters → systemctl restart kafka-broker → после первого же брокера топик
+создался (auto.create=true, 9 парт, RF=3), CC стартовал самостоятельно.
+
+**Грабли**:
+- `mcc sshexec` вывод маскирует ТОЛЬКО визуально — `password='kY3Kokn6HI4W4ueKsmdRfuddRfuddrNgyGq'`
+  в рендере это реальный vault-пароль (лежит и в jaas.conf), не маркер маски.
+- Верификация рестартов по grep "Successfully registered broker" в kafka-broker.out.log
+  ломается logrotate'ом (ротация по расписанию обнуляет файл) — «0 регистраций» = ложная
+  тревога; проверять systemctl ActiveEnterTimestamp + journalctl.
+- macOS: нет setsid — фоновые скрипты через `nohup ... & disown` с быстрым возвратом
+  tool-call (sleep в том же вызове убивает процесс-группу по таймауту).
+- Параллельный rolling: рестарт-команды каждые ~10с из фоновых subshell (mcc-коннект ~40с
+  доминирует, но рестарты ложатся с нужным шагом); верификация отдельным проходом в конце.
