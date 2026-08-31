@@ -1,5 +1,9 @@
 # UI Cruise Control отдаёт 504 — мёртвые per-DC VIP в uc (10.189.121.x)
 
+> **Повтор 2026-08-29..31:** те же мёртвые VIP uc, но симптом — URP (9 партиций, ISR=1 у
+> брокера 23001). Разбор —
+> [`kafka-cluster-inspector/history/2026-08-31_logs-recom-wizard-kafka-urp-uc-new-conn-broken.md`](../../kafka-cluster-inspector/history/2026-08-31_logs-recom-wizard-kafka-urp-uc-new-conn-broken.md).
+
 **Кластер:** `logs-recom-wizard-kafka` (dzen, ДЦ pc/hc/kc/uc)
 **Хост CC:** `1.cruise.logs-recom-wizard-kafka.pc.idzn.ru`
 **Дата:** 2026-08-25

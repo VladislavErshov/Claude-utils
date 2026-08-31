@@ -144,6 +144,12 @@ Temporal — по operationId в Temporal будет пусто. Диагнос�
   quorum не собрался.
 - **`<unresolved>` controller hostname** — норма в момент initialization, проблема если не резолвится
   через минуту.
+- **`/mnt/logs` 100% на cruise-хосте при живом CC** (I49678, 2026-08-31) — удалённый руками
+  `cruise-control.out.log` (~10GB) держится открытым fd процесса: df 100% при du ~180MB →
+  `lsof +L1`. Рост даёт спам host_checker'а (`GET /state` каждые ~5с). Фикс — рестарт
+  `cruise-control` (или `truncate -s 0 /proc/<pid>/fd/1` без рестарта); ротация —
+  `cruisecontrol-logs.conf` (copytruncate). Разбор —
+  `history/I49678-2026-08-31-cruise-deleted-outlog-disk-full.md`.
 - **CC не запускается** — `UnsupportedClassVersionError` (Java 11 vs 17). Фикс — обновить Java в
   `ubuntu20-mdb-cruisecontrol-base`.
 - **CC после пересоздания хоста долбит localhost:9092** (MDBSUP-4739) — конфиги pms лежат под

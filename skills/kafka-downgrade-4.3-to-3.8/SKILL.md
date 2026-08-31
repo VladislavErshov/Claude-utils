@@ -1,6 +1,6 @@
 ---
 name: kafka-downgrade-4.3-to-3.8
-description: Даунгрейд MDB Kafka кластера с 4.3 до 3.8 (KRaft) с сохранением бизнес-данных и офсетов consumer-групп. Прямой даунгрейд metadata.version невозможен — метод состоит в сбросе KRaft-метаданных, ре-формате кластера и переименовании 4.3-папок из stray обратно в canonical с переписыванием partition.metadata новым topic_id. .log файлы остаются на диске, не копируются через mcc scp. Бэкап скачивается только KRaft metadata с контроллеров (для отката). Процедура без остановки кластера перед бэкапом — бэкап KRaft meta-log делается на живом кластере. Используй когда нужно откатить кластер с 4.3 (включая share groups KIP-932) до 3.8. Docker-образ переключает пользователь через изменение манифеста хоста в админке облака (НЕ mdb-data, НЕ PMS напрямую). Work с хостами — `kafka-host-inspector` + `mcc-host-worker`, анализ логов — `kafka-log-investigator`.
+description: Даунгрейд MDB Kafka кластера с 4.3 до 3.8 (KRaft) с сохранением бизнес-данных и офсетов consumer-групп. Прямой даунгрейд metadata.version невозможен — метод состоит в сбросе KRaft-метаданных, ре-формате кластера и переименовании 4.3-папок из stray обратно в canonical с переписыванием partition.metadata новым topic_id. .log файлы остаются на диске, не копируются через mcc scp. Бэкап — только KRaft metadata с controller-leader; архив остаётся на хосте-лидере в /mnt/data/kraft_meta.tar.gz (этапом 3 не удаляется). Процедура без остановки кластера перед бэкапом — бэкап KRaft meta-log делается на живом кластере. Используй когда нужно откатить кластер с 4.3 (включая share groups KIP-932) до 3.8. Docker-образ переключает пользователь через изменение манифеста хоста в админке облака (НЕ mdb-data, НЕ PMS напрямую). Work с хостами — `kafka-host-inspector` + `mcc-host-worker`, анализ логов — `kafka-log-investigator`.
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
 
@@ -34,7 +34,7 @@ KRaft-only, broker и controller на разных хостах. Сброс meta
 `--create` топиков → Kafka сама переименовывает 4.3-папки в `<name>.<uuid>-stray`
 → мы переименовываем stray → canonical + переписываем `partition.metadata`.
 
-**Бэкап KRaft meta-log делается на живом кластере** (без остановки) с controller-follower. KRaft meta-log append-only — truncated segment при восстановлении игнорируется Kafka (безопасно), snapshot'ы создаются atomically через rename. Контейнер пересоздаётся при переключении docker-образа (Этап 2) — отдельная остановка не нужна.
+**Бэкап KRaft meta-log делается на живом кластере** (без остановки) с controller-leader — у лидера гарантированно самый актуальный meta-log. Архив остаётся в `/mnt/data/kraft_meta.tar.gz` на хосте-лидере: на машину оператора не скачивается, Этап 3 его не удаляет (удаляются только `metadata/__cluster_metadata-0`, `meta.properties`, `bootstrap.checkpoint`). KRaft meta-log append-only — truncated segment при восстановлении игнорируется Kafka (безопасно), snapshot'ы создаются atomically через rename. Контейнер пересоздаётся при переключении docker-образа (Этап 2) — отдельная остановка не нужна.
 
 **Топик `__share_group_*` не переносится** (3.8 не знает share-протокол KIP-932).
 **CC-топики (`__CruiseControlMetrics*`, `__KafkaCruiseControl*`) удаляем перед
@@ -144,31 +144,33 @@ cd /tmp && tar -czf /mnt/data/state_4_3.tar.gz topics_structure.txt topics_confi
 
 **Verify**: список share-group топиков может быть пустым (если share groups не использовались) — это норма. Записать cluster.id из `meta_properties.txt` — понадобится на Этапе 3.
 
-⚠️ **SCRAM users и ACLs хранятся в KRaft metadata и теряются при format (Этап 3).** Если `users_scram.txt` пустой или `kafka-configs` упал (кластер уже down после Этапа 2) — вытащить из бэкапа KRaft meta-log (Этап 1) через `kafka-dump-log.sh --files <meta-log>.log --cluster-metadata-decoder | grep -E 'USER_SCRAM_CREDENTIAL_RECORD|ACCESS_CONTROL_ENTRY_RECORD'`. Для каждого user взять ПОСЛЕДНЮЮ версию record (по offset) — более старые содержат устаревшие salt/key. Поля SCRAM: `mechanism` (1=SCRAM-SHA-256, 2=SCRAM-SHA-512), `salt`, `storedKey`→`stored_key`, `serverKey`→`server_key`, `iterations`. Поля ACL: `resourceType` (2=TOPIC, 3=GROUP, 4=CLUSTER, 5=TRANSACTIONAL_ID), `patternType` (3=LITERAL), `operation` (3=READ, 4=WRITE, 8=DESCRIBE, 10=DESCRIBE_CONFIGS), `permissionType` (3=ALLOW). Супер-пользователь `super` прописан в broker.properties через mdb-data секреты — его воссоздавать не нужно. Восстановление — на Этапе 7.
+⚠️ **SCRAM users и ACLs хранятся в KRaft metadata и теряются при format (Этап 3).** Если `users_scram.txt` пустой или `kafka-configs` упал (кластер уже down после Этапа 2) — вытащить из бэкапа KRaft meta-log (Этап 1; архив лежит на хосте-лидере `/mnt/data/kraft_meta.tar.gz` — распаковать на этом же хосте, например `tar -xzf /mnt/data/kraft_meta.tar.gz -C /mnt/data/kraft_extract/`, и запускать kafka-dump-log.sh там) через `kafka-dump-log.sh --files <meta-log>.log --cluster-metadata-decoder | grep -E 'USER_SCRAM_CREDENTIAL_RECORD|ACCESS_CONTROL_ENTRY_RECORD'`. Для каждого user взять ПОСЛЕДНЮЮ версию record (по offset) — более старые содержат устаревшие salt/key. Поля SCRAM: `mechanism` (1=SCRAM-SHA-256, 2=SCRAM-SHA-512), `salt`, `storedKey`→`stored_key`, `serverKey`→`server_key`, `iterations`. Поля ACL: `resourceType` (2=TOPIC, 3=GROUP, 4=CLUSTER, 5=TRANSACTIONAL_ID), `patternType` (3=LITERAL), `operation` (3=READ, 4=WRITE, 8=DESCRIBE, 10=DESCRIBE_CONFIGS), `permissionType` (3=ALLOW). Супер-пользователь `super` прописан в broker.properties через mdb-data секреты — его воссоздавать не нужно. Восстановление — на Этапе 7.
 
-### 1. Бэкап KRaft metadata с контроллеров на живом кластере (для отката)
+### 1. Бэкап KRaft metadata с controller-leader на живом кластере (для отката)
 
-Бэкап KRaft meta-log с контроллеров без остановки кластера. `.log` файлы брокеров НЕ бэкапим — они остаются на диске.
+Бэкап KRaft meta-log БЕЗ остановки кластера — только с controller-leader (у лидера гарантированно самый актуальный meta-log). `.log` файлы брокеров НЕ бэкапим — они остаются на диске. KRaft meta-log append-only — truncated segment при восстановлении игнорируется Kafka (безопасно), snapshot'ы создаются atomically через rename.
 
-⚠️ Бэкапить с controller-follower (не leader), чтобы снизить активность записи во время tar. KRaft meta-log append-only — truncated segment при восстановлении игнорируется Kafka (безопасно), snapshot'ы создаются atomically через rename.
+Архив остаётся на хосте-лидере в `/mnt/data/kraft_meta.tar.gz` — на машину оператора НЕ скачивается. Этап 3 архив не удаляет (удаляются только `metadata/__cluster_metadata-0`, `meta.properties`, `bootstrap.checkpoint` — путь архива не затрагивается). Скачать с хоста (`mcc scp <leader-fqdn>:/mnt/data/kraft_meta.tar.gz ./`) — только если бэкап реально понадобился (разбор сбоя, извлечение SCRAM/ACL из meta-log).
 
 ```bash
-mkdir -p ~/kafka_4.3_backup/controller-<dc>/
+# 1. Найти лидера: LeaderId из quorum describe (с любого брокера)
+export KAFKA_HEAP_OPTS='-Xmx512m'
+/opt/kafka/bin/kafka-metadata-quorum.sh --bootstrap-server <broker-fqdn>:9092 \
+  --command-config /opt/kafka/config/client.properties describe --status | grep -E 'LeaderId|CurrentVoters'
 
-# На каждом controller-хосте (3 шт): tar KRaft meta-log + meta-файлы
-mcc --local -n infra sshexec -n infra <controller-fqdn> \
-  "cd /mnt/data && tar -czf /mnt/data/kraft_meta.tar.gz \
-     metadata/__cluster_metadata-0 \
-     metadata/meta.properties metadata/bootstrap.checkpoint \
-     log/meta.properties log/bootstrap.checkpoint \
-     2>/dev/null || true"
+# 2. Сопоставить LeaderId с node.id контроллеров (выполнить на каждом controller-хосте)
+mcc_retry <controller-fqdn> "grep -h node.id /mnt/data/metadata/meta.properties /mnt/data/log/meta.properties 2>/dev/null"
+# хост, у которого node.id == LeaderId — лидер
 
-mcc scp <controller-fqdn>:/mnt/data/kraft_meta.tar.gz ~/kafka_4.3_backup/controller-<dc>/
+# 3. tar KRaft meta-log + meta-файлы ТОЛЬКО на хосте-лидере
+mcc_retry <leader-fqdn> "cd /mnt/data && tar -czf /mnt/data/kraft_meta.tar.gz \
+  metadata/__cluster_metadata-0 \
+  metadata/meta.properties metadata/bootstrap.checkpoint \
+  log/meta.properties log/bootstrap.checkpoint \
+  2>/dev/null || true"
 ```
 
-⚠️ `mcc scp` при скачивании tar.gz распаковывает его в каталог назначения — в `controller-<dc>/` появятся `metadata/` и `log/` с содержимым архива. Это нормально.
-
-**Verify**: 3 архива скачаны, в каждом есть `metadata/__cluster_metadata-0/` + `meta.properties` + `bootstrap.checkpoint`.
+**Verify** (на хосте-лидере): `tar -tzf /mnt/data/kraft_meta.tar.gz` — в списке есть `metadata/__cluster_metadata-0/` + `meta.properties` + `bootstrap.checkpoint` (последние два — если существовали на хосте; tar с `2>/dev/null` молчит об отсутствующих).
 
 ### 2. Переключение docker-образа на 3.8 (пользователь)
 
@@ -732,7 +734,7 @@ vector.service                   loaded active running Vector service for produc
 
 **а) Откат до Этапа 3** (KRaft уже очищен, но `.log` ещё в 4.3-структуре):
 1. Остановить сервисы.
-2. На controller-хостах: `rm -rf /mnt/data/metadata/*` и развернуть `kraft_meta.tar.gz` из `~/kafka_4.3_backup/controller-<dc>/`.
+2. На controller-хостах: `rm -rf /mnt/data/metadata/*` и развернуть `kraft_meta.tar.gz` (лежит на хосте-лидере в `/mnt/data/` — Этап 3 его не удаляет).
 3. На broker-хостах: `rm -f /mnt/data/log/meta.properties /mnt/data/log/bootstrap.checkpoint` (если появились от format), topic-папки НЕ ТРОГАТЬ.
 4. Переключить docker-образ на 4.3.
 5. `systemctl start confp-init.service` на всех 6 хостах.
@@ -740,7 +742,7 @@ vector.service                   loaded active running Vector service for produc
 
 **б) Откат после Этапа 6** (stray уже переименованы в canonical, `partition.metadata` переписан):
 1. Остановить сервисы.
-2. На controller-хостах: восстановить `kraft_meta.tar.gz`.
+2. На controller-хостах: восстановить `kraft_meta.tar.gz` (на хосте-лидере в `/mnt/data/`).
 3. На broker-хостах: `partition.metadata` в topic-папках содержит 3.8 topic_id. Для 4.3 это mismatch → папки уйдут в stray. Нужно либо восстановить OLD `partition.metadata` (нет бэкапа — только если снять с другого 4.3-кластера), либо accept что 4.3 поднимется с пустыми топиками.
 4. Переключить docker-образ на 4.3, `confp-init`, старт.
 
