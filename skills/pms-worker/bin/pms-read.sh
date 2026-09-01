@@ -1,25 +1,28 @@
 #!/usr/bin/env bash
-# Читать PMS-переменные для Kafka-хоста из реального pms.cloud.vk.team (mTLS).
+# Читать PMS-переменные из реального pms.cloud.vk.team (mTLS). Скилл pms-worker.
 #
 # Usage:
-#   pms-read.sh <host-or-fqdn> [property] [namespace] [application]
+#   pms-read.sh <host-or-fqdn> [property|prop,prop,...] [namespace] [application]
 #
-# Хост может быть как FQDN (1.broker.<queue>.<dc>.one-infra.ru), так и уже
-# PMS-ключом (<queue>.clouds / controller.<queue>.clouds). FQDN автоматически
-# конвертируется в PMS-ключ по логике MdbHostUtil.queueShortNameFromHost
-# (mdb-processing/common/util/MdbHostUtil.java):
-#   - 1.broker.<queue>.<dc>.one-infra.ru   → <queue>.clouds
-#   - 2.broker.<queue>.<dc>.one-infra.ru   → <queue>.clouds
-#   - 1.controller.<queue>.<dc>.one-infra.ru → controller.<queue>.clouds
-#   - 1.cruise.<queue>.<dc>.one-infra.ru   → <queue>.clouds  (cruise делит ключ с broker)
+# Хост может быть:
+#   - FQDN Kafka-хоста (1.broker.<queue>.<dc>.one-infra.ru) — автоматически конвертируется
+#     в PMS-ключ по логике MdbHostUtil.queueShortNameFromHost (mdb-processing):
+#       1.broker.<queue>.<dc>.one-infra.ru     → <queue>.clouds
+#       1.controller.<queue>.<dc>.one-infra.ru → controller.<queue>.clouds
+#       1.cruise.<queue>.<dc>.one-infra.ru     → <queue>.clouds (делит ключ с broker)
+#   - готовым PMS-ключом (<queue>.clouds / controller.<queue>.clouds / host-mdb)
+#   - любым другим ключом — передаётся как есть.
+#
+# Свойство (второй аргумент):
+#   - одно имя: kafka.sysconfig
+#   - список через запятую: "health.prod.rtconfig.warnings,data.prod.rtconfig.warnings.cluster"
+#   - пусто → дефолтный список известных Kafka-свойств (KNOWN_KAFKA_PROPERTIES ниже)
 #
 # Примеры:
-#   pms-read.sh 1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru
-#     — прочитать все известные Kafka PMS-переменные для broker-хоста
 #   pms-read.sh 1.broker.test-resize-mdbdev-kafka.dc.one-infra.ru kafka.sysconfig
-#     — прочитать одну переменную
-#   pms-read.sh test-resize-mdbdev-kafka.clouds kafka.sysconfig
-#     — явно указать PMS-ключ
+#   pms-read.sh test-resize-mdbdev-kafka.clouds "" infra mdb
+#   pms-read.sh events-front-kafka.clouds "" dzen mdb
+#   pms-read.sh host-mdb "health.prod.rtconfig.warnings,data.prod.rtconfig.warnings.cluster" infra mdb
 
 set -euo pipefail
 
@@ -29,7 +32,7 @@ NAMESPACE="${3:-infra}"
 APPLICATION="${4:-mdb}"
 
 if [[ -z "$INPUT_HOST" ]]; then
-  echo "Usage: pms-read.sh <host-or-fqdn> [property] [namespace] [application]" >&2
+  echo "Usage: pms-read.sh <host-or-fqdn> [property|prop,prop,...] [namespace] [application]" >&2
   exit 2
 fi
 
@@ -44,11 +47,9 @@ fi
 
 # Конвертация FQDN → PMS-ключ.
 # FQDN формат: index.role.queueShortName.dc.one-infra.ru
-# split(".") → [index, role, queueShortName, dc, "one-infra", "ru"]
-# PMS-ключ: <queueShortName>.clouds (broker/cruise) или controller.<queueShortName>.clouds (controller)
 host_to_pms_key() {
   local input="$1"
-  if [[ "$input" == *.clouds ]]; then
+  if [[ "$input" == *.clouds || "$input" != *.*.* || "$input" == host-mdb ]]; then
     echo "$input"
     return
   fi
@@ -70,8 +71,9 @@ host_to_pms_key() {
 
 HOST=$(host_to_pms_key "$INPUT_HOST")
 
-# Все известные Kafka PMS-переменные (из KafkaPmsProperty.java в mdb-processing)
-KNOWN_PROPERTIES=(
+# Дефолт: все известные Kafka PMS-переменные (из KafkaPmsProperty.java в mdb-processing).
+# Используются, когда свойство не указано явно.
+KNOWN_KAFKA_PROPERTIES=(
   kafka.soc.audit.enabled
   kafka.sysconfig
   kafka.broker.properties
@@ -92,6 +94,15 @@ KNOWN_PROPERTIES=(
   kafka.tools.log4j.properties
   zen.kafka.vaultRoot
 )
+
+if [[ -n "$PROPERTY" && "$PROPERTY" == *,* ]]; then
+  # Список свойств через запятую.
+  IFS=',' read -r -a PROPERTIES <<< "$PROPERTY"
+elif [[ -n "$PROPERTY" ]]; then
+  PROPERTIES=("$PROPERTY")
+else
+  PROPERTIES=("${KNOWN_KAFKA_PROPERTIES[@]}")
+fi
 
 fetch_one() {
   local prop="$1"
@@ -128,13 +139,9 @@ fetch_one() {
   fi
 }
 
-if [[ -n "$PROPERTY" ]]; then
-  fetch_one "$PROPERTY"
-else
-  echo "Input:  $INPUT_HOST"
-  echo "PMS key: $HOST   (namespace=$NAMESPACE, application=$APPLICATION)"
-  echo "-------------------------------------------------------------------------"
-  for prop in "${KNOWN_PROPERTIES[@]}"; do
-    fetch_one "$prop"
-  done
-fi
+echo "Input:  $INPUT_HOST"
+echo "PMS key: $HOST   (namespace=$NAMESPACE, application=$APPLICATION)"
+echo "-------------------------------------------------------------------------"
+for prop in "${PROPERTIES[@]}"; do
+  fetch_one "$prop"
+done

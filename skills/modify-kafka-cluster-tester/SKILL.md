@@ -63,7 +63,7 @@ Seed SQL (выгрузка из прода через read-only туннель l
 Auth в mdb-data local-профиле отключён — curl без токена.
 ⚠️ local-профиль mdb-processing пишет в РЕАЛЬНЫЙ `pms.cloud.vk.team` и ходит в
 реальный one-cloud (wiremock их НЕ перехватывает). Только dev-кластеры (project 160).
-Снапшот PMS до/после обязателен.
+Снапшот PMS до/после обязателен (чтение/запись PMS — скилл [`pms-worker`](../pms-worker/SKILL.md)).
 
 ## Эндпоинт и структура запроса
 

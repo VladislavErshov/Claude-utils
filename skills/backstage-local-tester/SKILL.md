@@ -163,7 +163,7 @@ WHERE id=<pms_task_id>;
 
 ## Проверка PMS-переменных в реальном PMS (`pms.cloud.vk.team`)
 
-Проверить что modify-флоу реально записал PMS-переменные — используй скилл **`kafka-config-inspector`** (там же сверка с отрендеренными конфиг-файлами на хостах).
+Чтение/снапшот PMS-переменных — скилл **[`pms-worker`](../pms-worker/SKILL.md)** (скрипт `pms-read.sh`). Сверка записанных значений с отрендеренными конфиг-файлами на хостах — скилл **`kafka-config-inspector`**.
 
 ⚠️ **ВНИМАНИЕ: local-профиль mdb-processing пишет в РЕАЛЬНЫЙ `pms.cloud.vk.team`, не в
 wiremock!** Bean `pmsRestClient` берёт `baseUrl` из `backend.mdb.baseUrl`. Несмотря на

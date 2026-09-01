@@ -79,7 +79,7 @@ cluster replicas <master_id>   # список реплик мастера
 **Канон — вики-секция «Частые запросы»** (ссылка вверху). Что там есть: ERR Slot 10922
 (FLUSHALL + CLUSTER RESET SOFT), не собирается кластер, смена мастера (`cluster failover`),
 решардинг (UI, Wf `reshardRedisCluster`), удалить ноду (полный алгоритм с host_state /
-cluster_links / PMS `zen.redis.hosts`+`backupHosts` / withdraw / рестарт оператора), вернуть
+cluster_links / PMS `zen.redis.hosts`+`backupHosts` (механика PMS — скилл [`pms-worker`](../pms-worker/SKILL.md)) / withdraw / рестарт оператора), вернуть
 долго лежавшую ноду, перебалансировка мастеров по ДЦ, модули (`mdb.redis.need<Module>`),
 телепорт (`cluster-preferred-endpoint-type hostname`), ACL (забанить команду,
 default-пользователь через оператор `redis-cluster.upsert-user`, права для диагностики,

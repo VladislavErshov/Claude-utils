@@ -25,6 +25,7 @@ mcc-паттерны, только специфику MongoDB.
   дляrestore-операций).
 - Конфиги — PMS: `zen.mongodb.hosts` (список хостов кластера — **порядок важен**, первый
   хост стартует как инициализатор репликасета), `zen.mongodb.conf` (конфиг mongod).
+  Механика чтения/записи PMS — скилл [`pms-worker`](../pms-worker/SKILL.md).
 - Пароли: PMS или `/etc/backups/mongo_config.ini` (`backup_mongo_username`,
   `backup_mongo_password`, `archive_password`), admin-пароль — vault.
 - Таблица шаблонов конфигов в БД: `cluster_to_template`.

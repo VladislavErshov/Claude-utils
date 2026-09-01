@@ -155,7 +155,8 @@ Temporal — по operationId в Temporal будет пусто. Диагнос�
 - **CC после пересоздания хоста долбит localhost:9092** (MDBSUP-4739) — конфиги pms лежат под
   неправильным hostname (`cruise-control.<cluster>.clouds` вместо `cruise.<cluster>.clouds`) →
   confp не рендерит `cruisecontrol.properties`, остаётся сток образа с
-  `bootstrap.servers=localhost:9092`. Фикс — переложить конфиги в pms под правильный hostname,
+  `bootstrap.servers=localhost:9092`. Фикс — переложить конфиги в pms под правильный hostname
+  (механика — скилл [`pms-worker`](../pms-worker/SKILL.md)),
   затем `confp --oneshot && systemctl restart cruise-control` (первый confp-прогон может упасть
   на vault-pki — повторить). Разбор — `history/MDBSUP-4739.md`.
 - **CC в crash-loop: `cannot find the metrics reporter topic [__CruiseControlMetrics]`**

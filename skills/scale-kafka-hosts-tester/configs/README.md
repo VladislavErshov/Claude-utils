@@ -4,7 +4,7 @@
 
 - cluster_id: `9fc47c1b-011d-4aaa-b411-de5345a0204e`, project 160, namespace infra
 - mdb-data: `http://localhost:8081`, temporal UI API: `http://localhost:8233/api/v1/namespaces/default`
-- PMS-чтение: `~/.claude/skills/kafka-config-inspector/bin/pms-read.sh 1.broker.test-modify3-mdbdev-kafka.dc.one-infra.ru <key>`
+- PMS-чтение: `~/.claude/skills/pms-worker/bin/pms-read.sh 1.broker.test-modify3-mdbdev-kafka.dc.one-infra.ru <key>`
   (кворум читать по BROKER-ключу, не controller!)
 
 ## Штатный запуск операции (mdb-data)

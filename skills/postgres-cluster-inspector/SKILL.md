@@ -94,7 +94,7 @@
 
 - **Timeline-gap после failover** — на мастере promote без попадания нужного WAL-сегмента в S3. Реплика не может переключиться на новую timeline. Лечится переналивкой (Простой случай). Разбор — `history/2026-07-23-timeline-gap-shard1.md`.
 - **`requested WAL segment ... has already been removed`** — реплика лежала дольше TTL архива (7 дней), либо wal-g не успел заархивировать. Лечится переналивкой.
-- **`max_connections на реплике меньше чем на мастере`** — поправить конфиг в PMS → `confp --oneshot` → `stolonctl update`. Без PMS-синхронизации чинить нельзя.
+- **`max_connections на реплике меньше чем на мастере`** — поправить конфиг в PMS (механика — скилл [`pms-worker`](../pms-worker/SKILL.md)) → `confp --oneshot` → `stolonctl update`. Без PMS-синхронизации чинить нельзя.
 - **`different local dbUID but init mode is none`** — кто-то удалил диск (проверить audit storage). Переналивка (Простой случай) с обязательным `stolonctl removekeeper` + `rm -r /mnt/postgres/*`.
 - **Crash-loop postgres после ребута хоста** — `/var/log/journal/` volatile-only, journal до ребута не сохраняется. Источник shutdown установить нельзя — копать mdb-data аудиты / логи соседних хостов.
 - **`stolon keeper is dead` в rscheck** — обычно следствие, не причина. Сначала проверить `stolon-keeper.service` и `stolon-keeper.log`.

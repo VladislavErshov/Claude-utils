@@ -73,9 +73,10 @@ WHERE cluster_id='9fc47c1b-011d-4aaa-b411-de5345a0204e' AND status='draft';
    controller-сервиса (`cloud_getServiceInfo` в history или UI one-cloud) с `host_state`;
    при расхождении — вылечить «реconcile»-запуском через mdb-data с целью=факт, либо
    перезалить seed заново.
-3. **PMS ↔ host_state**: `kafka.controller.quorum` (через `pms-read.sh`, broker-ключ) должен
-   содержать ровно хосты из `host_state` (+ их nodeId по `KafkaNodeIdCalculator`), без лишних
-   и пропущенных voter'ов. `kafka.layout` — все ДЦ кластера.
+ 3. **PMS ↔ host_state**: `kafka.controller.quorum` (через `pms-read.sh` из скилла
+    [`pms-worker`](../pms-worker/SKILL.md), broker-ключ) должен
+    содержать ровно хосты из `host_state` (+ их nodeId по `KafkaNodeIdCalculator`), без лишних
+    и пропущенных voter'ов. `kafka.layout` — все ДЦ кластера.
 4. **operations**: последняя операция кластера должна быть закрыта (не active/failed), иначе
    mdb-data вернёт 409 «Already has active or failed operation».
 
@@ -257,7 +258,7 @@ Local-грабли (актуально):
 
 Источники секретов — прод-vault хоста брокера (см. `mdb-local-tester/history/kafka-controller-downscale-test-modify3-2026-08-13.md`):
 1. На broker-хосте `/root/.vault-token` + `VAULT_ADDR=https://pc.vault.infra.one-infra.ru` (env внутри контейнера хоста).
-2. Путь секрета = PMS `zen.kafka.vaultRoot` (узнать через `pms-read.sh`) + `/<secret>`; чтение KV v2:
+ 2. Путь секрета = PMS `zen.kafka.vaultRoot` (узнать через `pms-read.sh`, скилл [`pms-worker`](../pms-worker/SKILL.md)) + `/<secret>`; чтение KV v2:
    `curl -s -H "X-Vault-Token: $(cat /root/.vault-token)" $VAULT_ADDR/v1/zkv/data/mdb/mdbdev/kafka/<queue>/<secret>` (⚠️ `/data/` в пути! без него — permission denied).
 3. Нужны три секрета (ключ `password`): `super`, `keystore-password`, `truststore-password`.
    Проверка `super`: совпадает с `user_super` в `/opt/kafka/config/jaas.conf` на брокере.

@@ -72,14 +72,15 @@ mcc (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — внутрен�
 - Бинарник: `/Users/vl.ershov/Documents/mcc/mcc` (в PATH).
 - Конфиг и mTLS-сертификаты для PMS-API: `~/.mccloud/` (`config.yaml`, `client.cert`,
   `client.key`, `ca.crt`). Напрямую через curl+mTLS к `https://pms.cloud.vk.team/api/conf/values.do`
-  ходит `kafka-config-inspector/bin/pms-read.sh` — это НЕ через mcc.
+  ходит `pms-worker/bin/pms-read.sh` (скилл [`pms-worker`](../pms-worker/SKILL.md)) — это НЕ через mcc.
 - С бекстейджа/локальной машины DNS `cdb.cloud-ops.clouds.vkcl.ru` может не резолвиться
   для namespace `vkontakte` → `dial tcp: i/o timeout`. Если нужен этот namespace —
   запускать mcc с хоста, у которого есть доступ.
 
 ## Что НЕ покрывает скилл
 
-- PMS-API (через mTLS curl, не mcc) — см. `kafka-config-inspector/bin/pms-read.sh`.
+- PMS-API (через mTLS curl, не mcc) — скилл [`pms-worker`](../pms-worker/SKILL.md),
+  скрипт `pms-worker/bin/pms-read.sh`.
 - Проброс SSH-агента через mcc — интерфейсом не предусмотрено. Проброс TCP-порта на
   localhost — теперь есть (`mcc tp-port-forward`, Teleport). Для сервисов с TLS помни про
   SAN сертификата (`localhost` может не совпасть) — см. [commands/portforward.md](commands/portforward.md).
