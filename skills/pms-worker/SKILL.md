@@ -112,6 +112,26 @@ Namespace кластера лежит в БД: `SELECT ns.name FROM db_cluster d
 ручки → mdb-data `WarningsFacade` (фильтр enabledWarningTypes + criticality) → Pebble-рендер
 `WarningTemplateRenderer` → `/api/v2/warnings` → UI.
 
+### Воркфлоу: как добавить и раскатать новый варнинг
+
+1. **Код чека** (mdb-health, `warnings/check/`): уникальный `warningType`, в `warningParams`
+   максимум полей (для шаблонов), в `warningMessage` рабочий русский текст — он же fallback
+   для UI. Один тип = одна карточка: если нужны отдельные сообщения — делай отдельные типы
+   (ветка в одном шаблоне тоже работает, но не даёт отдельных карточек/включателей).
+2. **Включение вычислений** — `health.prod.rtconfig.warnings` (ключ `host-mdb`): добавить
+   `<checkName>`-блок. Раскат: сначала `enabled=false` + `forceEnableProjectIds=[<тестовый проект>]`,
+   проверить на тестовом, потом `enabled=true` (+ `dbTypes`).
+3. **Включение отображения** — `data.prod.rtconfig.warnings.{cluster,cluster_list,db_list}`
+   (все три!): добавить тип в `enabledWarningTypes`. Без шаблона UI покажет `warningMessage`
+   из кода — этого достаточно для старта; красивый `templates.<type>` можно докрутить потом.
+4. **Точечный показ на тестовых проектах**: в display-настройках есть `forceEnabled`
+   (`projectIds` + свои `dbTypes`/`criticality`/`enabledWarningTypes`/шаблоны с префиксом
+   `forceEnabled.`) — работает пока `enabled=false` глобально.
+5. **Изменение значения** — через update.do (правила выше: подтверждение, верификация
+   байт-в-байт; значение — многострочный YAML/HOCON, копировать через `jq -j`).
+6. **Локальное тестирование отображения** — скилл `mdb-local-tester` (локальный mdb-data
+   читает `data.testing.rtconfig.*`; полный стэк UI: Backstage 7007 + vkone-stub 8090).
+
 Два независимых слоя настроек, оба на ключе `host-mdb` (ns=infra, app=mdb):
 
 ### 1. `health.prod.rtconfig.warnings` — включение чеков (mdb-health)
@@ -193,7 +213,7 @@ templates:
 </span>
 ```
 
-`_even`: `<b>Чётное число voter'ов в KRaft-кворуме ({{ warningParams.voters_count }})</b>: отказ любого одного voter'а оставит кластер без большинства — кластер станет недоступен. Создайте тикет в поддержку.`
+`_even`: `<b>Чётное число voter'ов в KRaft-кворуме ({{ warningParams.voters_count }})</b> — запас отказоустойчивости тот же, как у меньшего нечётного состава: лишний voter не даёт выгоды. Удалите один контроллер через UI облака, чтобы число voter'ов стало нечётным.` (⚠️ не писать «отказ одного voter'а приведёт к потере кворума» — это неверно: при N=4 отказ одного оставляет 3/4, кворум сохраняется)
 
 `_dead`: `<b>Voter'ы {{ warningParams.dead_voters | join(", ") }} не синхронизируются с лидером кворума</b> (лидер — {{ warningParams.leader_id }}): кластер работает без запаса отказоустойчивости. Создайте тикет в поддержку.`
 
