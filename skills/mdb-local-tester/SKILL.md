@@ -12,13 +12,63 @@ allowed-tools: [bash, read_file, edit_file, write_file]
 
 1. **Инфраструктура mdb-data** — команда `/setup-local-mdb-data` (postgres, redis, сам mdb-data).
 2. **mdb-processing + temporal** — обязателен для тестов, затрагивающих workflow (modify/resize/create кластеров). Команда `/setup-local-temporal` поднимает docker-compose (temporal, vault, kafka, wiremock) в `mdb-processing/localrun/`, затем запускает сам mdb-processing через `bootRun --args='--spring.profiles.active=local'`.
-3. **Backstage НЕ нужен** для базовых тестов modify-флоу. mdb-data сам стартует temporal workflow через processing. Backstage (`/setup-local-backstage`) поднимай только если тестируешь именно Backstage-слой (POST /version/, task chain generators, Redis-кеш проектов).
-4. **UI (репозиторий mdb)** — Vite dev-сервер на порту **3012**: `pnpm run dev` в `/Users/vl.ershov/Documents/Git/mdb` (Node ^22, см. `/ui-developer`). Чтобы UI ходил в локальный mdb-data, в `.env` репозитория mdb (файл в `.gitignore`, правки безопасны):
-   ```
-   MDB_API_URL=http://localhost:8081
-   PROXY_API_PREFIX=/proxy
-   ```
-   С `PROXY_API_PREFIX` запросы UI идут через vite-proxy (`/proxy/_mdb/*` → `localhost:8081/*`) — это обходит CORS, которого в mdb-data нет. Модули vkone/mdb-alerts/mdb-health тоже уедут на локальный mdb-data — их ручки будут 404, на основные флоу не влияет. Особенности: auth в mdb-data local выключен (`mdb.auth.enabled: false`), но страницы логина/OAuth в UI могут вести себя неочевидно — проверять при первом запуске.
+3. **Backstage НЕ нужен** для базовых тестов modify-флоу (мимо UI). mdb-data сам стартует temporal workflow через processing.
+4. **UI (репозиторий mdb)** — Vite dev-сервер на порту **3012**: `pnpm run dev` в `/Users/vl.ershov/Documents/Git/mdb` (Node ^22, см. `/ui-developer`).
+
+## Полная локальная связка с UI (5 сервисов)
+
+UI — это отдельный фронт (репозиторий mdb), его API `/api/mdb/*` отдаёт **Backstage mdb-backend**, а НЕ mdb-data. Полная цепочка:
+
+```
+UI (3012, vite) ──vite-proxy──▶ Backstage (7007) ──▶ mdb-data (8081) ──▶ mdb-processing (8080) ──▶ temporal (8233)
+        └──▶ vkone-stub (8090)
+```
+
+`.env` репозитория mdb (в `.gitignore`, правки безопасны):
+```
+MDB_API_URL=http://localhost:7007
+VKONE_API_URL=http://localhost:8090
+MDB_DATA_LOCAL_URL=http://localhost:8081
+PROXY_API_PREFIX=/proxy
+```
+С `PROXY_API_PREFIX` запросы идут через vite-proxy — обходит CORS. Важно: прод-балансер `api.mdb.one-infra.ru` рутил `/api/mdb/*` → Backstage (7007), а **`/api/v2/*` (products, кластерные v2-ручки) → mdb-data (8081)** — в `vite.config.cts` добавлен opt-in прокси `/proxy/_mdb/api/v2/*` → `MDB_DATA_LOCAL_URL` (без переменной — no-op).
+
+### Запуск Backstage (локально)
+
+1. Инфраструктура: `docker compose -f backstage/stubs/docker-compose.yml up -d` (postgres:6432, redis:6379, clickhouse, sentinel:26379).
+   - **pg_boss**: `docker exec postgres psql -U dev -d postgres -c "CREATE DATABASE pg_boss;"` — иначе backend падает на старте.
+   - **Sentinel**: контейнер `stubs-sentinel-1` не слушает с хоста без `bind 0.0.0.0` + `protected-mode no` в `stubs/sentinel.conf` (уже поправлено в репо). Старый контейнер `redis_sentinel` из docker-compose mdb-data держит 26379 и это обычный redis, не sentinel — удалить (`docker rm -f redis_sentinel`), иначе «Project cache initialization failed Command timed out» (ioredis commandTimeout=1000).
+2. `app-config.mdb.local.yaml` — нужны `backend.mdb.abc.baseUrl` (http://localhost:8088 wiremock) и `backend.mdb.abc.ca` (любая строка, обязателен `getString`) — иначе `Missing required config value at 'backend.mdb.abc.ca'`. `backend.mdb.auth.enabled: false` уже стоит (локальная сессия `k.boblak` из ADMIN_LOGINS).
+3. Запуск: `yarn mdb-start-backend` в `backstage/` (лог `/tmp/backstage.log`), ждать «Project cache successfully initialized» + «Listening on :7007».
+4. **Устаревшая схема 6432**: если `Undefined column(s): [name]` на projects — снести `backstage_plugin_mdb` (`DROP DATABASE` + `CREATE DATABASE`) и рестартнуть backend (Flyway/knex пересоздаст).
+
+### Сидирование из прода (для UI-данных)
+
+Прод-БД через port-forward `localhost:53480` (см. `db-worker`). Что копировать для живого UI (обе БД — 6432 Backstage И 6434 mdb-data, данные должны совпадать):
+
+- `projects` (все, ~2k), `namespaces` (все, 4), `hardware_presets` (все, ~91)
+- по кластерам проекта (по умолчанию **mdbdev = project_id 160**, ~800 кластеров): `db_cluster`, `db_cluster_version`, `host_state`, `one_cloud_meta`, `db_shards`
+- **`operations` (последние ~5 на кластер) — обязательно**: статус кластера в UI считается из последней операции (`ClusterManager.calculateClusterStatus` → `mapOperationEntityToModel` без null-check → 500 `Cannot read properties of undefined (reading 'id')` при отсутствии).
+
+Способ: `\copy (SELECT …) to '/dev/stdout' csv header` через туннель → отчистить хвостовой тэг `COPY N` (grep -v) → `docker cp` → `\copy … from csv header`. Грабли:
+- **Экспортировать по явному списку колонок локальной таблицы** — схемы прода и локали дрейфуют (6434 не знает `fake_id` в one_cloud_meta, другой порядок колонок в projects).
+- **Enum'ы прода шире** — добавлять значения перед импортом: `version_type` (+add_shard/add_hosts/delete_hosts), `db_type` (6434: +newsql/cassandra/temporal), `operation_type` (почти весь список прода). Каждый `ALTER TYPE … ADD VALUE IF NOT EXISTS` — отдельным `docker exec` (новая psql-сессия): значения, добавленные в той же сессии, COPY иногда не видит.
+- `host_state.grafana_dashboard_link`/`onecloud_ui_link` и `operations.error_message` — `ALTER COLUMN … TYPE text` (varchar(255) мало для прод-значений).
+- Порядок вставки: projects/namespaces/hardware_presets → db_cluster → db_shards → db_cluster_version → host_state → one_cloud_meta → operations. После — `setval` для serial-pk (projects, hardware_presets, db_shards) и рестарт Backstage (кэш проектов в redis строится на старте).
+
+### Auth UI на localhost: стаб vkone (порт 8090)
+
+mdb-data локально открыт (`mdb.auth.enabled: false` → сессия `i.mishechkin`, админ, кука `mdb_session_id` не нужна). Но `GetCurrentUser` (`/api/v1/user/info`) и `AllFeatureFlags` (`/api/v2/allflags`) — это **vkone** (`one.vk.team/_vkone/`), без них UI показывает «Необходимо авторизоваться».
+
+⚠️ Копировать прод-куки `vk-one-*` в DevTools бесполезно: в значениях из инструкций подписи замаскированы (`__SECRET_N__`) — vkone парсит юзера, но падает на `failed to get one-cloud user roles`.
+
+Рабочий способ — локальный стаб:
+
+1. Запустить: `node ~/.claude/skills/mdb-local-tester/scripts/vkone-stub.mjs` (порт 8090, лог `/tmp/vkone-stub.log`).
+2. В `.env` репозитория mdb: `VKONE_API_URL=http://localhost:8090` (запросы пойдут `localhost:3012/proxy/_vkone/*` → vite proxy → стаб).
+3. Перезапустить `pnpm run dev`, перегрузить страницу.
+
+Стаб отдаёт фиксированного юзера (vl.ershov), пустые фиче-флаги, `/api/v1/dcs → []`; отсутствующие роуты — 404 с логом в `/tmp/vkone-stub.log` (по нему видно, чего ещё не хватает — дописать в стаб по контракту из `src/shared/api/vkone/__generated__/data-contracts.ts`).
 
 ## Порты (важно!)
 
@@ -27,8 +77,12 @@ allowed-tools: [bash, read_file, edit_file, write_file]
 | mdb-data | **8081** | `bootRun --args='--spring.profiles.active=local --server.port=8081'` |
 | mdb-processing | **8080** | дефолт в `application.yaml` mdb-processing |
 | mdb UI (vite dev) | **3012** | `pnpm run dev` в `/Users/vl.ershov/Documents/Git/mdb` |
+| Backstage (API для UI) | **7007** | `yarn mdb-start-backend` в `backstage/` + stubs compose |
+| vkone-stub (auth UI) | **8090** | `node ~/.claude/skills/mdb-local-tester/scripts/vkone-stub.mjs` |
 | temporal UI | 8233 | docker-compose mdb-processing |
 | postgres (mdb-data) | 6434 | docker-compose mdb-data, контейнер `pg_backstage_plugin_mdb` |
+| postgres (backstage) | 6432 | `backstage/stubs/docker-compose.yml`, контейнер `postgres` |
+| redis (backstage) | 6379 | `backstage/stubs/docker-compose.yml`, контейнер `redis` |
 | wiremock (processing) | 8088 | docker-compose mdb-processing |
 
 mdb-data и mdb-processing оба по дефолту на 8080 — конфликт. Поэтому mdb-data запускать с `--server.port=8081`, а 8080 оставить под processing. В `application-local.yml` mdb-data уже есть `mdb-processing.base-url: http://localhost:8080` — это указывает на processing, не на сам mdb-data.
@@ -231,7 +285,7 @@ SELECT jsonb_build_object(
 
 ## Проверка PMS-переменных (modify-флоу в mdb-processing)
 
-После modify-операции проверить, что флоу реально записал PMS-переменные (`kafka.soc.audit.*`, `kafka.sysconfig`, `kafka.cruisecontrol.*` и т.д.) — используй скилл **`kafka-config-inspector`**. Там же — сверка PMS с отрендеренными конфиг-файлами на хостах.
+После modify-операции проверить, что флоу реально записал PMS-переменные (`kafka.soc.audit.*`, `kafka.sysconfig`, `kafka.cruisecontrol.*` и т.д.) — чтение PMS через скилл **[`pms-worker`](../pms-worker/SKILL.md)** (скрипт `pms-read.sh`), сверка PMS с отрендеренными конфиг-файлами на хостах — скилл **`kafka-config-inspector`**.
 
 ⚠️ **ВНИМАНИЕ: local-профиль mdb-processing пишет в РЕАЛЬНЫЙ `pms.cloud.vk.team`, не в
 wiremock!** Bean `pmsRestClient` (`PmsAutoConfiguration.java:36`) берёт `baseUrl` из
@@ -258,14 +312,17 @@ mTLS-сертификат из `~/.mccloud/` работает — modify-фло�
 # 1. Java-процессы mdb-data (8081) и mdb-processing (8080)
 lsof -ti:8080,8081 | xargs -r kill -9
 
-# 2. Vite dev-сервер UI (3012)
-lsof -ti:3012 | xargs -r kill -9
+# 2. Vite dev-сервер UI (3012), Backstage (7007), vkone-stub (8090)
+lsof -ti:3012,7007,8090 | xargs -r kill -9
 
-# 2. Docker-инфраструктура mdb-data (pg + redis)
+# 3. Docker-инфраструктура mdb-data (pg + redis)
 docker compose -f /Users/vl.ershov/Documents/Git/mdb-data/docker-compose.yml down
 
-# 3. Docker-инфраструктура mdb-processing (temporal + vault + kafka + wiremock)
+# 4. Docker-инфраструктура mdb-processing (temporal + vault + kafka + wiremock)
 cd /Users/vl.ershov/Documents/Git/mdb-processing/localrun && docker compose down
+
+# 5. Docker-инфраструктура Backstage (postgres 6432 + redis 6379 + clickhouse + sentinel)
+cd /Users/vl.ershov/Documents/Git/backstage/stubs && docker compose down
 ```
 
 Проверка:
