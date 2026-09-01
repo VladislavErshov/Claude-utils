@@ -1,10 +1,10 @@
 ---
-name: mdb-data-local-tester
-description: Используй этот скилл, когда нужно локально протестировать API или workflow в MDB Data. Для запуска инфраструктуры используй команду /setup-local-mdb-data.
+name: mdb-local-tester
+description: Используй этот скилл, когда нужно локально протестировать стек MDB — API/workflow mdb-data + mdb-processing, или UI (репозиторий mdb) против локального бэкенда. Для запуска инфраструктуры используй команду /setup-local-mdb-data.
 allowed-tools: [bash, read_file, edit_file, write_file]
 ---
 
-# Скилл для тестирования локального MDB Data
+# Скилл для локального тестирования стека MDB (mdb-data + mdb-processing + UI)
 
 Ты работаешь в режиме QA для тестирования интеграций mdb-data с другими сервисами.
 
@@ -13,6 +13,12 @@ allowed-tools: [bash, read_file, edit_file, write_file]
 1. **Инфраструктура mdb-data** — команда `/setup-local-mdb-data` (postgres, redis, сам mdb-data).
 2. **mdb-processing + temporal** — обязателен для тестов, затрагивающих workflow (modify/resize/create кластеров). Команда `/setup-local-temporal` поднимает docker-compose (temporal, vault, kafka, wiremock) в `mdb-processing/localrun/`, затем запускает сам mdb-processing через `bootRun --args='--spring.profiles.active=local'`.
 3. **Backstage НЕ нужен** для базовых тестов modify-флоу. mdb-data сам стартует temporal workflow через processing. Backstage (`/setup-local-backstage`) поднимай только если тестируешь именно Backstage-слой (POST /version/, task chain generators, Redis-кеш проектов).
+4. **UI (репозиторий mdb)** — Vite dev-сервер на порту **3012**: `pnpm run dev` в `/Users/vl.ershov/Documents/Git/mdb` (Node ^22, см. `/ui-developer`). Чтобы UI ходил в локальный mdb-data, в `.env` репозитория mdb (файл в `.gitignore`, правки безопасны):
+   ```
+   MDB_API_URL=http://localhost:8081
+   PROXY_API_PREFIX=/proxy
+   ```
+   С `PROXY_API_PREFIX` запросы UI идут через vite-proxy (`/proxy/_mdb/*` → `localhost:8081/*`) — это обходит CORS, которого в mdb-data нет. Модули vkone/mdb-alerts/mdb-health тоже уедут на локальный mdb-data — их ручки будут 404, на основные флоу не влияет. Особенности: auth в mdb-data local выключен (`mdb.auth.enabled: false`), но страницы логина/OAuth в UI могут вести себя неочевидно — проверять при первом запуске.
 
 ## Порты (важно!)
 
@@ -20,6 +26,7 @@ allowed-tools: [bash, read_file, edit_file, write_file]
 |---|---|---|
 | mdb-data | **8081** | `bootRun --args='--spring.profiles.active=local --server.port=8081'` |
 | mdb-processing | **8080** | дефолт в `application.yaml` mdb-processing |
+| mdb UI (vite dev) | **3012** | `pnpm run dev` в `/Users/vl.ershov/Documents/Git/mdb` |
 | temporal UI | 8233 | docker-compose mdb-processing |
 | postgres (mdb-data) | 6434 | docker-compose mdb-data, контейнер `pg_backstage_plugin_mdb` |
 | wiremock (processing) | 8088 | docker-compose mdb-processing |
@@ -90,6 +97,25 @@ mdb-data и mdb-processing оба по дефолту на 8080 — конфли
 
 Для проверки каждой toggle-фичи нужен **отдельный** modify-запрос, меняющий только нужное поле. Комбинировать можно, но тогда в temporal input приедут все сразу.
 
+## Идемпотентность рестарта операции (must-check)
+
+Для любого флоу, который бутит/перезапускает хосты (scale/modify/cruise-create), после проверки
+happy path **обязательно** проверяй сценарий рестарта:
+
+1. Дай операции упасть **после** того, как хотя бы один child-workflow успешно завершился
+   (например, урони деплой в одном ДЦ после reconcile/pms-шага).
+2. Перезапусти операцию тем же workflowId (новый run, как это делает retry из mdb-data).
+3. Ожидание: новый run **не** должен падать на старте уже завершённого child'а с
+   `WorkflowExecutionAlreadyStarted` (`RETRY_STATE_NON_RETRYABLE_FAILURE`).
+
+Причина: child-workflowId у нас детерминированные (`<parentId>_суффикс`), reuse policy —
+`ALLOW_DUPLICATE_FAILED_ONLY`, т.е. после **успешного** завершения child'а повторный старт тем же
+workflowId запрещён. Поэтому каждый синхронный/асинхронный старт child'а в workflow-коде должен
+быть обёрнут в `ChildWorkflowUtils.runIgnoringAlreadyStarted` / `ignoreAlreadyStarted` — иначе
+один упавший run операции блокирует все её рестарты навсегда (кейс MDBDEV-3245: reconcile-хелпер
+без обёртки). ВTemporal-истории это видно как `START_CHILD_WORKFLOW_EXECUTION_FAILED` сразу после
+старта run'а.
+
 ## Смежные скиллы
 
 - **`upscale-kafka-controller-tester`** — тестирование upscale Kafka-контроллеров (MDBDEV-3180): seed test-modify3, симуляция падений из прод-Temporal, планы T1–T7.
@@ -98,7 +124,7 @@ mdb-data и mdb-processing оба по дефолту на 8080 — конфли
 
 Перед написанием новых запросов проверяй готовые сценарии:
 ```bash
-ls ~/.claude/skills/mdb-data-local-tester/history/
+ls ~/.claude/skills/mdb-local-tester/history/
 ```
 
 Каждый файл в `history/` содержит: кластер (cluster_id), SQL для seed БД, modify request JSON, ожидаемый workflow в temporal, найденные проблемы. Используй их как образец.
@@ -232,6 +258,9 @@ mTLS-сертификат из `~/.mccloud/` работает — modify-фло�
 # 1. Java-процессы mdb-data (8081) и mdb-processing (8080)
 lsof -ti:8080,8081 | xargs -r kill -9
 
+# 2. Vite dev-сервер UI (3012)
+lsof -ti:3012 | xargs -r kill -9
+
 # 2. Docker-инфраструктура mdb-data (pg + redis)
 docker compose -f /Users/vl.ershov/Documents/Git/mdb-data/docker-compose.yml down
 
@@ -242,7 +271,7 @@ cd /Users/vl.ershov/Documents/Git/mdb-processing/localrun && docker compose down
 Проверка:
 ```bash
 docker ps --format '{{.Names}} {{.Status}}'   # должно быть пусто
-lsof -iTCP:8080,8081,8233,6434,26379 -sTCP:LISTEN -P   # должно быть пусто
+lsof -iTCP:8080,8081,8233,6434,26379,3012 -sTCP:LISTEN -P   # должно быть пусто
 ```
 
 ⚠️ У `pg_backstage_plugin_mdb` нет volume — после `down` данные стираются. При следующем запуске нужно заново:

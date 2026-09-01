@@ -35,7 +35,7 @@
 
 ## Доп: подготовка vault для downscale (2026-08-24, вечер)
 
-По истории /mdb-data-local-tester (kafka-controller-downscale-test-modify3-2026-08-13.md):
+По истории /mdb-local-tester (kafka-controller-downscale-test-modify3-2026-08-13.md):
 - Секреты читаются с broker-хоста: /root/.vault-token + VAULT_ADDR=https://pc.vault.infra.one-infra.ru,
   KV v2 путь с /data/ (без него permission denied): /v1/zkv/data/mdb/mdbdev/kafka/<queue>/<secret>.
 - super совпадает с user_super в /opt/kafka/config/jaas.conf (быстрая самопроверка).

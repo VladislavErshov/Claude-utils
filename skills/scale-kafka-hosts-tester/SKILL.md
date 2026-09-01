@@ -255,7 +255,7 @@ Local-грабли (актуально):
 
 ## Локальный downscale: vault-секреты + PEM truststore (делает downscale рабочим)
 
-Источники секретов — прод-vault хоста брокера (см. `mdb-data-local-tester/history/kafka-controller-downscale-test-modify3-2026-08-13.md`):
+Источники секретов — прод-vault хоста брокера (см. `mdb-local-tester/history/kafka-controller-downscale-test-modify3-2026-08-13.md`):
 1. На broker-хосте `/root/.vault-token` + `VAULT_ADDR=https://pc.vault.infra.one-infra.ru` (env внутри контейнера хоста).
 2. Путь секрета = PMS `zen.kafka.vaultRoot` (узнать через `pms-read.sh`) + `/<secret>`; чтение KV v2:
    `curl -s -H "X-Vault-Token: $(cat /root/.vault-token)" $VAULT_ADDR/v1/zkv/data/mdb/mdbdev/kafka/<queue>/<secret>` (⚠️ `/data/` в пути! без него — permission denied).
@@ -314,5 +314,5 @@ side-effects не важны, и цель не должна выполнятьс
 Каждый прогнанный сценарий — в `history/` этого скилла: seed SQL, modify JSON, workflowId,
 декодированный input, результат, найденные баги. Прежде чем писать новый сценарий — `ls history/`.
 
-Готовые сценарии modify-тестов и снапшоты инфраструктуры — история скилла **`mdb-data-local-tester`**:
-`ls ~/.claude/skills/mdb-data-local-tester/history/` (там же — детали запуска инфраструктуры, порты, грабли psql/auth/PMS).
+Готовые сценарии modify-тестов и снапшоты инфраструктуры — история скилла **`mdb-local-tester`**:
+`ls ~/.claude/skills/mdb-local-tester/history/` (там же — детали запуска инфраструктуры, порты, грабли psql/auth/PMS).

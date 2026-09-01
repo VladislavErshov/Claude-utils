@@ -279,7 +279,7 @@ PMS), тот же после + diff. Дополнительно для диск�
 
 - `scale-kafka-hosts-tester` — seed test-modify3, выгрузка из прода, прод-Temporal,
   terminate/откат, верификация кластера (эталон для общих разделов)
-- `mdb-data-local-tester` — структура modify-запроса, mapping request → temporal input
+- `mdb-local-tester` — структура modify-запроса, mapping request → temporal input
 - `kafka-cluster-inspector` / `kafka-config-inspector` — живость и сверка конфигов
 
 ## Сохранение результатов
