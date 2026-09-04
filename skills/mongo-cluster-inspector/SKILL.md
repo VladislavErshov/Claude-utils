@@ -82,6 +82,9 @@ db.serverStatus()                # статус сервера (db.serverStatus(
   коллекцию достаточен.
 - Проверить реальный размер данных: `db.getCollection(...).stats()` → `size` (данные)
   vs `storageSize` + `totalIndexSize` (на диске).
+- Креды для пост-проверки (`rs.status()`): backup-юзер из `mongo_config.ini` не имеет
+  прав на `replSetGetStatus`; `__system` + keyFile может не существовать. Рабочий
+  вариант — юзер `monitor` (clusterMonitor) из `/etc/mongo_init/script.js`.
 
 ### Починить отставшую ноду
 
