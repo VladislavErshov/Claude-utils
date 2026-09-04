@@ -1,6 +1,6 @@
 ---
 name: scale-kafka-hosts-tester
-description: Локальное тестирование scale-операций с Kafka-хостами в mdb (upscale/downscale контроллеров и брокеров) — настройка инфраструктуры, seed dev-кластера из прода, симуляция падений по фазам workflow, проверка идемпотентности и контрактов mdb-data ↔ mdb-processing. Сейчас содержит секцию про upscale Kafka-контроллеров (MDBDEV-3180); остальные операции будут добавлены. Используй когда нужно локально прогнать scale-флоу Kafka и проверить сходимость после падений.
+description: Локальное тестирование scale-операций с Kafka-хостами в mdb (upscale/downscale контроллеров и брокеров) — настройка инфраструктуры, seed dev-кластера из прода, симуляция падений по фазам workflow, проверка идемпотентности и контрактов mdb-data ↔ mdb-processing. Секции: upscale Kafka-контроллеров (MDBDEV-3180) и downscale Kafka-контроллеров (сценарии D1–D11 по прод-паттернам из Temporal). Используй когда нужно локально прогнать scale-флоу Kafka и проверить сходимость после падений.
 allowed-tools: [bash, read_file, edit_file, write_file, grep, glob]
 ---
 
@@ -220,6 +220,122 @@ curl -s "http://localhost:8233/api/v1/namespaces/default/workflows/$WID/history"
    failure type (type=null) — сообщение в mdb-data неинформативно.
 
 Конфиги и шаблоны запусков — `configs/` (README + direct-start шаблоны).
+
+# Секция: Downscale Kafka-контроллеров (MDBDEV-3180)
+
+## Прод-статистика (анализ 03.09.2026, из прод-Temporal)
+
+- Старый per-DC флоу `downscaleKafkaController` (17–26.08): 72 запуска, 54 ok / 15 failed / 3 terminated.
+- Новый `downscaleKafkaControllerInCluster` (с 26.08): 101 запуск, 70 ok / 31 failed.
+  ВСЕ упавшие в итоге сходились перезапуском операции (включая 5–7 фейлов подряд:
+  `bdf8bf6b`/`eba4c8ec` — 7 фейлов 31.08 → ok; `2655e340` — 5 фейлов → ok; `efabd6aa` — 5 → ok).
+- Реальные причины фейлов (последние run'ы с доступной историей):
+  1. `KafkaAdminClientException` на `kafka_host_getLeaderId` (`1a776d19`/stage-vk-support-kafka):
+     AdminClient не подключается к брокерам :9092, `RETRY_STATE_MAXIMUM_ATTEMPTS_REACHED` —
+     фаза applyNewQuorum (миграция лидера / поиск лидера).
+  2. `CloudClientException` 404 «The entity you specified cannot be found / Service controller.*»
+     (`24875e47`, `610ff371`): cloud-операция по уже удалённому сервису — рестарт флоу
+     после выполненного stop+withdraw.
+  3. `INVALID_REPLICAS_COUNT` «Current: 7, target: 1» (`34f6f10c`, старый флоу): mdb-data
+     прислал цель с шагом >1 — non-retryable, zero side-effects.
+- Прод-эталон фаз (успешный run `39099247`, target=0, последний контроллер в ДЦ):
+  `getExistingServiceDcs`+`getInfosForServices` (discovery) → `reconcileKafkaCluster` →
+  `getVariable`+`removeControllerFromQuorum` → `getLeaderId`×2 → `getInfoForInstances` →
+  `updateConfigKafkaBroker` → `restartAndRestoreControllerInstanceSsh`+`pingReady` (лидер,
+  remaining пуст — мигрировал) → child: `isServiceExists`+`stopService`+`getServiceInfo`×3+
+  `withdrawService`+`isServiceExists`×3 → `isStorageExists`+`withdrawStorage` →
+  `saveDownscaledKafkaControllersInfo`.
+
+## Что тестируем
+
+- **mdb-processing**: `DownscaleKafkaControllerInClusterWorkflowImpl` (parent) +
+  `DownscaleKafkaControllerInDcWorkflowImpl` (child по ДЦ). Архитектура —
+  `docs/kafka/downscale-controller.md` (ЧИТАТЬ ОБЯЗАТЕЛЬНО).
+- Фазы parent (места падений): discovery → affectedDcTargets (+`INVALID_REPLICAS_COUNT`) →
+  reconcileCluster → applyNewQuorum (кворум PMS → миграция лидера → reload брокеров →
+  рестарт контроллеров+лидера) → downscaleControllers (child) → saveDownscaledControllers.
+- Лимит как в upscale: шаг −1 контроллер на ДЦ за запуск; цели ниже — только через серию.
+
+## План тестирования (downscale-контроллеров)
+
+| # | Сценарий | Прод-паттерн |
+|---|---|---|
+| D1 | Happy path −1 контроллер (rescale-путь child): порядок фаз как в эталоне, PMS-кворум без удалённого, save ровно один раз | ~70% запусков |
+| D2 | Happy path target=0: stop+withdraw сервиса, withdraw стораджа, лидер мигрирует в другой ДЦ, remaining пуст | эталон `39099247` |
+| D3 | Идемпотентный перезапуск после успеха: `current <= target` → early return, ноль side-effects | — |
+| D4 | Рестарт после stop+withdraw: кворум уже чист, сервиса уже нет → discovery не отдаёт ДЦ / child скипает, save не дублируется | 404 `24875e47`/`610ff371` — главный падающий прод-кейс |
+| D5 | Рестарт посреди applyNewQuorum (после removeFromQuorum, до рестартов): PMS уже без хоста, хосты живы → `removeControllerFromQuorum` идемпотентен, сходится | — |
+| D6 | AdminClient недоступен: `getLeaderId` исчерпывает ретраи → FAILED; после восстановления перезапуск сходится | `1a776d19`; локально — естественное состояние (9092 недоступен), для happy path наоборот нужны tp-port-forward + секреты (см. секцию vault ниже) |
+| D7 | Partial failure: цель в 2 ДЦ, один child падает → `PARTIAL_DOWNSCALE_FAILURE` non-retryable; перезапуск доводит упавший ДЦ | — |
+| D8 | Контракт шага >1: `INVALID_REPLICAS_COUNT` non-retryable, zero side-effects (валидация уезжает в mdb-data — тест держать как контракт до переезда) | `34f6f10c` |
+| D9 | Лидер среди удаляемых: stop по SSH + waitLeaderMigrated + рестарт НОВОГО лидера, `LEADER_NOT_FOUND_IN_QUORUM` если миграция не сошлась | — |
+| D10 | Серия ретраев (3+ падения на одном operationId): состояние не деградирует, каждый ретрай сходится к тому же плану (`buildHosts` детерминирован) | `bdf8bf6b`×7, `2655e340`×5 |
+| D11 | Прерывание ПОСЛЕ удаления сервиса (до save) → перезапуск деградирует до ручной починки — «падает на рестартах» | `24875e47`/`610ff371` |
+
+### D11. Прерывание после удаления сервиса (главная боль прода)
+
+Прод-механизм (подтверждён 03.09.2026): оба кейса — единственная активность в упавшем ране
+`cloud_getServiceInfo` с `CloudClientException` 404 «Service controller.* cannot be found»,
+`RETRY_STATE_MAXIMUM_ATTEMPTS_REACHED`. Задеплоенная тогда версия шла в discovery через
+`getServiceInfo` per-DC → сервис уже withdrawn → 404 → операция падала на каждом ретрае,
+пока состояние не чинили руками.
+
+Шаги:
+
+1. Seed: 2 контроллера в dc (после T1-апскейла). Запустить downscale `{dc:1}` (или `{dc:0}`
+   для withdraw-пути) через mdb-data API.
+2. Дождаться завершения child (в history родителя появился `cloud_withdrawService` /
+   `rescaleService` + `waitService*` прошёл), но terminate родителя ДО
+   `saveDownscaledKafkaControllersInfo` (terminate через UI API по поллингу history;
+   окно секунды — если не поймали, см. п.4: тот же эффект даёт kill mdb-processing).
+3. Закрыть операцию в mdb-data (`UPDATE operations SET status='done'`), перезапустить
+   downscale с той же целью через mdb-data API.
+4. Зафиксировать фактическое поведение (текущий код):
+   - discovery (`getExistingServiceDcs`) уже НЕ падает 404 — ДЦ без сервиса пропускается;
+   - но `affectedDcTargets` пуст → ранний выход **БЕЗ `saveDownscaledControllers`**;
+   - `host_state` в mdb-data всё ещё содержит удалённые хосты → десинк БД ↔ облако;
+   - повторные запуски через mdb-data строят `controllersPerDc` из устаревшего host_state
+     → «завершаются» без эффекта → операция не сходится никогда.
+5. Ручная починка (процедура для дежурного, пока фикс не сделан): вырезать удалённые
+   хосты из `host_state` (или перевести в removed) + убедиться, что PMS-кворум уже чист,
+   операция закрыта. После этого новый запуск — ранний выход без side-effects (корректно).
+6. Критерий будущего фикса (после него сценарий должен проходить без п.5): ранний выход
+   при уже достигнутой цели обязан сохранять факт удаления в mdb-data — варианты:
+   идемпотентный save по списку из host_state на стороне mdb-data при закрытии операции,
+   передача ожидаемых удаляемых хостов в request, или save из child сразу после withdraw.
+   Плюс regression-guard: discovery не должен падать 404 на отсутствующем сервисе
+   (уже обеспечен `getExistingServiceDcs`, тест держит).
+
+⭐ Сценарий прогонять в двух вариантах: target=0 (withdraw сервиса+стораджа) и target>0
+(rescale: инстанс удалён, сервис жив) — во втором десинк тот же, но 404 не было никогда;
+падение было только в deploy-версии с discovery через getServiceInfo.
+
+Способы симуляции — те же, что в T3 (terminate через UI API, kill воркера, прямой запуск
+только для негативных). Проверки после каждого сценария — общий чек-лист ниже
+(host_state, PMS-кворум, operations, живость кластера).
+
+⚠️ Статус на 03.09: D-сценарии ещё не пройдены — оба кластера заблокированы plait-PREFAIL
+(reload-цикл висит вечно, живое подтверждение MDBSUP-4938); найдена и исправлена регрессия
+MDBSUP-4939 (кворум для миграции лидера читался после чистки). Полный разбор и план
+продолжения — `history/2026-09-03-downscale-incluster-first-runs-plait-prefail-block.md`.
+
+✅ Статус на 04.09: D-матрица закрыта на трёх кластерах параллельно —
+D1+миграция лидера (modify4 `d69b1f3e`), D2 withdraw pc→0 (downgrade7 `9f75061d`),
+D2 ic→0 + D11-десинк (modify3 `9d14e5c3`/`298aaa4f`), D5 terminate-после-кворума +
+ретрай тем же id (`be6c5705`), D10 серия прерываний (`94bfc3ce`), D8 guard
+увеличения → PARTIAL_DOWNSCALE_FAILURE (`d8-direct-guard-9fc47c1b`), D6 битый
+vault-секрет → KafkaAdminClientException = прод `1a776d19` (`fbab747a`).
+Инфра-фиксы: mdb-data переведён на контракт queueInfo/controllersPerDc
+(branch-snapshot processing-api + mapper), save-фаза направлена на реальный
+mdb-data:8081. Разбор — `history/2026-09-04-D1-D2-D11-three-clusters-parallel.md`.
+⚠️ Даунскейл при десинке «host_state < облако» ОПАСЕН: цель строится из host_state и флоу
+снимет ВСЕ контроллеры ДЦ (потеря кворума) — сначала converge-ретрай апскейла.
+⚠️ Direct-start воркфлоу руками: task queue `kafka-activities-queue` (не `kafka-activities-worker`),
+payload encoding `application/json` (не `json`) — иначе workflow висит/падает на первом таске.
+
+⚠️ Downscale — операция отката для upscale-сценариев: после каждого upscale-теста
+возвращать состав через downscale (не руками). Для самих D-сценариев наоборот —
+восстановление upscale-ом.
 
 ## Верификация кластера ДО и ПОСЛЕ каждого сценария
 
