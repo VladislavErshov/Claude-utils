@@ -26,8 +26,8 @@
 `sentinel announce-ip` и иногда `quorum`).
 
 Скачать `/etc/redis/` (целиком директорию) с хоста — через скилл
-[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc scp`, см.
-`commands/scp.md` для шаблона). Шаблон хоста:
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc scp`, см.
+шаблон массового скачивания — в скилле). Шаблон хоста:
 `1.db.<cluster>-cfs-redis.<dc>.one-infra.ru`.
 
 ## Вытащить master-name и sentinel-pass
@@ -61,7 +61,7 @@ redis-cli -p 26379 --user master -a 'B49QFI2UA1xA0QDN9Y8iAYeHGXFdfE' SENTINEL RE
 ## Выполнить на ВСЕХ хостах кластера
 
 Команду нужно выполнить на **каждом** оставшемся sentinel-хосте кластера.
-Пользователь заходит на хост (через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+Пользователь заходит на хост (через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
 или иным способом) и запускает `redis-cli` локально на хосте.
 
 Ожидаемый ответ: `(integer) 1` — sentinel сбросил state для указанного мастера.

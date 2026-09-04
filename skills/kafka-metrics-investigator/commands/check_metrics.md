@@ -3,7 +3,7 @@
 Kafka-брокер отдаёт метрики через **четыре** независимых exporter'а на разных портах.
 Если в Grafana пропали метрики — нужно проверить каждый порт отдельно.
 
-Доступ к хосту — через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`).
+Доступ к хосту — через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc ssh`).
 Здесь — только специфика проверки метрик.
 
 ## Порты
@@ -19,7 +19,7 @@ JMX (8080) — основной источник метрик. Если он м�
 
 ## Быстрая проверка всех портов
 
-Зайти на хост через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh`)
+Зайти на хост через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc ssh`)
 и выполнить:
 
 ```bash
@@ -43,7 +43,7 @@ port 23570: 200     # share-group-lag-exporter — жив
 
 ## Проверка статуса сервисов
 
-На хосте (через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md), `mcc ssh`):
+На хосте (через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md), `mcc ssh`):
 
 ```bash
 systemctl is-active kafka-broker kafka-exporter share-group-lag-exporter
@@ -121,22 +121,75 @@ tail -10 /mnt/logs/dbms/share-group-lag-exporter.err.log
 
 `max by (group, topic, partition)` схлопывает дубликаты с разных инстансов (лаг одинаковый).
 
+## Follower lag (панель «Broker Max Lag» в Grafana)
+
+Панель «Broker Max Lag» на дашборде Kafka использует PromQL:
+```promql
+sum(kafka_server_replicafetchermanager_maxlag{mdb_kafka_cluster="$cluster"}) by (instance)
+```
+
+Это **follower lag** — максимальный лаг (в сообщениях) среди партиций, для которых брокер
+выступает **follower** (подтягивает данные с лидера). MBean: `kafka.server:type=ReplicaFetcherManager,name=MaxLag`.
+Растущий график = брокер не успевает подтягивать реплики → следующий шаг выпадение из ISR
+(`UnderReplicatedPartitions > 0`) и рост `IsrShrinksPerSec`.
+
+⚠️ **Грабля: этот MBean НЕ виден через Jolokia (7777)** — `InstanceNotFoundException`.
+Но он экспонируется через JMX exporter (8080) как Prometheus-метрика. Поэтому:
+
+- ❌ `curl http://localhost:7777/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=MaxLag` → 404
+- ✅ `curl http://localhost:8080/metrics | grep replicafetchermanager_maxlag` → значение
+
+**Снять follower lag через 8080:**
+```bash
+# Общий MaxLag по брокеру:
+curl -s --max-time 15 http://localhost:8080/metrics | grep '^kafka_server_replicafetchermanager_maxlag'
+
+# Per-partition лаг (MBean kafka.server:type=FetcherLagMetrics,name=ConsumerLag) —
+# показывает, какие именно партиции отстают:
+curl -s --max-time 15 http://localhost:8080/metrics \
+  | grep '^kafka_server_fetcherlagmetrics_consumerlag' | grep -v ' 0.0$' | sort -k2 -n -r | head -20
+
+# Сопутствующая метрика — минимальный fetch rate среди fetcher-тредов:
+curl -s --max-time 15 http://localhost:8080/metrics | grep '^kafka_server_replicafetchermanager_minfetchrate'
+```
+
+Метрика per-partition имеет вид:
+```
+kafka_server_fetcherlagmetrics_consumerlag_clientid_replicafetcherthread_0_23001{partition="32",topic="recommender-vkvideo-neuralrank-features-log"} 675224.0
+```
+Где `23001` — broker.id источника (лидера), с которого этот fetcher-тред тянет данные.
+Число fetcher-тредов на брокере = `num.replica.fetchers`. Если per-partition лаг растёт,
+а `NetworkProcessorAvgIdlePercent`/`RequestHandlerAvgIdlePercent` не исчерпаны —
+увеличить `num.replica.fetchers` (см. `kafka-cluster-inspector/commands/troubleshooting.md`
+→ «Метрики по io/network тредам»).
+
+## Дедупликация лагов в Grafana — несколько типов лага
+
+В Grafana Kafka-дашборде есть **три разных** лага, которые легко перепутать:
+
+| Панель / метрика | Что значит | Источник | Порт |
+|---|---|---|---|
+| **Broker Max Lag** (`kafka_server_replicafetchermanager_maxlag`) | Follower-лаг брокера (отставание реплики от лидера) | JMX exporter | 8080 |
+| **Under-replicated partitions** (`kafka_server_replicamanager_underreplicatedpartitions`) | Кол-во партий, где реплика уже выпала из ISR | JMX exporter | 8080 |
+| **Consumer group lag** (`kafka_consumergroup_lag`) | Лаг consumer-группы (отставание консьюмера от HW) | kafka-exporter (Go) | 23569 |
+| **Share group lag** (`kafka_share_group_lag`) | Лаг share-группы (KIP-932) | share-group-lag-exporter | 23570 |
+| **LastStableOffsetLag** per-partition (`kafka.cluster:Partition,name=LastStableOffsetLag`) | Насколько LSO отстаёт от HW (открытые транзакции) | JMX exporter | 8080 |
+
+Если «лаг растёт» — сначала уточнить, **какой** лаг. Растущий follower lag (Broker Max Lag)
+при `UnderReplicatedPartitions=0` — это ранняя стадия проблемы; Metrika `IsrShrinksPerSec`
+ещё нулевая, но если лаг дойдёт до `replica.lag.time.max.ms` (30s по умолчанию) — реплика
+выпадет из ISR.
+
 ## Грабля: `nproc`/`/proc/cpuinfo`/`lscpu` через mcc — это ядра миньона, не хоста Kafka
 
 ⚠️ **Команды `nproc`, `lscpu`, `cat /proc/cpuinfo`, `cat /proc/uptime`, `cat /proc/loadavg`,
-выполненные через `mcc sshexec`/`mcc ssh` на Kafka-хосте, возвращают ресурсы mcc-миньона
-(прокси-узла), а не самого Kafka-хоста.** Это приводит к ложным выводам — например, расчёт
-«средний CPU процесса = `process_cpu_seconds_total / uptime`» даст числа, привязанные к
-конфигурации миньона (64 ядра), а не реального брокера (часто 8–16 ядер).
+выполненные через `mcc sshexec`/`mcc ssh`, возвращают ресурсы mcc-миньона (прокси-узла),
+а не Kafka-хоста** (канон грабли — [`mcc-host-worker/commands/pitfalls.md`](../../mcc-host-worker/commands/pitfalls.md)).
+Это приводит к ложным выводам — например, расчёт «средний CPU процесса =
+`process_cpu_seconds_total / uptime`» даст числа, привязанные к конфигурации миньона
+(64 ядра), а не реального брокера (часто 8–16 ядер).
 
-**Что НЕ работает для определения числа ядер Kafka-хоста через mcc:**
-- `nproc` — возвращает ядра миньона
-- `lscpu | grep CPU(s)` — то же
-- `cat /proc/cpuinfo | grep -c processor` — то же
-- `cat /proc/uptime` — uptime миньона, не Kafka-хоста
-- `cat /proc/loadavg` — loadaverage миньона
-
-**Что работает:**
+**Что работает (число ядер / утилизация хоста):**
 - **JMX-метрика** `process_start_time_seconds` на порту 8080 (только для elapsed-time процесса,
   не для ядер) — но см. ниже граблю со стартовым временем.
 - **Prometheus/VictoriaMetrics метрика числа ядер** — обычно `count(count without(cpu, mode)
@@ -153,6 +206,33 @@ tail -10 /mnt/logs/dbms/share-group-lag-exporter.err.log
   / on(instance) group_left()
   count(count without(cpu, mode) (node_cpu_seconds_total{instance=~"$instance"}))
 ```
+
+## Грабля: высокий `process_cpu_seconds_total` может быть вызван TOS agent, не самой Kafka
+
+Если на панели «Process CPU Usage» в Grafana виден рост CPU процесса Kafka (значения
+`rate(process_cpu_seconds_total)` близки к числу ядер хоста или превышают ожидаемую
+утилизацию), **не всегда виновата сама Kafka**. Известный кейс — **TOS agent** (агент
+observability, загружаемый как `-javaagent` в `KAFKA_OPTS` внутри JVM Kafka broker):
+
+- TOS agent имел **утечки памяти** → heap заполнялся → запускался частый GC
+  (видно по панелям «JVM GC Per Minute» / «JVM GC Duration Per Minute» в row JVM).
+- GC выжирал **все доступные ядра процесса** → `rate(process_cpu_seconds_total)` рос
+  до числа ядер хоста.
+- При этом throughput Kafka (Record Acknowledgements, Bytes In/Out) **не рос** или даже
+  падал — то есть CPU тратился не на полезную работу, а на сборку мусора.
+
+**Как диагностировать:**
+1. Сравнить «Process CPU Usage» с «JVM GC Per Minute» / «JVM GC Duration Per Minute» —
+   если растут синхронно, проблема в GC, не в нагрузке.
+2. Посмотреть «JVM Average Heap Memory Usage» — если heap близок к max (`-Xmx`),
+   подтверждается утечка памяти.
+3. Проверить через `ps -ef | grep -i tos` или `jcmd <pid> VM.system_properties` наличие
+   TOS agent в опциях Kafka broker.
+4. На хосте: `grep -iE "tos|javaagent" /opt/kafka/config/* /etc/systemd/system/kafka-broker.service`
+   — найти, как TOS agent подключается.
+
+**Фикс:** обновить или отключить TOS agent в spec'е кластера (через OneCloud/mdb-data),
+перезапустить брокера. Сама Kafka после этого возвращается к нормальной утилизации CPU.
 
 ## Сопоставление имён графиков Grafana с метриками
 

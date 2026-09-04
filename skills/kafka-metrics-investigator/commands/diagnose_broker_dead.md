@@ -46,7 +46,7 @@ curl -s 'http://localhost:7777/jolokia/read/kafka.server:type=raft-metrics/curre
 
 ### Шаг 3: подтвердить, что rscheck падает именно на этом
 
-Посмотреть исходник rscheck — скачать с хоста через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+Посмотреть исходник rscheck — скачать с хоста через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
 (команда `scp`, источник `1.broker.<cluster>.<dc>.one-infra.ru:/etc/rscheck/` → `~/kafka_rscheck/`):
 
 ```bash
@@ -70,7 +70,7 @@ curl -s 'http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,nam
 ### Шаг 4: host_checker
 
 Та же история — `check_kafka.py` в host_checker тоже использует `kafka.server:type=raft-metrics/current-state`.
-Скачать с хоста через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) (команда `scp`,
+Скачать с хоста через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (команда `scp`,
 источник `1.broker.<cluster>.<dc>.one-infra.ru:/etc/host_checker/` → `~/kafka_host_checker/`):
 
 ```bash

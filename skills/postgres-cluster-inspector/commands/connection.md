@@ -1,6 +1,6 @@
 # Команды на PostgreSQL-хосте
 
-Доступ к хостам — через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md).
+Доступ к хостам — через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md).
 Здесь — только специфика PostgreSQL.
 
 ## Полезные команды на хосте

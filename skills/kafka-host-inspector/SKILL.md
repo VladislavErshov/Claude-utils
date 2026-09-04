@@ -10,7 +10,7 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 mdb-data. Не содержит диагностики — только методы работы с хостами и путеводитель по путям.
 
 > Работа с хостами (ssh + expect, scp, sshexec) — через скилл
-> [`mcc-host-access`](../mcc-host-access/SKILL.md). Ниже — только специфика Kafka.
+> [`mcc-host-worker`](../mcc-host-worker/SKILL.md). Ниже — только специфика Kafka.
 
 Диагностику кластера (логи, KRaft quorum, известные проблемы) — см. `kafka-cluster-inspector`.
 Метрики и Jolokia MBean'ы — см. `kafka-metrics-investigator`.
@@ -29,13 +29,21 @@ mdb-data. Не содержит диагностики — только мето
 
 ## Специфика Kafka-хостов
 
-- Для выполнения команд на хосте — скилл [`mcc-host-access`](../mcc-host-access/SKILL.md)
+- Для выполнения команд на хосте — скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md)
   (команда `ssh` + expect, см. `commands/ssh.md`).
+- Kafka-скрипты НЕ в PATH при `mcc sshexec` (`which kafka-topics.sh` пусто) — запускать
+  с полным путём `/opt/kafka/bin/`. Для CLI-инструментов auth-конфиг —
+  `/opt/kafka/config/client.properties` (не `/etc/kafka/kafka-console-consumer.properties`,
+  которого на хосте нет):
+  ```bash
+  mcc --local -n infra sshexec <host> \
+    "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --command-config /opt/kafka/config/client.properties --describe --under-replicated-partitions"
+  ```
 - Для `sudo -u kafka` с env-переменными — `source` из `/etc/sysconfig/kafka`
   (см. `commands/run_commands.md`).
 - Для скачивания конфигов — скачать директорию целиком (`/opt/kafka/config/`),
   не отдельными файлами — обходит проблему с файлами без расширения
-  (`jaas.conf`, `sysconfig`). Подробнее — см. [`mcc-host-access`](../mcc-host-access/SKILL.md)
+  (`jaas.conf`, `sysconfig`). Подробнее — см. [`mcc-host-worker`](../mcc-host-worker/SKILL.md)
   (команда `scp`, `commands/scp.md`).
 - При загрузке скриптов-чекеров на хост — путь назначения **директория**
   (см. `commands/run_commands.md`).

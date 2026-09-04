@@ -73,7 +73,8 @@ grep "^2026-07-23 03:" /mnt/logs/dbms/postgres.log | head -60
 grep "^2026-07-23T03:" /mnt/logs/dbms/stolon-keeper.log | head -60
 ```
 
-⚠️ **Не использовать `grep -E "0[23]:"`** — Tcl в expect ломается на `[23]`. Использовать отдельные grep или escape `\[23\]`.
+⚠️ **Не использовать `grep -E "0[23]:"`** — Tcl в expect ломается на `[...]`
+(канон грабли — [`mcc-host-worker/commands/pitfalls.md`](../../mcc-host-worker/commands/pitfalls.md)).
 
 ## Конфиги
 

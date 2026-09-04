@@ -1,5 +1,10 @@
 # Переналивка реплики постгреса
 
+**Канон — [вики «Дежурство MDB: Postgres»](https://confluence.vk.team/pages/viewpage.action?pageId=1348619018),
+разделы «Переналивка реплики постгреса» и «Реплика не поднимается...»** (SSOT).
+Ниже — тот же материал + наши дополнения (контроль хода наливки, маркеры успеха,
+частые ошибки из живого инцидента `../history/2026-07-23-timeline-gap-shard1.md`).
+
 ## Почему может происходить
 
 Перезаливка (reinit) в штатном режиме происходит крайне редко и самопроизвольно не возникает. Однако в отдельных случаях она возможна:
@@ -156,7 +161,7 @@ INFO  our db role is none
    etcdctl snapshot save snapshot.db
    ```
    Файл `snapshot.db` на всякий случай скачать на локальную машину через скилл
-   [`mcc-host-access`](../../mcc-host-access/SKILL.md) (команда `scp`,
+   [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (команда `scp`,
    `1.db.amokrousov-test-16-mdbdev-pgsql.pc.one-infra.ru:/snapshot.db` → `.`).
 
 2. **Ребутстрапнуть оставшийся в живых хост etcd из дампа:**

@@ -1,0 +1,785 @@
+b077f8f9-a108-4f5c-8cc0-de0ef5644e17	abc-devcloud	abc-devcloud-vkone-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7702dadb-6b78-4ec7-90c7-e96829836979	accounttable	accounttable-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e5bdfdf5-193f-4097-98fc-02d54e89c58a	actions-billing	actions-billing-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7eab6ac5-7dfc-4a5d-a933-5ae8828ae8ca	adb-smb	adb-smb-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e97f7382-3889-4968-9b95-97e10e2092c1	adb-users	adb-users-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cad601a9-e0d4-455c-a69f-81d69db64845	adplacements	adplacements-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+14a9afd3-43d5-47a1-8432-ea18d17490c6	adplan-uniques	adplan-uniques-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+bdeac2c5-e605-4b0a-9318-94a29dc87acc	ads-comp	ads-comp-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+5f7546ce-be30-4b82-9c1c-866e97f188f8	ads-format-dev	ads-format-dev-ads-format-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6f4133c3-1cfa-4ed5-be46-a60532a29952	ads-kafka	ads-kafka-rustore-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7818a146-9f23-4c44-a6c2-e985ba18f478	ads-kafka-hdd	ads-kafka-hdd-rustore-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fe13e578-4faa-4a3b-83e1-fd2847130580	ads-stat-sum	ads-stat-sum-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5de47023-b7e1-4cbe-841d-f725d77d5094	adtech	adtech-recommender-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+03712fe4-b028-4352-a007-a6b0cc66af99	adtech	adtech-mdb8553-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+bbbfed8a-3985-4b0b-8acd-cbefeffdd32b	ai-studio	ai-studio-mdb10108-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b11b8671-51fa-4a9f-901d-1e3dd5c186fd	aigen	aigen-adtech-kafka	infra	1	       9	<NOT_SET> 
+9b027f49-ea6e-4118-809e-4c970c8cdb58	aitools-api	aitools-api-ai-rnd-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f8dfb22f-0cf7-4e45-a7c3-406ffe60c4e2	analytics	analytics-vk-messenger-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fe753a1d-4be5-4147-9724-d8f59b45a324	analytics	analytics-onemebotfarm-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f4ee2556-da3c-4924-831d-eafe862420cb	anpotapovtest	anpotapovtest-adtech-kafka	infra	1	       9	<NOT_SET> 
+a705845e-e2b1-4af9-b9ac-10d1ed1233e5	anti-fraud-msk	anti-fraud-msk-karma-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+48f2d3cc-48ac-45bc-9642-42303c5ab028	api-calls-logs	api-calls-logs-api-core-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+262885a2-fe7f-42cc-8e96-2b46a66e7162	api-test	api-test-aisearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a7d38c11-9327-4e09-9c57-808e50538eaa	apphost-dzen-kafka	apphost-dzen-kafka-zinfra-kafka	dzen	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d48e5cd4-5223-4247-8fd2-f2d1c8b7f9c1	apphost-ucp	apphost-ucp-recommender-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f0b089a1-e0bc-4aa3-8e35-f1ec5ef22f49	apps-installed	apps-installed-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f560cac5-4ff4-419d-9da8-b7514440fd43	apps-production	apps-production-vkontakte-kafka	vkontakte	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1ff6f1a4-c244-4383-91a6-f8192868edfe	apps-s	apps-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7267fe06-de63-4118-ac2d-fe9ad31ef855	apps-staging	apps-staging-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+c4103d64-5aea-44ee-ba2d-21ef16db0a30	artem-zinovev-test	artem-zinovev-test-paas-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+162f218d-3469-4189-81a5-6869acd608bd	article-tykva	article-tykva-dzencontent-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d578f3aa-4982-4625-b457-1c25a4fdd6fa	assistant	assistant-mdb8837-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+06ba2370-112a-4f5d-b937-408c4c5f2fe2	assistant-analytics	assistant-analytics-mdb8837-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6fa758c0-66a6-4d85-be14-419eeb2c0b7b	assistant-prod	assistant-prod-mdb9346-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9eefdef8-34c2-4d28-b998-c5f4988de107	auction-realtime	auction-realtime-adtech-kafka	infra	1	       9	<NOT_SET> 
+115c35ae-f338-4830-b8b9-1ebc28bd75a8	audio-ai-texts	audio-ai-texts-mdb6079-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2d6613e0-0cfb-417b-bc01-8a1a593ac936	audio-artist-kafka	audio-artist-kafka-mdb9281-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+28b444b4-2a5a-4fa7-ac81-5327aea80074	auth-prod-1	auth-prod-1-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e6745ee3-b704-41c7-b712-a51d802a1fc9	auth-prod-2	auth-prod-2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+df15ce5b-c248-45d7-ab25-c132839d4c07	auth-prod-3	auth-prod-3-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dfbf1b2a-aa11-4659-a7ce-c72ecfc692dc	auth-prod-4	auth-prod-4-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+37cd7ec4-9d1d-4cfc-9c49-85b5d799f8eb	auth-testing	auth-testing-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+52320381-395c-4938-aac2-0c6fdb17dd3e	balance-sn-dwh	balance-sn-dwh-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+68dca5a8-d165-49cb-af71-5a8db5f1adba	bannerd-image	bannerd-image-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+865db503-09d5-44e6-ab81-31a0717348d7	bannerd-tables	bannerd-tables-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4738efee-ec7b-42f5-8ca8-f5ad806a1f0d	bidatahubpg	bidatahubpg-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2b7b63fa-c45b-4665-b80e-bb2098d6d995	bidatalens2yt	bidatalens2yt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0639c3f5-c6e7-4837-8004-4f3f29ebc4e9	bidatalenspmpg	bidatalenspmpg-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d09b304a-ac7c-40da-a542-cce5d7ae1a00	bidatalensus	bidatalensus-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4baeed05-0c10-466d-8371-2b313a6a0cf8	bidatalensuspg	bidatalensuspg-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+665b6df7-04c7-4ba1-8f5f-3be3d772d693	bihorizonex	bihorizonex-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+19155a62-85a4-4ebf-b211-7258de0cf515	bihorizonpg	bihorizonpg-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1e679e27-4737-429e-a3f5-fe37321b526c	billcurrencyd	billcurrencyd-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+47e9791c-ec22-4b1f-8538-c4dfb336168d	billing-logs	billing-logs-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b285335a-19d6-4b59-9907-09ad9d45fd96	billing-prod	billing-prod-vkbilling-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1d11fd7c-937e-4a4b-9c13-84ee8e21d332	billing-test	billing-test-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+02839110-1ceb-4dcf-8c7b-6c7880687b5b	billingsapdoc	billingsapdoc-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+80ab8038-f27e-43c5-86c0-8996a87b0f1b	bilmigrated	bilmigrated-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+79a8c72c-cc8c-4750-8120-0990d2f4c523	biltransferd-billing	biltransferd-billing-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e4610280-d116-40b7-b05b-e51c88c3dea4	binvoiced	binvoiced-datatransfer-kafka	infra	8	     512	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1614c90d-dddb-43e8-907a-53cdcbbac70d	biredashpg	biredashpg-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8b8afa62-d56b-46c0-bb02-34026c1a2950	biredashpg2yt	biredashpg2yt-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+affce89e-d3f5-44e9-81c1-69af56559db3	bisupersetpg	bisupersetpg-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8ac1153e-dbeb-4e28-a6af-247a7afe1c97	bizmaxru	bizmaxru-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+425531d8-079d-470d-810c-9cef4b0490fb	bizmaxrudev	bizmaxrudev-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+75aea776-67a9-4314-99ab-b3bd90e63ce4	bizon-edr-kafka	bizon-edr-kafka-vksoc-kafka	infra	1	       9	<NOT_SET> 
+1135e80d-8cff-4d7a-b873-c6ec4d5cc2c8	blogger-import	blogger-import-video-kafka	dzen	1	       9	<NOT_SET> 
+b55df4d3-aaa9-4d81-9881-f95a87d95e49	botapimdb	botapimdb-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+673a9229-1539-4306-84d1-cbb5e5b1f9ff	bti-inference	bti-inference-predict-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8f11c7c2-1022-4211-aae4-a95dc30c1f19	bufferkafkamdb	bufferkafkamdb-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+231db6f6-7985-4820-aae6-9c2c9b4ee7fb	callbackd-billing	callbackd-billing-adtech-kafka	infra	1	       9	<NOT_SET> 
+a4a0e0d6-325d-452f-b236-a132b3546983	calls-s	calls-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f9374193-8a78-4fb7-9cdf-dac2b27065a2	camp-bannerd	camp-bannerd-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+4efdabc3-c272-4a1e-acc6-dbcf992ecf05	camp-bannerd1	camp-bannerd1-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2f95af81-0403-4af6-a59d-0737f5d3cc06	campaign-pan	campaign-pan-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+64adbd3c-ba81-418b-9ad4-eab14f60fa00	campaign-pan-q	campaign-pan-q-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+02d74883-b35b-4200-8121-00e0fa0c9d03	campaign-q	campaign-q-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d965a518-ca88-40c6-826a-c34a334f7c49	cashout-dev	cashout-dev-fintech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+538433ad-34e8-49f0-81f4-38cdc22895d1	cashout-prod	cashout-prod-fintech-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5a268d1f-cece-453f-8484-6d58219e26ee	cfs-yt	cfs-yt-cfs-dev-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c50632e9-0624-4be1-95c1-cecea70d71ed	ch-set	ch-set-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+08c016aa-11ed-4777-b057-2716573a9488	channel-f-info	channel-f-info-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c765ffd7-79b7-4f62-9386-db33bac8f030	channel-info	channel-info-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+298abc5e-1686-43ee-9a4b-a6c6b4713deb	chapterization	chapterization-mdb6334-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+731a41f7-6434-4620-b568-7faf2675fff4	chepusher	chepusher-vkcm-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ef6bf61c-fe69-468b-a0d7-7ca26609d3b8	chepusher-dev	chepusher-dev-vkcm-kafka	infra	1	       9	<NOT_SET> 
+ba9d9b56-5def-4589-8986-514df53a589f	clickhouse-queries-soc	clickhouse-queries-soc-mdb-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c598caaf-a27d-404f-a847-d8ba8600b647	cloud-event-prod	cloud-event-prod-mdb6255-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+296b13ea-8ac5-4c4c-8a33-2a1825a03264	cloud-events-dev	cloud-events-dev-mdb6255-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f24727ec-42d8-474c-8ba9-5418d49026c2	cloud-master-stats	cloud-master-stats-onecloud-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6f10b3aa-8112-4236-ba55-535d937d2ff8	cmpgn-pnl-q	cmpgn-pnl-q-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c380994d-840b-4527-8c83-6872943dbc45	com-analytic	com-analytic-vk-communities-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d11b3808-9c6f-4bca-a6f6-80bd24fa2900	com-search-rec	com-search-rec-mdb8509-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a8ac8c98-c018-4d24-b3dd-3c01b2ebdf4e	comments	comments-social-kafka	dzen	1	       9	<NOT_SET> 
+6bf71eba-be63-4493-855e-abd4af80a04f	comments-p	comments-p-vkontakte-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+11d3b746-d4f1-49ce-ba62-8fd48f160c69	comments-s	comments-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+eb4d8591-5a37-4d92-aa5d-2d2c72bfa4fc	comments-stats	comments-stats-vk-messenger-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e144811c-5274-43bf-a054-01d013eca652	common	common-media-infra-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9e70be92-e9c5-4d5c-a014-bd18d5be6650	common	common-mli-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+34769c99-df10-4afc-af28-01da70823039	common-dev	common-dev-media-infra-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+167c2774-1c41-494e-a427-00e11e946ba3	communal	communal-integr-platform-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2f34a369-e2f2-48fa-ba3b-04b5a4bd6c49	communities-p	communities-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6782fa13-dcef-40fc-9970-7d3b8de46da5	communities-s	communities-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fd82681d-5712-4b16-84bd-7ef042e0828c	consumption	consumption-onecloud-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ba994bdd-2ba1-4c17-ab45-f2a3e7182e67	content-platform	content-platform-mdb9214-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c5395480-b966-40f7-b139-bff721beb549	contractorsjup	contractorsjup-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0b69a158-de15-4b46-a48a-3bce8ae76465	contractorsyt	contractorsyt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+755a2ae4-8e61-4a93-a039-7551add42e03	copilot	copilot-copilot-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+eaf2eaf7-43fa-4c66-8484-ff061e292fb0	core-blacklists-p	core-blacklists-p-vkontakte-kafka	vkontakte	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+917d0882-7e7c-4be9-87b7-0c6f6404a97e	core-blacklists-s	core-blacklists-s-vkontakte-kafka	vkontakte	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+144601e5-8d16-4782-b07e-67b2790ce1c8	core-domains-p	core-domains-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+53465e4e-43c2-4900-8e8c-981e9dcaa92c	core-domains-s	core-domains-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3794acfc-c719-46b7-9415-8190e6c84c92	core-employees-p	core-employees-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9c0df20e-eb37-4819-acf0-1c053c25f79c	core-employees-s	core-employees-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+34ec3953-02f5-4257-9696-6f52bc95f35b	core-photos-p	core-photos-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1eabaeea-7e21-4040-b2ed-71d5505a1318	core-photos-s	core-photos-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3ae0e738-0959-418f-8bab-b156f6bc017e	core-privacy-p	core-privacy-p-vkontakte-kafka	vkontakte	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a54786eb-e40f-482c-ab91-851899c441f7	core-privacy-s	core-privacy-s-vkontakte-kafka	vkontakte	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5baeed1d-e5ef-4b6b-89c1-c06ac70341a6	corp-cxp	corp-cxp-cxhub-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f023fd4d-efcd-47e8-ae63-271fded2a642	cplane-test	cplane-test-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+49df5224-1e97-4fd6-9d32-9360f4750c0a	crash	crash-ratelimit-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+922a0145-a69b-410f-841d-0e8a97d8eb9c	crawler-gen-dev	crawler-gen-dev-misearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9d8e8512-8b38-4e02-be8f-4edd78994f0d	crawler-gen-prod	crawler-gen-prod-misearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+989400fa-cefc-4d71-8808-24d3c6f89936	cstm-event-q	cstm-event-q-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c6dcf5f6-2fdd-45e6-8e3c-db1c2fa2fc6d	cusersyt	cusersyt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5198781e-f7c3-4d06-a6a7-6429d4431b1c	dark-fetcher-dev	dark-fetcher-dev-misearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0edbfe45-5b0f-404f-994e-09aac4620dd2	dark-fetcher-prod	dark-fetcher-prod-misearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+026cbf6a-0ea4-44ba-8070-3e9dea035978	data-transfer	data-transfer-ucp-rnd-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+92630ced-d031-43ac-b5e2-0b6e3aae4ad3	databus	databus-vksoc-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+13a508f0-6e6e-4cc9-8f55-674ba35bfae7	datahub-main	datahub-main-datahub-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ef396631-6df4-4bf7-9fae-d12d5a28ffb8	datetime-norm	datetime-norm-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+78f99683-6afe-4d00-838d-ff3a42e8e838	deb-static-3	deb-static-3-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+44a0faf9-bd34-44ed-a02f-537fb64e0226	deb-test-pg	deb-test-pg-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7ff80b79-2818-4e10-9058-358a72ad319b	debezium	debezium-adtech-kafka	infra	1	       9	<NOT_SET> 
+7bac9f70-6c66-4649-98cb-dc09cf55404f	debezium-test	debezium-test-adtech-kafka	infra	1	       9	<NOT_SET> 
+ccb789a2-5007-4cec-9c6c-12a0ce1815d5	debezium0	debezium0-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+b7fb0350-3def-41ed-a223-24a07c8623ff	dev	dev-cxhub-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c8969972-eaf9-4ccc-8ead-f959bada5e7a	dev	dev-movika-kafka	infra	1	       9	<NOT_SET> 
+067d1084-c5c2-455c-a925-29fc81b56ec0	dev2	dev2-mdb9110-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8f89ab45-ed59-43be-b538-dea26d66708c	develop-kafka	develop-kafka-vkbilling-dev-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+eb494f7e-fb0b-4ef5-a807-cf67c78b8455	digital-id	digital-id-onemebotfarm-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fde50166-7679-4c96-827e-136132427c4b	diona	diona-ai-rnd-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+62aa0dbf-d413-4857-a460-b8b206806839	directumyt	directumyt-cfs-dev-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8fed6d35-a0a5-4398-9689-0c80e28f21d9	do-12738	do-12738-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+36035c9a-e168-404b-9b21-71869eb1b948	do-12739	do-12739-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3fed6cf4-2ba3-4d85-81c5-a03d7931fd44	do-12842	do-12842-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fa8a3a6b-9814-4166-a3cf-70106f97c5ed	donut-p	donut-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+501f3060-9cb3-4311-a328-b325ec8fec03	donut-s	donut-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c41739b1-b863-4582-a0d5-c78207488a8a	dp-api-pg2pg	dp-api-pg2pg-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+630611b8-0a9f-42fe-a19a-8195e58d75cf	dr-000	dr-000-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2aaee80c-966e-4d73-bf51-25d82fc7d9c2	dream-app	dream-app-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ba7b274d-343b-44f6-9bbc-d564408491dd	dsp-gate	dsp-gate-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dc0c3988-12a6-496d-8015-4be0e8d11a9e	dsp-notices-msk	dsp-notices-msk-adtech-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+664bb87a-a174-4e1c-87d5-0d3f9229e97a	dsp-notices-spb	dsp-notices-spb-adtech-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+90e1b956-3c10-4b6a-8500-9140cec2f4e5	dt-pub-dzen	dt-pub-dzen-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+70cf54bb-b761-4835-b580-fbad364dbc1a	dwh-events	dwh-events-onemedwh-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+538dc676-29fb-4035-a04b-dbc4e869cead	dzemukh-test	dzemukh-test-eventbus-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2ed6e43c-bde6-4762-8a80-ddbf615968dd	dzemukh-test-s	dzemukh-test-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dd2a8f9a-8895-49a2-90d5-a7333a9fbac9	dzen	dzen-recommender-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+414447ec-91ad-4a3f-9e51-9424e7038697	dzen-access-logs	dzen-access-logs-zinfra-kafka	dzen	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+accf4bdf-65ad-4c37-859c-d413823d25d4	dzen-com1-attr	dzen-com1-attr-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+072c80d1-4524-4755-b89b-d875dbdba9e2	dzen-com2-attr	dzen-com2-attr-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+3ee384e7-933d-475a-be51-ac6db5ff2b9b	dzen-com3-attr	dzen-com3-attr-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+06e81144-3a09-4a21-a34c-b06ec711b054	dzen-com4-attr	dzen-com4-attr-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+f2cdd2b9-b53a-4639-b21d-55a832bcfcdb	dzen-comments1	dzen-comments1-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d7322fa3-9fd7-4675-9e04-62cee714f53c	dzen-comments2	dzen-comments2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f022d150-37a5-4c12-9c57-55a1ed919c17	dzen-comments3	dzen-comments3-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fd812e93-32bc-4eeb-a309-57acc0288841	dzen-comments4	dzen-comments4-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a5b6d391-7d2f-47b3-92be-37bc5077ba5f	dzen-common-kafka	dzen-common-kafka-common-kafka	dzen	1	       9	<NOT_SET> 
+987e4abb-17a6-4967-b686-1dd9c760a4bc	dzen-glif-prod	dzen-glif-prod-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ee6a19dc-6b4c-4757-9d11-3bf76aaaa0a0	dzen-integrns	dzen-integrns-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b89564be-efdf-407f-81ba-68c7a3b875ef	dzen-news-dev	dzen-news-dev-dzen-news-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9347b40b-5a66-4985-b3bd-fb56b1637dbe	dzen-news-prd	dzen-news-prd-misearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cc9d498c-4e14-4cbb-bc65-dd03b4b150b2	dzen-news-prd	dzen-news-prd-dzen-news-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7727a717-102d-44a7-941b-8520f0d751b2	dzen-payments	dzen-payments-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+10480899-15c5-4275-848e-c004b09eeed6	dzen-verbose-logs	dzen-verbose-logs-zinfra-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+77a30734-eefb-4d7d-844c-9b76b6085808	ecom-autofeed	ecom-autofeed-adtech-kafka	infra	1	       9	<NOT_SET> 
+cb7e7207-81b3-4127-b247-850e72bd3916	ecom-crm	ecom-crm-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+afbd8f7c-578c-4f32-939e-6ff5ddf7457d	ecom-dynamic	ecom-dynamic-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5eb1c17f-576d-45c4-815f-6b844ec8d337	ecom-events	ecom-events-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+08f5ed31-fdc7-4505-a3fd-69d39724bdc2	ecom-fsa	ecom-fsa-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+116806bf-dece-441a-9f3b-2b6111fcfcf7	ecom-logs	ecom-logs-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9b1c0244-c80f-42e3-a45b-3ebca69f4575	ecom-recommendations	ecom-recommendations-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+62cdc897-78e9-469a-ab34-cd37dbbf9ede	ecom-tables	ecom-tables-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+01ea63ca-8c8c-46c2-88ff-0794cf3627bc	etl-orchestrator	etl-orchestrator-mdb8548-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+38cc60cc-9e1b-4034-bcd7-9bffe51a73a9	event-bus-dev	event-bus-dev-mdb6096-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b3e5344d-2792-41a5-85db-6412dbc245a1	event-bus-dev	event-bus-dev-video-live-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ce58a62e-ff65-46e1-aff3-cdd00e70cbab	eventa	eventa-monitoring-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3a6bcab5-e955-4af5-8c52-6315a746bf13	eventa-dev	eventa-dev-monitoring-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1eff466f-7212-48ba-a3bd-fcfc69b831eb	eventbus-sr-prod	eventbus-sr-prod-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+1a51596d-7dae-461b-bce5-4d09888eca30	eventbus-sr-stage	eventbus-sr-stage-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+6e9d061a-e0db-42ae-89a6-3b163ed88fef	events	events-front-kafka	dzen	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4d52f5b5-16b5-4c44-a3c0-ea5fe3959e63	eventstream-general	eventstream-general-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2d5ecbab-d849-436f-95b9-c9cf5bc0b70f	eventstream-reserved	eventstream-reserved-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1ac56647-d613-4827-8fd9-2bf31a8c9d57	eventstream-vk-logs	eventstream-vk-logs-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4f3e66d4-46b2-459f-8535-abc0a30cb51d	eventstream-vkfeed	eventstream-vkfeed-adtech-kafka	infra	17	     801	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3c107d7f-4735-423b-8311-4216c9ed8922	export	export-media-infra-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+97f91e28-0fa7-4542-a164-f9e1715cd1c0	extdbmetaops	extdbmetaops-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6a9e8ad1-10c8-41f2-8012-5d559dfdc1d4	extdbperf	extdbperf-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3f9cfb21-8818-474f-aaa0-0e0ca86b39e0	extdbpr	extdbpr-oneme-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cb1e5643-37c4-46d8-8515-a247909a81c4	extdbprsoc	extdbprsoc-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+94bed650-7adf-4b78-9640-37a311033e65	extdbpu	extdbpu-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+96810e49-e2fe-445d-a374-dd3052a0c376	extdbpush	extdbpush-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ad3d0f43-9fc4-4455-90cf-ca3d74d47fa6	external-prod	external-prod-cloudtraining-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+127edbc2-106c-40b9-b32e-f9d4fce0cffa	external-test	external-test-cloudtraining-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+22c1f2c1-add7-4526-b63e-f1b5c8691876	fintech-dev	fintech-dev-fintech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dbee9a79-1edf-41ca-b194-3f25cc1d425a	frontlogs	frontlogs-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3cbe4366-2850-4290-9de3-5125ee705da1	frontlogs-general	frontlogs-general-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5644ae96-58c4-4b24-a615-381e4b2ba398	frontlogs-vkfeed	frontlogs-vkfeed-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a12b488e-3584-4a0e-bdf5-983be4e29ed0	frontlogs2	frontlogs2-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+60eb282d-9ae1-462a-9e16-4168b5ddb0df	g3-prod	g3-prod-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+5bf35d52-fba6-41dd-b20d-d04d20d288c1	games	games-mdb8418-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+efc82b88-fd57-4ac2-910a-d4c0e7b88e4f	gateway	gateway-mdb7501-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7a420fd6-58cc-427c-9c84-2b43478b3871	gateway-events	gateway-events-mdb7501-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ffbd5d91-a104-4305-b89b-08ab9aa3adfd	gateway-stage	gateway-stage-mdb7501-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+910aa837-4f0c-49fc-9b17-3eb97b5e007f	gateways-dt	gateways-dt-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+582b976e-1e9b-4f00-ac6d-9450434f2866	glif	glif-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2a0fd2b2-4587-49ab-8b21-e52ba8cb6923	glif-app	glif-app-mdb8983-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0fa0c284-2203-4d99-a901-d20f95113da0	gmt-geoblock-s	gmt-geoblock-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2b28600d-1646-40e9-9f40-19b199f0a99e	gmt-zeus-s	gmt-zeus-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b7b76fbd-4d90-476b-bd09-5119fc98b777	goryanoy-test	goryanoy-test-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1d426364-42f2-4226-8d72-8ca471464a74	horizon-kafka	horizon-kafka-bi-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+48a62cee-fb2e-4982-a6a1-f8f1732ee149	hot	hot-mdb10142-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fadc392c-4bd7-4fa7-95f5-c93c4b1ec197	in-one-event-vk-app	in-one-event-vk-app-mdb9977-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e12c8200-4187-4189-bc5b-79271b5d7457	inference-kaka-test	inference-kaka-test-mops-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3ee60650-a309-4773-9bfc-e8df943ad3a9	infram-events-prod	infram-events-prod-mdb6096-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9ecad929-7a90-4329-8beb-85b83471bc89	infram-events-stage	infram-events-stage-mdb6096-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cc42c807-547c-4793-86aa-159b4cabee1e	input	input-mdb8103-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2b3df97f-5be4-4f15-a395-4a6067fd19b8	input-dzen	input-dzen-mdb8103-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+55270017-aca4-47f5-b080-86fb12b32f7e	input-vk-critical	input-vk-critical-mdb8103-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+eb82bbd0-4dbd-474f-93ca-79a1b33f4ed7	internal-events-p	internal-events-p-adblogger-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c1538d75-3dab-4d96-afbc-77888395e473	internal-events-s	internal-events-s-mdb9772-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+91abcf37-da1f-4a9f-9f7e-78d18023a730	ipv6-test	ipv6-test-vkontakte-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1df2ac6f-6ad9-4648-ac58-cb2394867202	isecurity-log	isecurity-log-dzensecurity-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+326a25b3-dfb3-4739-9d8c-9ceb53bea758	iw-broker-test	iw-broker-test-warp-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+79851c7d-7253-436b-a799-4d49b465dde0	iw-kafka	iw-kafka-warp-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f4c80e8f-4ad1-4772-bfb2-934f854e3713	k-soc-media	k-soc-media-kafka-humio-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7a1d03bd-c697-4eaa-8303-f2b8808fff6c	kafka-addata-1	kafka-addata-1-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cd769102-9c6e-49af-87a4-2be16da58758	kafka-af-staging	kafka-af-staging-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a28bf275-8c0c-4189-a5e9-f8a4533d007a	kafka-aist	kafka-aist-aist-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+719d0cd5-aee7-4fa5-8efc-078a18bd0aac	kafka-antifraud	kafka-antifraud-adtech-kafka	infra	8	     512	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b706c642-2e24-41ac-ba3a-d6f27bb07998	kafka-asr	kafka-asr-uchiru-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d043f384-add0-4808-8367-4c55012e0bd7	kafka-content2	kafka-content2-dzencontent-kafka	dzen	1	       9	<NOT_SET> 
+05a9d54f-22cf-4cdf-b1f8-7fd195891c3a	kafka-conv-staging	kafka-conv-staging-adtech-kafka	infra	8	     512	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+825dcd72-87e1-4f04-b700-e83c1ea52a05	kafka-dbaas-3	kafka-dbaas-3-vkdev-kafka	vkontakte	1	       9	<NOT_SET> 
+3614e3fa-fea6-466c-89f7-7274f74d341c	kafka-debug	kafka-debug-adtech-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2ae212a3-6fde-4050-ac8e-29f9ce4d87a3	kafka-dev	kafka-dev-vkone-kafka	infra	1	       9	<NOT_SET> 
+89fa492e-ab8c-4a02-9fc8-586d5570df26	kafka-devstand	kafka-devstand-rustore-dev-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0adf8072-3930-4fc1-8349-62a46d2d6a0c	kafka-dynstand	kafka-dynstand-rustore-dev-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fb1a74cc-8723-49fb-b9c4-02f281262f6d	kafka-events	kafka-events-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+761a5be5-dca6-4186-bff4-f2ebfd9fb26c	kafka-events-staging	kafka-events-staging-adtech-kafka	infra	8	     512	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d37b4e32-0495-4217-8b31-208d302facea	kafka-loadtest	kafka-loadtest-uchiru-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6195dc89-89ec-483e-bf6c-abc842fbf8df	kafka-m2b	kafka-m2b-adtech-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0fe9bcd2-acee-4165-8753-fe45f3b4ab17	kafka-m2b-staging	kafka-m2b-staging-adtech-kafka	infra	1	       9	<NOT_SET> 
+6d42298d-b6af-4e12-ae57-6b0ffbd7a89d	kafka-mtrk-olap2	kafka-mtrk-olap2-mytracker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f8a15d1c-b200-4744-951e-8fa9da0bee4c	kafka-mtrk-olap3	kafka-mtrk-olap3-mytracker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cf5703a6-492f-4342-a10f-fce10bbef5ae	kafka-news	kafka-news-news-kafka	dzen	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+48a6a070-006c-49e0-a4b7-170d465bb788	kafka-news-logs	kafka-news-logs-news-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9974b16f-f2d1-4b29-a237-a9753d1f3700	kafka-news-snapshots	kafka-news-snapshots-news-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3b4ca2e9-dcc2-4e9a-bd7c-986d2c038d02	kafka-notify	kafka-notify-onemebotfarm-kafka	infra	1	       9	<NOT_SET> 
+112c3d88-6c7e-47c5-b5da-815684cec620	kafka-onebug	kafka-onebug-uchiru-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+01b5e49d-cbd9-428e-9b15-a0e675c112d2	kafka-prod	kafka-prod-vkone-kafka	infra	1	       9	<NOT_SET> 
+52c76025-1690-444b-8ac3-aacf0c6de19a	kafka-queries-soc	kafka-queries-soc-mdb-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0b1370f5-abff-4276-a9e2-ddf5bd885d60	kafka-sentry	kafka-sentry-mytracker-kafka	infra	1	       9	<NOT_SET> 
+971eb868-1be8-41c0-ad03-8096d59a4d92	kafka-seo	kafka-seo-seo-kafka	dzen	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+56bab8a0-3067-4c6d-aa67-0bb98d9a1140	kafka-sites-search	kafka-sites-search-adtech-kafka	infra	1	       9	<NOT_SET> 
+26ea1184-b63c-4d6c-b940-95df84d9f21c	kafka-spd	kafka-spd-adtech-kafka	infra	10	     666	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c4a3642d-7dfa-4fbd-bf15-f27d2dc007fd	kafka-stats-conv	kafka-stats-conv-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ee60222e-3a2f-4081-9800-c4bcbbeb63e0	kafka-stats-debug	kafka-stats-debug-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d39a4799-c46d-48a9-a5d2-2cf3b0ff941f	kafka-stats-misc	kafka-stats-misc-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e44866b9-a868-4820-8d44-aeeec3b872d1	kafka-top-s2s	kafka-top-s2s-mytracker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0516395f-bdf6-46a7-a8f1-0f70c23e2fab	kafka-tophits	kafka-tophits-mytracker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+692a2c33-de82-4c31-9871-41ee096e2af6	kafka-trk	kafka-trk-mytracker-kafka	infra	1	       9	<NOT_SET> 
+ce006cfe-2cbe-4d6d-a3e4-57a8fba7f11b	kafka-ts-in	kafka-ts-in-mytracker-kafka	infra	1	       9	<NOT_SET> 
+3badaf28-004a-4afa-a35b-29ef560c5515	kafka-uchiru	kafka-uchiru-uchiru-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1d45d387-ba9d-4979-b131-d656f7751be6	karma-dev	karma-dev-karma-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+93184400-8005-4b75-8011-21fb74bff4ed	karma-prod-kafka	karma-prod-kafka-karma-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a219d1f3-f7f5-4107-9cb4-f226aab27788	kuadwhprod	kuadwhprod-cfs-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+61270773-f840-4242-b202-3c52c951e336	la-miranda-v2	la-miranda-v2-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4a09bf6b-3bbe-4e4b-84a6-61b1225f55d2	la-yt-jupiter	la-yt-jupiter-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f8bc73f0-667b-4f3d-8e08-c91dede5fa86	leadads	leadads-adtech-kafka	infra	1	       9	<NOT_SET> 
+e219ef9e-bad3-42bc-bbda-7e66125a0834	lf-hang	lf-hang-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+38ae08fb-3786-4562-82e9-82d648026148	library-events	library-events-dzensecurity-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2ce3feda-462c-44aa-ac49-4251803dfe05	linkchecker	linkchecker-mdb8045-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7a6ac3f3-c184-4a77-93de-01942c1b9e1b	linkchecker-dev	linkchecker-dev-mdb8045-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0a20eadb-e52c-47f6-b81a-4625cdf2c4b6	liquid-ai	liquid-ai-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ade5d1c8-a719-4e91-9562-da7a4527ff23	llm-defender	llm-defender-mdb8983-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f0d28ab1-bbd6-4288-a2f3-958b635a5f3e	logs	logs-recom-wizard-kafka	dzen	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dc7c9104-004b-4874-87de-8e3744caf540	logs	logs-smsapi-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+46cba10a-5813-4774-bd7a-a6c0aff5c7e7	logs	logs-datahub-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+db9d2180-9591-4b0f-9359-289955d3d1e0	logs	logs-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+abb1800c-5fcd-4b01-aecb-58954e6576aa	logs-dev	logs-dev-rustore-dev-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8c219a9a-3cef-47e9-ad15-dab7d6ac7615	logs-nc	logs-nc-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+ab0f4486-e810-4f0b-bd05-9e9cb9234d58	logs-prod	logs-prod-rustore-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3b8230e9-3e1d-4185-9e38-384733134a3c	m2b-spb	m2b-spb-adtech-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9a391355-10b9-40ff-bb7f-c3c1f6979537	mail-topics	mail-topics-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+281508f7-b250-4214-9d30-ca9a99fcd725	maildwh1	maildwh1-mail-dwh-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e775246b-8092-47d2-891f-293c00a1cf53	mailer-kafka	mailer-kafka-mail-mini-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b6ebcd5b-5387-4464-bdc7-ff09b440d8d9	mailing-p	mailing-p-vkdating-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ca733208-30f4-400b-82a0-04ff1750aa79	main-yt	main-yt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+bfd338d3-bfe3-423c-9232-ba3d2754b71a	major-21	major-21-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+501394f5-ad3d-4afa-862c-7664c4b69a36	major-22	major-22-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e3893b73-7f6f-4bf4-a89f-f9dc021a8ca6	marusia-logs-kafka	marusia-logs-kafka-misearch-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3c22e95f-92a7-418b-b775-5f8ff6302742	matcherd-logfather	matcherd-logfather-adtech-kafka	infra	1	       9	<NOT_SET> 
+9fbac48b-0553-474c-afa1-d165fc88beb4	matcherd-ml-batch	matcherd-ml-batch-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ce455041-8cbd-4c60-9f40-cfe21ab4e908	max	max-eventstream-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+08496e33-afbe-4f81-a755-8e2ff5433b63	max-ai-bot-3	max-ai-bot-3-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a533c02e-53db-42dc-ac1e-0d33139b8495	max-ai-bot-4	max-ai-bot-4-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a2e0323a-66ce-4be8-a9ac-e3d37181bebe	max-billing	max-billing-notify-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3525dc6b-196b-4428-a283-374a4b060fec	max-otp-dev	max-otp-dev-notify-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1ed074ae-bc98-4385-9015-89e22c394899	maxb2b-console	maxb2b-console-notify-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+85941f2d-623e-4f30-8460-4a76314b64c0	maxb2b-notify	maxb2b-notify-notify-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3577bc2b-9bdf-4c9d-b8d4-b81dc3883d99	maxb2b-notify-dev	maxb2b-notify-dev-notify-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+61363869-71f3-422f-a170-d67f5a7abd3c	mdb-backend-logs	mdb-backend-logs-mdb-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+406b13d0-0999-4cfe-9a80-feb8dd3435cc	mdb-logs	mdb-logs-mdb-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a7cb2b7d-5eea-434a-9ea6-ba4dea1c2bf8	mediascope	mediascope-mdb941-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c0a29c99-f46d-422d-a75b-59a03dfeb4bd	messages-bus-d	messages-bus-d-vk-messenger-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9f25da35-c90d-41f9-a9b9-061139a8e753	messages-bus-p	messages-bus-p-vk-messenger-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9ffa473c-edf2-45d2-a4ab-36c7395e16a2	metrics	metrics-calls-prod-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5b608c55-8fa9-4ae5-bb4e-e2ed6cfc06a5	metrics	metrics-calls-bender-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c0f3da1c-6a96-4e4b-bfcc-e10d6e6f89e6	metrics2yt	metrics2yt-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+55cb9588-4b2c-450e-8059-94b264f24164	migrator-test	migrator-test-vkontakte-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+79ab1d8c-986a-4e32-b469-c0f2a8abbb5b	ml-platform-prod	ml-platform-prod-mops-kafka	dzen	1	       9	<NOT_SET> 
+d74193bc-bef5-4d93-82ca-e3b6ccad4cc9	ml-platform-test	ml-platform-test-mops-kafka	dzen	1	       9	<NOT_SET> 
+312f24a6-3c21-415b-bbd3-5d8f30581a4e	mmstat	mmstat-mm-stream-stat-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c55205aa-a683-4f71-a581-69b069349fda	mobads	mobads-adtech-kafka	infra	8	     512	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+abab459d-057c-4c4d-b69b-709f83411a8f	mobile-mt-events	mobile-mt-events-mytracker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ee4d49df-8f4a-4327-8740-9501ce94d7ef	mobile-sdk-events	mobile-sdk-events-mytracker-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a9e3b0e4-2658-4fda-9991-c24bed9bc47a	moderation	moderation-mdb7027-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a784de4d-65f2-47b8-bb36-55077838b383	moneyflowd	moneyflowd-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+f6f0ad2f-7c78-4ea2-a65f-e3302e08ca64	moneyflowd-billing	moneyflowd-billing-adtech-kafka	infra	1	       9	<NOT_SET> 
+91aaff96-490c-4f39-a1ab-12742ebbc64e	moneyflowdmyt	moneyflowdmyt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ac3f6b7e-a045-45e9-b9af-22aebdac98fa	moneyflowdyp	moneyflowdyp-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ff30c050-3787-4034-8484-e7c9e3ae04ca	moneyflowdypr	moneyflowdypr-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ba59627d-2c17-4c1e-a362-7cd93b33cdad	moneyflowdypr2	moneyflowdypr2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c4c01eb3-a4ea-4b08-a8a5-391151217cbf	moneyflowdyt	moneyflowdyt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3c5db06b-2d6a-4c83-b887-5c5fed71f1a6	mongo-up-test	mongo-up-test-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5fbb9ec3-e760-4e6d-9c26-c04812720144	mops-copilot-prod	mops-copilot-prod-mops-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+356ad92f-98c8-4043-8449-e446792cbff7	mops-copilot-test	mops-copilot-test-mops-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+06d8d53e-fbcd-4375-b914-818db31e0944	mops-copilot-test-2	mops-copilot-test-2-mops-kafka	dzen	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4d2e34b0-a56a-48ca-a350-03445189c4b3	mops-dispatcher-test	mops-dispatcher-test-mops-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4e03b6bb-0467-41b8-9fc6-206c5d060865	msc-mtch-6408	msc-mtch-6408-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5ea8dd6e-df0f-4414-80ee-e355a8a4915e	mtlink-events	mtlink-events-mytracker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+888cdd1a-8569-4ed9-8213-68690bc181c0	mvp-eventbus-kafka	mvp-eventbus-kafka-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+22e55fb0-b3a0-45e9-bb30-71e4cd23fbf8	my-kafka2	my-kafka2-mdbsandbox-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ad2b9578-acb5-44aa-b35a-abdd6ce33f01	n8n-chat	n8n-chat-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2795227d-5ecc-4648-8d9a-b97c5d037831	n8n-main	n8n-main-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+38867a71-a637-41ea-a963-5d80e1ac7a47	ner-cdc	ner-cdc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6ff3d49c-30ec-43f2-89d7-a46e0013ed35	ner-kafka	ner-kafka-social-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ce75cd65-8e23-48a2-90c7-7a62da651dc5	new-dt-connect	new-dt-connect-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+62eceebc-3215-44b0-848c-9cef1f71450a	news-headline-ai	news-headline-ai-publishers-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+018d8d21-66f9-4764-ae60-4b4c642d3280	news-pub-cdc	news-pub-cdc-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e298ec07-6ef6-47b4-851e-e573c2cc76b1	news-pub-cdc-t	news-pub-cdc-t-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8482ac37-3ff2-49b6-8e57-9f5d02a55d81	news-pub-test2	news-pub-test2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dc026309-9d07-49b5-8a49-277ea5666d1e	notifications	notifications-notifications-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+939cb698-7931-46d0-84b9-5abd475f652b	notify-dev	notify-dev-notifications-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9bedd7c9-35b2-4f09-8b3d-1aa38b14c003	notify-op-kafka-p	notify-op-kafka-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9c1d0d2b-c83f-4265-96e6-eb623d6d0858	notify-op-kafka-s	notify-op-kafka-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+490838a3-dd3c-47de-9dd6-56a22d1f6871	nova-abc-pg-dt	nova-abc-pg-dt-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+de336e3b-11ad-4c15-bb43-c346ed602570	nova-deployer	nova-deployer-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c89ddf52-2d56-4926-9d82-37c44cdc2a22	nova-notifications	nova-notifications-mdb6637-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f03ab24b-97d5-474b-9898-446a9fe79e54	nova-tc-agents	nova-tc-agents-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4c3e45e8-ba18-49ba-99af-55af7c6c8343	novapg-ytj-s1	novapg-ytj-s1-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f6d832fb-5a73-4947-bb82-3b92748d397d	odkl	odkl-mdb8273-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6ad6f8df-f56f-4f4c-92a4-6b768d2ce38e	odklcluster-kafka	odklcluster-kafka-dpkafka-kafka	dzen	1	       9	<NOT_SET> 
+cc469d74-da9c-4d46-b500-690687a8177c	ok	ok-recommender-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+12daef01-ca61-4c6b-b586-f46d06c1c329	ok-events	ok-events-adtech-kafka	infra	1	       9	<NOT_SET> 
+fc8816aa-2219-4615-87aa-c4233883b7da	okfeed	okfeed-eventstream-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+308cd8d8-52a3-4003-8180-a24e4e6f1107	one-cookie-prod	one-cookie-prod-mdb8498-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+078f608c-3e13-43cf-96c6-f3ec75ae44dc	one-flow	one-flow-vh-kafka	dzen	1	       9	<NOT_SET> 
+63c1ab63-137b-4909-b8b8-dc1b6cc76b44	one-flow-prestable	one-flow-prestable-vh-kafka	infra	1	       9	<NOT_SET> 
+05ac1ace-0e11-4295-b1aa-5b79f5fa36dc	onecloud-logs	onecloud-logs-adtech-kafka	infra	1	       9	<NOT_SET> 
+f8c6c61e-10cb-44b8-a9b1-77d3b82da6d1	onedata-catalog	onedata-catalog-mdb9169-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fbbb87d4-cd46-44e7-a7e0-26f37b16711d	oneflow-pg2j	oneflow-pg2j-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+26c531c1-ef44-434e-a562-69c9e5a83713	oneflow-testing	oneflow-testing-oneflow-kafka	infra	1	       9	<NOT_SET> 
+7035477d-0b1c-40d3-a2c2-725703510477	oneflow-topics	oneflow-topics-oneflow-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e2692c52-b864-4d04-8df5-e386d7d4dedc	oneflow-topics-test	oneflow-topics-test-oneflow-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+33cf1667-1c0a-4c17-a36c-28937ee6b4b4	onelayers	onelayers-oneflow-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9d6b905d-6391-47cb-bc04-84849df9fbb3	onelayers-testing	onelayers-testing-oneflow-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e7625dc7-0430-4f7f-b8c6-abc86f4a551d	oneme	oneme-vksoc-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b6b80f0b-d3f4-496a-a6ec-f34084b5997a	oneme-aqa-kafka	oneme-aqa-kafka-oneme-qa-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8c808b3f-a640-4410-acbb-055b85ba0495	onemekafkaauth38	onemekafkaauth38-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5ad29562-8979-48eb-83ec-d7312e25af7b	online-prod	online-prod-vk-messenger-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5e6057fa-4bed-4578-80fc-9ff45b997ed8	orauthddb-dwh	orauthddb-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+875cc895-61c6-42b8-bf1b-dc365bb751a1	ord	ord-ord-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a857fe1b-7938-42cd-9362-737fb20caf19	ord-logs	ord-logs-ord-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ea0358a9-e128-4475-8347-1270e9747d77	ordsandbox	ordsandbox-ord-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+72cfcd01-b0af-4cee-b798-60bf86f79e15	others	others-recommender-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a93b3f2a-5d59-44f2-bf85-197796717a9c	otvet	otvet-otvet-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a12b50f8-3cb9-4fc3-83a1-630b2a9e0617	otvet-dev	otvet-dev-otvet-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b688939b-ee33-4841-a7a6-8f232a0fddc5	output-adtech	output-adtech-mdb9786-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3c8673e6-53d8-445f-a163-05f917a8ba7a	output-music-recom	output-music-recom-mdb9001-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+efa255e3-9b1d-4544-aa1f-f73dc2a1e7a5	output-recom-1	output-recom-1-mdb9099-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4ed5bc6c-782a-4bd8-9cd1-e59fe7c225f4	output-recom-2	output-recom-2-mdb9100-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2f4055a4-9f40-4efb-a78f-81693204c430	output-search	output-search-mdb9061-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e825d4bf-adc8-4df1-9c6b-465314e1ae34	output-vk-clips	output-vk-clips-mdb9846-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d5424322-4bb1-4d88-aaf4-1d71aacd3796	own-video	own-video-vk-video-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5ddbff47-25c6-4c9e-a2cd-08e7067a46e2	ozon-products-events	ozon-products-events-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fd62d258-b2c5-4099-833c-14a1f2a012b3	paas-cluster-p	paas-cluster-p-paas-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a1dafb24-391f-4847-9b1d-52a4d8e9e88e	paas-cluster-s	paas-cluster-s-paas-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3f039ce4-6636-4c5c-9863-e7dad19cec4f	paas-internal-p	paas-internal-p-vkontakte-kafka	vkontakte	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d9f4bd10-212e-4430-a718-fada989f98f4	paas-internal-s	paas-internal-s-vkontakte-kafka	vkontakte	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+82a77316-ff2b-4792-8ce5-1daa882ceb4d	paid-music-kafka	paid-music-kafka-mdb9257-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f887029b-bf82-4498-8ae6-9b8473807f54	palantir	palantir-mail-mini-kafka	infra	1	       9	<NOT_SET> 
+4ad3f434-a814-4236-8f97-a222e9911870	palantir	palantir-mail-kafka	infra	1	       9	<NOT_SET> 
+cbebd864-e565-49dc-923c-186d26b037e8	partner-notifier-dev	partner-notifier-dev-notify-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3cf4979c-04fd-4ff6-ab90-2c59d6f55af2	partners-prod	partners-prod-vkontakte-kafka	vkontakte	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f74678a8-382d-4d5c-ba3e-64a85978b48e	payment-gateway	payment-gateway-profeatures-kafka	dzen	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4e754f0b-fbd1-44d8-a119-50af7ea8fcb0	payment-vkpbl	payment-vkpbl-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ffea1152-b29a-4cf8-b3f8-34d66d41e5ee	payments-prod	payments-prod-fintech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0743214b-af59-46ac-95c6-2ba621cb91a9	pb-partner	pb-partner-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f3712f24-4e25-4dda-b1e3-8f93d544060d	pb-staging	pb-staging-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e6e1bc46-1ed1-4e2a-aa0c-817642079fe4	pd-music-rec-10135	pd-music-rec-10135-mdb10135-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d52d350e-655d-47f3-81fb-7f72c665231b	pg-failover	pg-failover-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e4701943-ac9f-45a9-87ab-9dcaa51aa6ce	pg-meta-yt	pg-meta-yt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6d2aee0f-ebd2-48fa-aa1c-cd4823b2c835	pg-push-to-yt	pg-push-to-yt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b3516214-682c-42dc-944e-c8998b3ce352	pg14tmaux-mdb	pg14tmaux-mdb-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ea90498e-e9ce-499e-8d68-100a87ffcf3d	pg15tmaux-mdb	pg15tmaux-mdb-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c2c0a3f9-5214-423d-8103-867d595bbe0e	pgsql-publshrs	pgsql-publshrs-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3ddf6b34-be3c-4c32-ba4c-c9bdcc2becff	pgtmaux-mdb	pgtmaux-mdb-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+77326532-19ac-4f64-bbcb-9eb01918c4f5	pgtmaux-test	pgtmaux-test-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b60666a3-9d44-4d51-89dd-caf1e15cc681	phonemon	phonemon-vkcm-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4fe7e4c3-2239-4518-9399-51eaebbb57c9	phonemon-dev	phonemon-dev-vkcm-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f40c9313-42e9-4784-a4a0-cd5f486df92f	platform	platform-odkl-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d79b5e0f-22e8-42d9-a10c-d50d05154398	platform-preview	platform-preview-mi-voice-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+27ca45ed-476b-481a-a49f-5d5c328a3f6b	platform-prod	platform-prod-mi-voice-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9633434d-52f9-4d21-8f96-f2b7d7b7afe6	platform-prod	platform-prod-cloudtraining-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2738e9cb-5720-4d72-bf7c-524a1db7aac3	platform-test	platform-test-cloudtraining-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ee546fb7-cc0f-4305-bd77-0436cf0f60c4	portal-logs	portal-logs-mdb9338-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c2736084-1794-49a7-9169-df29c52a479e	portal-logs	portal-logs-vk-video-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a7d92ec3-4111-4f16-aeb1-389f5ac99a83	portal-logs	portal-logs-mdb7247-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+14d8a760-11bc-40e0-9209-ec2f886eb6da	portal-logs	portal-logs-max-search-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2b232887-28bf-46e3-bff1-1360dda6aca1	portal-logs	portal-logs-mdb9275-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9cfd67c0-f3ce-4757-8210-9cba8835e7c8	post-events-queue	post-events-queue-mdb7168-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b6f2ad69-5580-481a-9875-6dc030ae0066	postbacks	postbacks-adtech-kafka	infra	8	     512	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d2eb353e-ddd4-4c99-93b4-f538063b382c	postbacks-receiver	postbacks-receiver-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+aea161a5-65b3-4e73-9ee7-f4d0fce48896	prebilling-cl1	prebilling-cl1-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+332f60a1-108c-49e8-870a-c3325e8dc6a8	prebilling-cl2	prebilling-cl2-datatransfer-kafka	infra	8	     512	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+baab7fc3-abc4-4fe0-bb14-04d45b726718	premium	premium-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+3d03ed4a-89fb-4413-9c2d-aa887f2da6d0	preprod	preprod-mdb8103-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e67f499f-6b72-4234-bf33-aef81c7b8476	preprod	preprod-vk-support-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9698102f-fac6-4397-876c-9697e9aad437	prizedraw	prizedraw-integr-platform-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+29e00b5a-db34-43ac-9aad-fdce82022001	prod	prod-faq-cx-vk-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+27bdd0dd-b1fe-4a00-a279-14234112e6a3	prod	prod-smb-subs-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+adc0b417-759a-44f6-9325-1522aa0d5ca3	prod	prod-vk-support-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dd8c7814-1dd2-40f1-a1b1-65edc3ff5567	prod	prod-movika-kafka	infra	1	       9	<NOT_SET> 
+08a20d2c-4960-4c3d-896c-2e85acaecf4c	prod-cdp	prod-cdp-cxhub-kafka	infra	1	       9	<NOT_SET> 
+fd320b79-05e6-4c8e-8bd7-1cb9a70c43df	prod-cxp	prod-cxp-cxhub-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dd2c53f2-5eac-464b-ba8a-c4138e77be00	prod-external	prod-external-vk-support-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+73d1e566-ab0c-4b21-880b-ca7d7fe4e1ab	prod-stat-events	prod-stat-events-vk-support-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b1efac16-9dc5-4519-83e5-c2c8c47315da	proxy-logs-test	proxy-logs-test-mdb9008-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+406bbd0b-fd02-4c86-80b9-c7edcb00e745	psg-test	psg-test-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a94eb6fe-6929-4b78-b90c-62ec7844dae4	pu-mt-events	pu-mt-events-mytracker-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8191b27b-0593-44d7-a7fd-bec53d562bef	pub-processing	pub-processing-dzencontent-kafka	dzen	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+568d8f8c-479d-4e3e-b5c1-030ff4b87460	pub-shard-test	pub-shard-test-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+46364896-b163-470c-920e-b90acc762023	pub1-cdc	pub1-cdc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+81ddd9a2-3f60-4faa-ae49-67ccf63b17e9	pub1-dev	pub1-dev-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+70be0551-fb16-4039-8cba-aa6f78b092d2	pub1-test	pub1-test-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+98a6eee8-6ff9-4b85-9038-24d403e018a4	pub2-cdc	pub2-cdc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+281814e3-bbf6-4219-a3d8-3f6f3c4f6334	pub3-cdc	pub3-cdc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+68ca606f-d4d1-49ec-92be-636540a12f0e	pub4-cdc	pub4-cdc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+08b9a6e8-4ef2-47da-8e68-22dac41a3dbc	pub5-cdc	pub5-cdc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2f6581ac-09e5-4056-b645-515366dcc75a	pub6-cdc	pub6-cdc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9eeb703c-8bb6-4dd8-8fb7-dcfef849dfb6	pubhouse	pubhouse-pubhouse-vk-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+52ced669-bb77-44a6-8233-9b710c686025	publications-1	publications-1-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+cecba6cc-4b14-4c78-9943-30bf04355abb	publications-2	publications-2-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+e2732f48-3082-41ab-bcbe-0f0eee87cf57	publications-3	publications-3-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+e6a7d5ef-d539-4d01-894b-87dd20ca5fa5	publications-4	publications-4-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+b9f279dd-4ad0-4eff-b37e-347fdb69ac62	publications-5	publications-5-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+d37eb179-e5ea-4e21-895a-b90f07a2e168	publications-6	publications-6-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+facca125-50b7-457e-931e-94892d14058f	publish-test	publish-test-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+9dd2978f-f862-4679-a06f-f2fe23b58c52	publisher-tags	publisher-tags-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+29fbb3a6-9734-4599-be4b-c42060610100	publishers-cdc	publishers-cdc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fd5a8434-e1fb-4e4c-83c9-3b013a1c3e0a	pubs-drafts-1	pubs-drafts-1-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9f7cf6b9-da36-4f06-a253-4897df8cfeda	pubs-drafts-2	pubs-drafts-2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3fe8226f-a433-43e9-8757-3a682c81799b	pubs-drafts-3	pubs-drafts-3-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dedeba3d-9e58-42a8-975f-95d250c0faf6	pubs-drafts-4	pubs-drafts-4-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e2b78799-0b68-47b3-8756-186ee30b7f3c	pubs-drafts-5	pubs-drafts-5-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7e462a0d-b75f-41de-a6f1-664f4f059651	pubs-drafts-6	pubs-drafts-6-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9790b12a-1234-4648-b20b-2562ab9b27ca	pubs-suites	pubs-suites-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+16c24aeb-7946-45ed-93f1-de88c72786c5	pulse	pulse-reco-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+df7a038f-0467-4cb0-b515-d8a09581c967	push-messages	push-messages-front-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c3867486-119f-4a9a-8679-72361b22d8f9	push-sender	push-sender-notifications-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6a367da0-4e79-49fd-976d-4b57aa2f0512	qa	qa-vk-support-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2a7c29e9-cf96-4650-875d-f303e7b50197	qparser-dicts-prod	qparser-dicts-prod-qparser-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ffc67c8b-8688-4da1-95f8-20f9ea0f8037	qparser-dicts-test	qparser-dicts-test-qparser-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1da771e9-c7bd-44d0-9b8f-3b541f2ecc94	queue	queue-school-events-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1abb4f5e-368e-4b26-83ed-30eb6555bdf8	rag-prod	rag-prod-mi-voice-kafka	infra	1	       9	<NOT_SET> 
+29437a76-ffbe-4aec-8164-374fe93d12fb	rag-test	rag-test-mi-voice-kafka	infra	1	       9	<NOT_SET> 
+f8627075-a461-4d88-8ea5-1084ca972b8f	rb3	rb3-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3c3c2197-e7f5-4857-ad61-f2d7a740fa7e	rbmedia-dwh	rbmedia-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+53a490d1-6df7-403e-9807-77666b1305a4	rbscore-logs	rbscore-logs-predict-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8db4ac0d-d00a-4656-8065-17ed8dc2a216	re-cnt	re-cnt-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cfe38661-b6a7-46dd-9484-643d58bbeb83	reactions-core-p	reactions-core-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8fe72f9d-29d7-4cab-8057-bfa5ca1e5c42	reactions-core-s	reactions-core-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cba5131e-a3e2-4bb5-bd4f-8d20563d317f	reactions-prod	reactions-prod-vk-reactions-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0378db42-324e-48c7-a9a3-b0f49f17154b	reconnection	reconnection-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+658646f2-9eaa-4571-834e-5f5b4048ffe2	redirector-staging	redirector-staging-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c8212a32-8a88-45b1-b290-4341932150e0	reklama-dwh	reklama-dwh-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+30bb2d0c-8bac-40be-88e3-918807801b47	release	release-smb-subs-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+307f7183-3f6f-4cf0-ba2b-82253a1c4e37	requests	requests-mdb7449-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+71109326-4441-4961-a6cb-b7f85add9b72	requests-preview	requests-preview-mdb7449-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4d6da030-b358-432f-ab83-e1df2984c09a	rsm-kafka	rsm-kafka-mdb8475-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7b838ac2-91a4-496a-a81f-4556b024e755	rss-importer-queue	rss-importer-queue-mdb7168-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b1248203-3905-471c-b6b7-0dd9c6ba99c8	rt-filters	rt-filters-adtech-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+494baf66-e44b-4e57-9840-156c49a13c44	rtse-staging	rtse-staging-streamflow-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+71e0e020-a07f-4b02-8ba1-c17306ef2b89	rugc-backend-s	rugc-backend-s-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+a3c97ddd-bb89-4f84-a1e0-7d626d300701	rum-transfer	rum-transfer-ucdn-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2b3e0a5d-4e52-4817-9704-209629f9bdd6	s2s	s2s-mytracker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8cc729d8-8a44-41c2-86f0-aefbdcbad84b	s3-scheduler-queue	s3-scheduler-queue-etp-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d1ecd6d3-d186-4f38-8839-c7bb40667408	s3-scheduler-queue-dev	s3-scheduler-queue-dev-etp-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a83b8791-34fc-4430-b1b4-d85bdba2f5cc	s3-scheduler-queue-dzen	s3-scheduler-queue-dzen-etp-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ad95bc7a-ec58-4438-8e32-ffe855328814	salon-clients	salon-clients-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+730e60cf-f55f-4df9-a1d7-a2b3b6395428	sandbox-testing	sandbox-testing-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+b8d8f1ef-ac52-49d9-8e38-82a391838f85	sandboxmanager-dev2	sandboxmanager-dev2-mdb8836-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b2e48b8f-d016-4c9c-bdda-e1568db35da8	sandboxmanager-prod	sandboxmanager-prod-mdb8836-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d2691f10-03fb-4645-9183-b067f1b9b577	saturn-camp	saturn-camp-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7cc6b7e9-b10c-44f6-85dc-86c415135264	saturn-target	saturn-target-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+76d9dc6e-afa3-4570-b1f6-dab7dc617ef0	saturn-url	saturn-url-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ad805815-3295-4677-af19-c0a69a30da92	sdk-deeplinks	sdk-deeplinks-mytracker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d3f08a9a-1b4b-4190-b5f7-3ac29fca5dcd	sdk-events	sdk-events-rustore-dev-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+86376250-ec9a-489b-8124-3e9b33aac661	sdkkafka	sdkkafka-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+50a0754a-331f-4ec1-80cd-0963dc2f06d7	search-phrase	search-phrase-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+d8c40272-1ce2-491a-9b62-d4686412771b	search-phrase-dev	search-phrase-dev-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a596f57d-65fa-49f9-9ee4-3861839f733b	search-vkpeople	search-vkpeople-mdb10125-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cf79afa9-49a7-4a89-9880-cc97de214021	security-file	security-file-karma-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1583e749-2075-4c02-beae-87a54aee121e	security-file-dev	security-file-dev-karma-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+19b993cb-6911-4571-aa89-df68e6963db3	seg-rel-kv	seg-rel-kv-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+bb8279e1-b1e2-4c36-ab2a-adaf184946de	sentry	sentry-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c973c934-00f4-48dd-96c4-761ebcda91ba	shared	shared-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a5be7aa7-3df7-48a5-a5fb-ea579ae58dce	shared-cookie-test	shared-cookie-test-mdb8498-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a3827eb7-ecd5-4fe8-a685-c8d39381b829	shared-cookie-test2	shared-cookie-test2-mdb8498-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+931197a6-4d87-4852-a5ac-e7fa77257dad	short-video-p	short-video-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+378849ba-5293-4678-8860-344b7174a4a5	short-video-s	short-video-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+36daa2fb-e152-47d7-994f-74f6de9363c1	slowtransport	slowtransport-dataplatform-kafka	infra	1	       9	<NOT_SET> 
+fadf1a6a-66f9-408b-b614-49367653a074	sms-gate-dev	sms-gate-dev-vkcm-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fd162ed1-fee0-4d04-9b4a-80460af6c5f9	sms-gate-prod	sms-gate-prod-vkcm-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c5cdc0ce-e4e1-489c-89dd-9c9020151776	sms-history-dev	sms-history-dev-vkcm-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+be15a5e2-8bfb-49e1-b1ba-bdc92e7936d0	sms-history-prod	sms-history-prod-vkcm-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7daa0656-cb60-487b-a6b2-8534c7c01fa9	snapshot-cdc	snapshot-cdc-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e86ec689-a555-4fd9-82d4-877808468d70	soc-test-kafka	soc-test-kafka-vksoc-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e1e1d9dc-8fa5-48f0-84da-26c9b4fc3787	spec-manager	spec-manager-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7bdfb7ce-c055-4fab-b53a-4f9eed642d67	specials	specials-valentines-box-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+123a53a8-0642-404a-b9ed-75772d700ff2	spell-test	spell-test-spellchecker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7e6c3664-b781-4e21-afc0-d4ae095ed731	spellreplies	spellreplies-spellchecker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f7834ad2-3c36-4785-8af5-4d2efd00777a	spellrustore	spellrustore-spell-rustore-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+14aa4059-4d9c-4cd3-a852-35d3e06629f9	spfrclustermdb	spfrclustermdb-oneme-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b6cf6d8f-b091-4e12-8c89-68a8e8202698	splitter	splitter-oneab-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+31045603-f354-4253-b76c-6816a58f8109	splitter	splitter-mdb9447-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+145a6177-502c-4942-8293-1bd06b4b3a2a	splitter	splitter-mdb10074-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+937a98ca-064e-4bd6-bbe2-971e1cff3ea5	splitter	splitter-mdb8508-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5921284c-a924-4473-b4fe-f70ad9b8ee60	splitter	splitter-mdb8408-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+971d6a3d-8fa8-4b35-a5b6-149d434cce58	splitter	splitter-mdb9607-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4e6c8549-8b05-4ba6-a4d2-29a53cbfa583	splitter-test	splitter-test-oneab-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8906822c-2565-4126-a0a4-a3b1cc8abe16	sports	sports-sport-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5cf8c2dd-ef84-4ec5-bef8-34c68c4c77e3	sps-kafka	sps-kafka-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e4f08546-da76-4e50-9126-a892243ba6c7	srch-rustore	srch-rustore-spell-rustore-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+02da7d4b-598b-4ef1-bbd6-b6d37d9f2d2b	ssp-requests	ssp-requests-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0dd8bc55-abd0-40ac-aeef-e1b2529a7c48	ssp-requests-spb	ssp-requests-spb-adtech-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6a5d52e1-6f4c-45e9-8f90-d684eceed9ee	stage	stage-vk-support-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4699c09b-bb64-4dc6-a326-5a58b7d71e7e	stage	stage-smb-subs-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+781d09f1-9cfc-49a7-8c9a-b155e801401d	stage-cdp	stage-cdp-cxhub-kafka	infra	1	       9	<NOT_SET> 
+0d79406e-4a1e-478c-a118-5ada5ee20240	stage-cxp	stage-cxp-cxhub-kafka	infra	1	       9	<NOT_SET> 
+92a99831-f19c-4f76-a3a6-c67efc54f9a1	stat-events-p	stat-events-p-adblogger-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d8f44033-5756-49bd-9830-d7c90aef29a9	statd-general-spd	statd-general-spd-adtech-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+97537b07-cba3-4398-a121-b5c299fcb09b	statd-spd	statd-spd-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+654d4186-235b-4c66-ac31-e8fa496c89f0	statd-vkfeed-spd	statd-vkfeed-spd-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+55cab1de-60c1-4e7c-afaa-c1c17bb90d9b	stats	stats-mdb7449-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+88003d54-fbf2-4a09-ab9d-9310cac68d5e	stats-banner-1	stats-banner-1-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f44d8b77-f18a-4068-b2d5-1db696c94e83	stats-campaign	stats-campaign-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b931b5ea-e93a-40c4-871c-01be61990491	stats-miranda	stats-miranda-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b7c485cf-641a-404f-a0b2-969cf03fc00c	stats-preview	stats-preview-mdb7449-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6ffca8f5-cca6-465e-acb3-2052d3311c6e	stats-target	stats-target-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cce76f3e-7948-4394-b3d3-e9458e45986e	stats-to-kc	stats-to-kc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fe2dbb06-a1e3-4999-a274-74c18f7f6144	stats-to-kc-2	stats-to-kc-2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+86a382dc-2f46-44f3-a0a2-8f3780214fac	stg-kafka	stg-kafka-int-platf-test-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9f3495ef-07be-41da-85fe-8e16a4e4d76f	stories-p	stories-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f41b878b-a3d0-4e72-a8e3-ff9d12b97d80	stories-staging	stories-staging-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+17b53835-e69b-448b-b1ba-4753754e9d40	stories2-dev	stories2-dev-vk-stories-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a1a990da-3ab5-44f2-8ed9-aae90ca63fc8	stories2-prod	stories2-prod-vk-stories-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+467cec45-d508-4d07-b82b-36dcb4051d2b	story-external-p	story-external-p-adblogger-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+34e45157-421b-42d4-8469-6e36ffaf6830	streaming	streaming-uv-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+26435816-b61d-4435-b004-ffb30b6fd622	streaming-test	streaming-test-uv-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9784a5a6-d91b-49c2-8ce4-6d5e4bdfe5a8	strn-trg-ban	strn-trg-ban-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+70b7cf30-d313-47d9-8d56-cfb8626801b7	subsc-vkpbl	subsc-vkpbl-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+964a3a13-c0e8-4539-9ade-89a753ea3287	sugg-output	sugg-output-mdb8266-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0d9e48d0-1b87-4bd4-868b-1f2f6f53f1dd	tap-kafka	tap-kafka-tap-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1cbcc37e-e4c7-40b6-94f6-698a79734842	tap-test-kafka	tap-test-kafka-tap-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+beb6da14-7a81-4ce0-9cf9-0cf74a2efe58	tar-segment-kv	tar-segment-kv-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7b0a370c-17d2-4781-88ba-b47790b11eb3	target-1-dwh	target-1-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+026a63d4-9f72-4cf6-9570-aaffdc707fd9	target-10-dwh	target-10-dwh-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f945bb44-b8e0-4830-a8e2-9ed85f3a5ce0	target-11-dwh	target-11-dwh-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+66541b4f-fa86-4373-915c-f146f33b25e5	target-2-dwh	target-2-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+5d447dad-830d-4b54-9344-d3228db8ed98	target-3	target-3-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+42fd0100-7ac3-45da-bafc-1ca3eaa9ba68	target-3-dwh	target-3-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+3d99ba97-89a4-4603-8c9d-cca60692f7b4	target-4-dwh	target-4-dwh-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+bdf70d08-1b34-48c7-87fe-f6510a33ff5f	target-5	target-5-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+b93e312e-dd8e-443c-9e12-4e60c05dd47c	target-5-dwh	target-5-dwh-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e790caea-097d-4398-b241-ffb8064ca35a	target-6-dwh	target-6-dwh-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+98845ec6-d140-4f12-b4f2-ec9f73ba688f	target-7-dwh	target-7-dwh-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f4483622-1615-48a9-b54d-d652b48b991c	target-8-dwh	target-8-dwh-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fc309459-9289-4f72-92cf-b0835d87c141	target-9-dwh	target-9-dwh-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b6d276de-4cfc-4cc2-8bd6-7f68b3619bd9	target-auth	target-auth-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+2b96cc5b-7b0e-47d9-be90-40e5765f9828	target-mrd	target-mrd-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b48ff0ac-27d2-4c5b-a91f-31afc738c11c	target-mrnd	target-mrnd-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+293c57ff-fe90-429f-973b-51c233ab278e	target-queue	target-queue-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d3ac6681-3f51-4d06-8227-2a71223a85f2	target-st-dwh	target-st-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+795b3019-db34-4322-b068-ba729a8bf617	target-web-2	target-web-2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7b703371-a8a8-4bc3-909d-32f1ba9381a9	target-web-3	target-web-3-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+026202d5-c49b-4e0d-b64f-50968f2b56e1	target-web-dwh	target-web-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+bd19afa3-4e4b-451f-9c29-319b5ef9eefd	targetposts	targetposts-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2ce41756-4c42-459e-884b-6e3734e3e89b	tcollectord	tcollectord-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+0173a63c-6207-4403-9527-6c27a3b4716c	tcollectord-billing	tcollectord-billing-adtech-kafka	infra	1	       9	<NOT_SET> 
+6e01bf76-7c5d-4f96-834c-87cec7f539b0	tcollectord2	tcollectord2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+01802974-3c17-4595-80da-9e2469fedd69	telemetry	telemetry-cloud-admins-kafka	infra	1	       9	<NOT_SET> 
+39eeaeb7-9547-4d56-a095-aa4155876593	test	test-mdb4831-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+07e126f1-f50e-4686-9c6a-c058a9b4f92b	test-create3	test-create3-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8fbdb3b6-749b-4670-bdfc-a2cf7e06b56f	test-cruise1	test-cruise1-mdbdev-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5db55ce4-0b7f-49c8-ad02-d3ef5a45266c	test-cruise2	test-cruise2-mdbdev-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+789b22f3-7923-4dbb-b9e4-c049e19d203c	test-cruise5	test-cruise5-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fa428fdc-976c-43f1-ab49-a3156fc374b1	test-deb-dcs-1	test-deb-dcs-1-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8a3cd9b6-c8ff-47d1-9b38-8693052f58d3	test-delete-topic	test-delete-topic-mdbdev-kafka	infra	1	       9	<NOT_SET> 
+032674a5-bce0-4359-92a5-e91c2d9bb805	test-downgrade2	test-downgrade2-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8d898294-7d6e-4936-97b2-2bcf0deb7575	test-downgrade3	test-downgrade3-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b5661307-a859-45d0-a94e-ecf7aee6fdc1	test-downgrade4	test-downgrade4-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+184ac05d-64e7-4276-ad59-017475bf4f4a	test-downgrade5	test-downgrade5-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+69204f9d-723c-4ad7-848c-efcd1b2389bd	test-downgrade6	test-downgrade6-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+23f108ac-1907-434e-a67b-dda01df316f4	test-downgrade7	test-downgrade7-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4915466a-268e-409f-a02e-403cc452b4fd	test-ec	test-ec-mdbsandbox-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8c86a87f-4c3d-4148-829c-7bb357764430	test-ec-kafka	test-ec-kafka-mdbsandbox-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5a9cd50a-7f60-4588-9c2d-43e6b478b0d6	test-faq	test-faq-faq-cx-vk-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ce06dce9-5b93-4021-b97d-ae72b798c78a	test-generated	test-generated-recommender-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f01e874a-f959-4962-b9a3-7a6b3ded7898	test-kafka-debug	test-kafka-debug-adtech-kafka	infra	1	       9	<NOT_SET> 
+9fc47c1b-011d-4aaa-b411-de5345a0204e	test-modify3	test-modify3-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3fb46c41-fec6-4c78-9b94-bbfb34ef08cd	test-modify4	test-modify4-mdbdev-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+03a23bcb-7e01-4ccd-abd7-b6489cda115b	test-user-task-infra	test-user-task-infra-mdbdev-kafka	infra	1	       9	<NOT_SET> 
+f4e1f241-5df4-428e-b6d7-dc5a27122521	test-version	test-version-mdbdev-kafka	infra	1	       9	<NOT_SET> 
+d4ba1e49-ce60-44c3-b4d3-61c370304df6	test11	test11-mdb8404-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8699d4d8-9356-417e-9fd9-700728319359	test1234	test1234-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+5bc6873f-eecc-4b54-8c3b-68c4e69e6e6b	testing	testing-mdb8103-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+bff3f0e3-1101-40c1-9376-d8caa7096be4	testing	testing-combo-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7ebfc7c1-d84b-40f0-890b-e506400e65e6	testkafka1	testkafka1-mdbsandbox-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3a6a1906-1e22-40fa-8d5d-f653d53cb6a3	testmdbint	testmdbint-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3d2d4b68-239c-48a4-a0ce-6aea5ca153d2	testransfer	testransfer-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+984813f9-b191-4a0a-a98a-721809420cad	testscoreyt	testscoreyt-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+264d8c7d-ee8b-49f2-923a-e2d53cd41260	testtime2yt	testtime2yt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a5855e78-439f-40d2-8ea2-8a50bbd69c1b	testvlad	testvlad-mdb8146-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4d4a1e03-75a5-4202-872e-3274868829a6	tetrika-production	tetrika-production-uchiru-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4701adff-380f-47ac-8f0f-80752ff5b0d4	tetrika-stage	tetrika-stage-uchiru-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ba94ed67-1ea5-411e-8321-d9ba2ce1bceb	tg-bot-updates	tg-bot-updates-dzencontent-kafka	dzen	1	       9	<NOT_SET> 
+e6628313-7f98-4fd8-b50f-2a0460894155	ticket-service	ticket-service-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+0c21f97e-681b-425f-aa75-bfaeac46ba5a	timefixed	timefixed-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ebf96ece-1fae-4a9f-be26-855c643029de	timeline-dev-kafka	timeline-dev-kafka-vkone-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+99e3ebe3-ddc6-4f6c-940e-2097546cac88	timeline-proxy	timeline-proxy-sitcentr-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dee87ddb-0fd9-4063-be03-7798035d9e59	tns	tns-mdb9036-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ec4e1c6c-8c20-4148-b5ee-487c910aab8b	tns-controlplane	tns-controlplane-mdb8350-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+17c610fd-14db-490a-8f4e-940f02a705b2	toauthprod	toauthprod-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b760f8c2-43bd-4c28-9662-27cc8956851c	topic-channel	topic-channel-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b9da00b2-2e74-4822-98b4-2f9598b517fb	topic-daemons	topic-daemons-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4baa4221-29d1-4d19-ae95-af7845567ac0	toreportsprod	toreportsprod-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+aad26c91-15f5-4b7d-9593-a8a363d59b69	tosmbprod	tosmbprod-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6d70154c-a745-43d1-a9ad-756d88695288	tosmbstage	tosmbstage-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3032506a-ec49-4011-9a1c-b4e80174eeed	transfer1	transfer1-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+913bf35b-48e3-42a0-a90b-b85611421141	trg-188703	trg-188703-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+af671aa7-cb6e-4eb3-9bec-95bf066b9e7d	trg-188703-dwh	trg-188703-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+0fa9d946-16a9-4257-86a0-2e0ebfd9c58b	trg-190191-dwh	trg-190191-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+d7199efe-1702-4364-84ed-040907c15c58	trg-190420-dwh	trg-190420-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+936fcc40-5e2f-453c-8443-782611b80c6b	trg-190836-dwh	trg-190836-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+5553e2a8-f430-4a25-bbf8-e83bf505c509	trg-194302-dwh	trg-194302-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+a8261a9a-f8d8-46fd-b744-7b3cd3c3a9f9	trg-195060-dwh	trg-195060-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+993320b9-1ddb-48af-b043-51e11f83afee	trg-195741-dwh	trg-195741-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+32b83f2b-b46d-4dd1-993e-d85ad4497a22	trg-196375-dwh	trg-196375-dwh-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+cd50d4ff-5c5c-49ab-8ad1-97b7e43842b9	trg-200010-1	trg-200010-1-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+e2672519-1faa-4b14-b18c-36acb04c8db3	trg-200010-2	trg-200010-2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+10d6c250-b215-4fe2-aefa-6081ce071eeb	trg-203344-tmz	trg-203344-tmz-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6b5287f7-31cf-4d2c-917b-a16536ea2504	trg-203777	trg-203777-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+da499e04-d869-4c11-b6dd-b56ea3e41be5	trg-204500-rb	trg-204500-rb-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ae92ba51-a9e8-4693-ae90-52b14c059924	trg-204500-tr	trg-204500-tr-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+22d261eb-e2ac-44e5-bc88-5974ada06390	trg-205966	trg-205966-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+83f51204-5454-4e5d-adfb-a846986e116e	trg-205966-2	trg-205966-2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fde1d628-c9b7-402f-bdad-b865d9301af6	trg-208304	trg-208304-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1aced3a0-05da-43ea-878e-e12f9e68626a	trg-208362	trg-208362-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4ed453bd-a4e6-4c12-ab1a-13261226c9df	trg-209974	trg-209974-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1888f749-f5f5-4ad6-a8a3-295beb7e7fc9	trg-210727	trg-210727-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d75f2084-b7a4-4381-a200-49169ee76a87	trg-210730	trg-210730-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+95e62b7b-7aa5-4d8d-87aa-7b212a3f3968	trg-210730-2	trg-210730-2-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d3d97df0-66df-4437-ae24-6f0ed6c56aaf	trg-211110	trg-211110-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+36deb8b2-690c-432f-a5a1-ccc5683e6608	trg-212411	trg-212411-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+daf92df3-fd0b-473d-94d8-95e3f3ea9f06	trg-219217	trg-219217-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+5ccbb676-92ac-49ee-84fb-9c62b976fde4	trg-billing	trg-billing-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+77b63912-da72-464e-adde-ff48050ab8da	trust-id-dev	trust-id-dev-notify-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f95ad37c-4c8f-4ad4-a026-48ea214fe610	uchiru-soc	uchiru-soc-uchiru-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b49f8fee-2ac4-4b90-830c-418878502182	uchiru-test	uchiru-test-uchiru-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+875936af-78cb-4bdd-86f7-a20e9b6fbe2d	ucp	ucp-content-kafka	dzen	1	       9	<NOT_SET> 
+59a2b348-fe3b-4d1a-829b-7dd3fd7764ed	ucp-e2e	ucp-e2e-content-kafka	dzen	1	       9	<NOT_SET> 
+a7207c46-52f2-4a39-867b-88f3e362094a	ucp-events-p	ucp-events-p-vkdating-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f8260436-2958-4062-b887-8a81013bed4e	ucp-test	ucp-test-content-kafka	dzen	1	       9	<NOT_SET> 
+5ca23bf8-921b-415b-b876-40e29a32ec10	unified-yt-loader	unified-yt-loader-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+63e8ea1b-25a2-43f5-9168-b59bfbd94b5e	unigate-kafka	unigate-kafka-mdb3211-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+613c33da-2f40-423e-86ec-02e559ce0dfb	upmetric-recvw	upmetric-recvw-mail-mini-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a8fb5079-264c-4c00-9d32-34da5ec2f5d1	upmetric-recvw-dev	upmetric-recvw-dev-mail-dev-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+80d4d384-57d4-44cc-89b9-466acbdfb212	upmetric-recvw-kafka	upmetric-recvw-kafka-mail-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+574d7196-9a3b-4114-ac6b-329ce8b2715f	user-info-add	user-info-add-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+98950370-9277-46ee-95fa-116d621d0209	user-uniques	user-uniques-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c5d1e5a9-e7a2-46a2-804a-99a6a5ecea8e	usersmyt	usersmyt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+13bdfb45-76eb-46dc-ac47-ef78e4650c95	usersyup	usersyup-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8a1c4ea2-c292-4cb6-8227-974be688f22b	usertable	usertable-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+daefc375-5109-406f-ab16-cde8611e3663	usr-add-inf-q	usr-add-inf-q-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+c7bb8a95-6da6-415a-9148-3400cdb49907	uv-stat-prod	uv-stat-prod-uv-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a8371aed-9fc0-4ec7-ac70-ba272e824f5b	uv-stat-test	uv-stat-test-uv-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a6de8952-5643-4175-b434-c4bd57766e07	uv-stat-test-dev	uv-stat-test-dev-uv-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fb912cc0-4c60-4b29-b96c-11c31802fe83	vahter-mail	vahter-mail-mail-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9dacf209-8b81-4476-bce9-57ab44f1b191	vahter-mail-mini	vahter-mail-mini-mail-mini-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+849a69be-047f-42e8-8610-6f9c5e11ff5f	verdicts-cdc	verdicts-cdc-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+90f7d76f-8e74-47f0-a6e2-c025aa5f8a77	videoq-prod	videoq-prod-uv-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a21f9a75-2160-4853-bf5b-f8d1e1245a0a	vk-alert-staging	vk-alert-staging-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+70ecca02-a5e0-4358-8141-7a1d85289dd3	vk-binlog	vk-binlog-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+12d62bd8-c9d3-4b6b-890f-9eadc3805ef2	vk-events	vk-events-adtech-kafka	infra	1	       9	<NOT_SET> 
+1a9b7971-9558-4874-aee0-f253fa0d0939	vk-health-production	vk-health-production-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+862dddda-ced7-403c-b119-68b42e9e425f	vk-health-staging	vk-health-staging-vkontakte-kafka	vkontakte	1	       9	<NOT_SET> 
+bdc2787a-f7d5-4c65-b4a1-c6fcfd66d63e	vk-music-p	vk-music-p-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a4f88bc7-469a-44ed-aae2-9464451b20af	vk-music-s	vk-music-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+78e8d653-6dc4-4e6b-a574-9eaa07c4efdb	vk-notify-status-events	vk-notify-status-events-uv-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fdd13047-ead0-4c99-8a72-cb909e964afd	vk-ucp-video-match	vk-ucp-video-match-onedwh-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+53ea5f26-25b2-4595-ae8f-e161f22d1a7b	vk-video-dscv	vk-video-dscv-mdb10084-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2d376f4a-a2ea-40b7-a325-2a13920aa67d	vk-video-kafka-prd	vk-video-kafka-prd-misearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+1e912b7a-5e21-4e41-9cac-bdcdc8c613d3	vk-video-p	vk-video-p-vkontakte-kafka	vkontakte	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8ab70704-4fdd-4420-af74-b0341f2153c9	vk-video-s	vk-video-s-vkontakte-kafka	vkontakte	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c1eff5d6-120d-4793-896c-a0b964998c0f	vk1ctosaphcmdev	vk1ctosaphcmdev-cfs-dev-kafka	infra	1	       9	<NOT_SET> 
+2636df73-4647-4c84-a915-97339101aa92	vkclips	vkclips-recommender-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a53a0a59-2be4-4545-b670-c2178a09102a	vkclips-i2i	vkclips-i2i-recommender-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+eba4c8ec-ce96-4997-9e14-e83adaac1f71	vkcluster-kafka	vkcluster-kafka-dpkafka-kafka	infra	1	       9	<NOT_SET> 
+f5137169-40df-4816-b144-b6809cc87000	vkfeeds	vkfeeds-recommender-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+feed6c88-4dc8-4173-a727-f6a1a4512bda	vkid-p	vkid-p-vkontakte-kafka	vkontakte	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+14f42bbe-16c5-4871-829b-b3a34bb05450	vkid-s	vkid-s-vkontakte-kafka	vkontakte	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+99b14636-a812-48fa-9142-34125cfaafe9	vklogsic	vklogsic-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b61aee29-26ab-4c34-befb-a3a8bab05574	vklogsnc	vklogsnc-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d4c0f7be-f6d9-43f6-a553-40b4f8175bfb	vklogszc	vklogszc-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3244db47-5fcb-4ef0-a291-1f4883bbe232	vkmarket-events-p	vkmarket-events-p-adblogger-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+7e1bfd30-2e62-4a79-a343-6667adb336cc	vkmu-common-dt	vkmu-common-dt-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+fb0120d6-191a-44e5-897a-57bcb06e5be6	vkmusic-common	vkmusic-common-combo-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+12c93bf5-cfc7-4b2b-8ef4-dc5eff33607e	vkmyvkteamdev	vkmyvkteamdev-cfs-dev-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+d9d550e0-eab6-4dc4-849b-a81534dcfa8e	vkmyvkteamdev2	vkmyvkteamdev2-cfs-dev-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+dbe1e570-e84c-4212-beec-998e9ad60ee6	vkmyvkteamdev3	vkmyvkteamdev3-cfs-dev-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b9d1c884-afe8-4d84-9ffa-e6462b6efcd8	vkmyvkteamprod	vkmyvkteamprod-cfs-kafka	infra	1	       9	<NOT_SET> 
+0e855314-3046-4dc8-b354-67b4d626794e	vkmyvkteamstage	vkmyvkteamstage-cfs-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2c983b81-bb56-43de-a5f7-0113ce6ae2f1	vkontakte	vkontakte-mdb8273-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+38c5c0ab-ae96-4bcc-bf9a-e74ef3ba22fe	vkpixelsproxy	vkpixelsproxy-adtech-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4ae898f5-e877-45f8-8a0b-f3b4607a532b	vkplay	vkplay-vkplaystore-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+ed54b5c8-c376-4116-af84-d1ae3f33301b	vkplay-stage	vkplay-stage-vkplaystore-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+6213d4b6-4713-400c-8f80-b7535630d5c9	vksc	vksc-mdb8273-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+c8a2854f-3454-4eb0-93d3-95ca10a38655	vkskkcxdev	vkskkcxdev-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+68c8e3db-caab-4126-8396-a41fd0c8b2bb	vksupport2yt	vksupport2yt-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+df0b854c-875e-4082-bd47-043466c3dddc	vkt-pce-p	vkt-pce-p-vk-crowd-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+06bcfca2-a39b-44aa-bab1-dc5a30ad771c	vkt-pce-s	vkt-pce-s-vkontakte-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+f26e354a-c8bd-4509-a2be-57871ef043a2	vkube-prod	vkube-prod-vkontakte-kafka	vkontakte	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+3aabb3f9-9530-46ea-a58a-f5dc73197f40	vkvideo	vkvideo-recommender-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+2e756869-eb6f-4d4f-85fc-359af787b59f	vkvideo-common	vkvideo-common-combo-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+aeb577a9-64e4-47ff-b17e-35ec4d3092f3	vkvideo-i2i	vkvideo-i2i-recommender-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+38a15e9c-ffce-498d-a228-0fa5252f6e69	vkwsgp	vkwsgp-mail-mini-kafka	infra	1	       9	<NOT_SET> 
+7bd18711-9fc0-4e86-9595-f40d05ec2308	vkwsgp	vkwsgp-mail-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+b214fe87-046e-4ecb-a419-65039c7f7f95	vpn-detector	vpn-detector-mdb9098-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+db398ef4-6814-4f1f-b8df-5e4f7cf33a76	vpn-detector-dev	vpn-detector-dev-mdb9098-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+0f32267b-6723-4a18-b577-e7ee1988b172	vqueue-test	vqueue-test-uv-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+8e44cb8f-7213-40ce-9155-cc862e045ce3	vt-migr	vt-migr-datatransfer-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9f77843a-0ba5-4110-800c-b8116de6aa01	web-mtrk-events	web-mtrk-events-mytracker-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cf0cf205-ed5c-478a-97e6-42fa4b0257ec	wnf-prod	wnf-prod-vk-video-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+edec82fb-77a4-4d43-b1b8-22f198dc269a	wnf-vk-clips-stage	wnf-vk-clips-stage-misearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+465aab05-ab9b-4692-90f4-7bdbd80eab0b	wnf-vk-video-stage	wnf-vk-video-stage-misearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+55f9818d-2df1-400b-8beb-05fed6291477	wnf-vk-video-test	wnf-vk-video-test-misearch-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+884bfc41-0cde-496f-87c0-1ff3c9beec1b	workspace	workspace-mail-mini-kafka	infra	22	    1003	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+9769ce4b-0e39-43ea-8994-9d79c81a440d	workspace	workspace-mail-kafka	infra	8	     512	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+23e42f7e-1d1f-4229-a084-fcca2ddec0d5	ya-yt-channel	ya-yt-channel-datatransfer-kafka	infra	1	       9	<NOT_SET> 
+6c2c8de1-834c-4791-9258-b83c8e5bbe5f	yc-1	yc-1-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+4aebbf8b-7464-4852-b970-1b6ae698fa40	yc-test-2	yc-test-2-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cab55c26-e22e-435f-aadd-ff42faa5c64f	ycl-infra-prod	ycl-infra-prod-mdb9173-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a934b331-0840-4d11-a282-604009b41053	ycl-infra-stage	ycl-infra-stage-mdb9173-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+bb51a1b7-e5a9-4c29-bd13-cb1d2c9d39c1	ycl-pltf-dev	ycl-pltf-dev-mdb9709-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+75a067de-94d9-4c54-9fc8-f7b9db80e6b1	ycl-pltf-prod	ycl-pltf-prod-mdb9709-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+cc48423d-8a8c-435c-aec9-8bd74f6aa551	ycl-pltf-stage	ycl-pltf-stage-mdb9709-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+920e3926-e276-4cf1-b932-cce0d93900bf	yclients	yclients-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a63ca740-46e9-44a3-9f22-0ac497d70346	yt-logs-kafka	yt-logs-kafka-yt-kafka	infra	18	     809	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+a77d5fe9-bffe-4e06-aeb2-3e55ebf6f629	yt-tracing	yt-tracing-yt-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+774f36df-ade2-455c-ab65-6e3b4c8ad8f5	zen-max-ai-bot	zen-max-ai-bot-datatransfer-kafka	infra	17	     800	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk
+656d3f6c-861c-4600-933c-bd5fd6d6ac33	zen-push-to-yt	zen-push-to-yt-datatransfer-kafka	infra	22	    1005	JMX_PORT=9000 KAFKA_HOME=/opt/kafka KAFKA_OPTS="         -Djava.security.auth.login.config=/opt/kafk

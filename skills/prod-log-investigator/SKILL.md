@@ -1,6 +1,6 @@
 ---
 name: prod-log-investigator
-description: Используй этот скилл, когда нужно скачать и проанализировать прод-логи mdb-data или mdb-processing для разбора ошибок (502/500/NPE и т.п.). Скачивает логи со всех прод-ДЦ через скилл mcc-host-access, фильтрует шум, ищет stacktrace-ы.
+description: Используй этот скилл, когда нужно скачать и проанализировать прод-логи mdb-data или mdb-processing для разбора ошибок (502/500/NPE и т.п.). Скачивает логи со всех прод-ДЦ через скилл mcc-host-worker, фильтрует шум, ищет stacktrace-ы.
 allowed-tools: [bash, read_file, write_file, edit_file]
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: [bash, read_file, write_file, edit_file]
 
 Ты работаешь в режиме расследования инцидентов: пользователь дал ошибку (обычно 502/500 из UI), нужно найти её причину в прод-логах.
 
-> Доступ к хостам и копирование файлов — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+> Доступ к хостам и копирование файлов — через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
 > Ниже — только специфика прод-логов mdb-data / mdb-processing.
 
 ## Прод-ДЦ
@@ -39,7 +39,7 @@ Service name на всех — `cdb.cloud-ops.batch` (queue `cloud-ops.batch`), 
 
 ### Проверка регистрации кластера
 
-Проверка делается через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (команда `ops` с флагами `-n <namespace> -c <dc>`):
+Проверка делается через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md) (команда `ops` с флагами `-n <namespace> -c <dc>`):
 - `cluster-id` — UUID, `cluster-name` — например `test-43version-4-mdbdev-kafka`.
 
 Маркеры ответа:
@@ -53,7 +53,7 @@ Service name на всех — `cdb.cloud-ops.batch` (queue `cloud-ops.batch`), 
 
 ### Если sync не идёт
 
-1. Проверить регистрацию через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (команда `ops`) по всем комбинациям namespace × ДЦ (см. выше).
+1. Проверить регистрацию через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md) (команда `ops`) по всем комбинациям namespace × ДЦ (см. выше).
 2. Если нигде не зарегистрирован — проблема не в коде one-cloud-ops, деплой новой версии не поможет. Кластер нужно засабмитить (manifest типа kafka в нужный namespace) или уточнить namespace у команды оператора.
 3. Если зарегистрирован — смотреть логи one-cloud-ops и sync-таски (`KafkaSyncMdbStateTask`, task name="sync", critical=true) на хосте оператора.
 
@@ -68,10 +68,10 @@ Service name на всех — `cdb.cloud-ops.batch` (queue `cloud-ops.batch`), 
 
 ## Скачивание
 
-Скачать логи mdb-data (`/mnt/logs/mdb-data.err.log` с хостов `{1,2}.mdb-data.mdb-data.{hc,pc,uc,kc}.one-infra.ru`) и mdb-processing (директорию `/one/logs/` с хостов `{1,2}.mdb-processing.java.{hc,pc,uc,kc}.one-infra.ru`) — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md) (команда `scp`, см. `commands/scp.md` для шаблона массового скачивания по списку хостов × ДЦ).
+Скачать логи mdb-data (`/mnt/logs/mdb-data.err.log` с хостов `{1,2}.mdb-data.mdb-data.{hc,pc,uc,kc}.one-infra.ru`) и mdb-processing (директорию `/one/logs/` с хостов `{1,2}.mdb-processing.java.{hc,pc,uc,kc}.one-infra.ru`) — через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md) (команда `scp`, см. `commands/scp.md` для шаблона массового скачивания по списку хостов × ДЦ).
 
 **Только `scp`** — `ssh` не принимает аргументы с пробелами/пайпами, не используй его.
-Подробнее про доступ к хостам и грабли — скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+Подробнее про доступ к хостам и грабли — скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
 
 ## Анализ mdb-data логов
 

@@ -26,7 +26,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
   - **Правило:** всегда вешай `@NullMarked` на новый код. Если создаёшь новый класс/интерфейс/record — `@NullMarked` на тип. Если добавляешь новые методы в существующий класс/интерфейс — предпочтительно повесить `@NullMarked` на сам тип (класс/интерфейс), если это не ломает существующий код. После добавления запусти `./gradlew check` — если NullAway выдаёт ошибки `@Nullable` → `@NonNull` в чужих вызовах, откатай `@NullMarked` с типа на отдельные новые методы. Если ошибок нет — оставляй на типе, это правильнее.
 - **Lombok:** `@RequiredArgsConstructor`, `@Slf4j`, `@Builder` для records через `@Jacksonized`.
 - **Коллекции:** Stream API в бизнес-логике, неизменяемые коллекции (`List.of`, `.toList()`, `Collections.emptyList()`).
-- **Checkstyle:** Google Java Style, длина строк ≤120, лексикографический порядок импортов. Запуск `./gradlew check` перед завершением.
+- **Checkstyle:** Google Java Style, длина строк ≤120, лексикографический порядок импортов. Финальный прогон — см. «Финальная проверка» ниже.
 
 ### Temporal workflow/activity паттерны
 
@@ -97,5 +97,12 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 2. Зафиксируй предположения. Если двусмысленность — спроси.
 3. Для Kafka-операций — изучи AdminClient API перед выбором подхода.
 4. Сгенерируй код целиком, без плейсхолдеров.
-5. `./gradlew check` перед завершением (checkstyle + компиляция).
+5. **Финальная проверка** (обязательно, всегда): `./gradlew clean check integrationTest` — check
+   (checkstyle + компиляция + юнит-тесты) и integrationTest отдельно, `clean` — чтобы исключить
+   ложно-зелёный UP-TO-DATE. Грабли (проверено 2026-08-31, MDBDEV-3245):
+   - `./gradlew check` после правок может пройти за секунды из кэша — «BUILD SUCCESSFUL in 3s»
+     НЕ значит, что тесты прогнались;
+   - `--rerun` применяется только к таскам в командной строке (`check --rerun` не форсирует
+     дочерние test/checkstyle) — для честного прогона только `clean`;
+   - упавший тест проверяй точечно: `./gradlew test --tests "<Class>" --rerun`.
 6. Обнови `docs/` если менял workflow/activity.

@@ -137,6 +137,55 @@ grep "Starting Cruise Control metrics reporter" /mnt/logs/dbms/kafka-broker.out.
 `metric.reporters` и весь блок `cruise.control.metrics.reporter.*`, рестартовать
 `kafka-broker.service`. Минус — Cruise Control перестанет получать метрики с брокеров.
 
+## Cruise Control: цели NotReady — BROKER_CPU_UTIL не идёт с одного брокера (JDK cgroup v1)
+
+**Инцидент-референс**: кластер `trg-190836-dwh-datatransfer-kafka`, брокер 21001 (kc), 2026-09-03.
+
+**Симптом**: в CC `state?substates=analyzer` — `isProposalReady: false`, capacity-цели
+(Disk/Cpu/NetworkInbound/OutboundCapacity, DiskUsageDistribution) `NotReady`, готовы только
+3 distribution-цели. `MonitorState`: 0 валидных окон из 5, полнота окон одинаковая и низкая
+(например 2/185 = 1.08%). В облаке — `availability_details: NO_TASK_IN_PROGRESS; Proposals are not ready`.
+
+**Диагностика по цепочке**:
+
+1. На cruise-хосте: `grep '] WARN Skip generating' /mnt/logs/dbms/cruise-control.out.log.1 | tail -5`
+   → `Skip generating metric sample for broker 21001 because the following required metrics are missing [BROKER_CPU_UTIL]`.
+   Сэмплы брокера не создаются → окна невалидны → capacity-цели требуют 95% полноты и не готовы.
+2. На брокере-виновнике: `grep -A 5 'Failed reporting CPU util' /mnt/logs/dbms/kafka-broker.out.log | tail -10`
+   → `java.io.IOException: Java Virtual Machine recent CPU usage is not available.`
+   от `CruiseControlMetricsReporter` (каждую минуту, с момента старта брокера).
+3. На брокере через Jolokia (порт 7777): `curl -s http://localhost:7777/jolokia/read/java.lang:type=OperatingSystem/ProcessCpuLoad,SystemCpuLoad`
+   → оба `-1.0` (на здоровых брокерах `0.0..1.0`).
+4. Свежая JVM на этом хосте воспроизводит NPE в JDK:
+   `CgroupV1Subsystem.getCpuQuota → CgroupUtil.readStringValue → Path.of(null)` — JDK не резолвит
+   путь cpu-контроллера cgroup v1 для процесса (у порто-контейнера процесс в
+   `pids-prod/libpod-…`, на здоровом хосте — `pids-idle`).
+
+**Причина**: на конкретной VM (host kc, 128 CPU, uptime 502 дня) состояние cgroup v1
+ломает JDK-контейнер-детекцию: `getProcessCpuLoad/getSystemCpuLoad` возвращают -1 →
+репортер CC не может отправить `BROKER_CPU_UTIL`. Конфиг CC и образ — нормальные
+(на соседних ДЦ тот же образ работает). Специфика хоста, не кластера.
+
+**Проверенный workaround** (тестовой JVM на том же хосте):
+`java -XX:-UseContainerSupport CpuTest.java` → `proc=0.0001 sys=0.15` — CPU load работает.
+Т.е. флаг `-XX:-UseContainerSupport` в JAVA-опциях брокера чинит репортинг CPU.
+Минус: JVM перестанет учитывать cgroup-лимиты (auto heap sizing); если Xmx задан явно —
+практически без последствий.
+
+**Ход фикса (факт)**: рестарт `kafka-broker` ✗, рестарт инстанса с `--relocate` на другой
+минион (srvk5977→srvk4440) ✗ — JVM по-прежнему отдавала -1. Однако после серии рестартов
+сэмплы брокера восстановились, окна наполнились.
+
+**Резолюция (2026-09-03 ~16:30, кластер trg-190836-dwh-datatransfer-kafka)**: RESOLVED —
+`isProposalReady: true`, все 8 целей Ready (включая capacity), NumValidWindows 3/5.
+Флаг `-XX:-UseContainerSupport` в итоге НЕ понадобился. Нюанс: MXBean может эпизодически
+возвращать -1 — если "цели не готовы" повторятся на kc-кластерах, возвращаться к этому
+чеклисту (далее — запасной фикс флагом через `/etc/sysconfig/kafka` ← PMS `kafka.j2`).
+
+**После фикса**: цели станут Ready через ~5 окон (25 мин) — по числу `num.partition.metrics.windows`;
+проверка: `curl 'http://localhost:8080/kafkacruisecontrol/state?substates=analyzer'` на cruise-хосте
+(REST порт CC в MDB — **8080**, не дефолтный 9090).
+
 ## Broker не регистрируется в controller quorum (рассинхрон `controller.quorum.voters`)
 
 **Инцидент-референс**: INCALL-42685 (2026-07-23, кластер `kafka-spd-adtech-kafka`).
@@ -196,6 +245,45 @@ the node id 11001 must be included in the set of voters controller.quorum.voters
 лидера кворума, не падение. `QuorumState` transitions `Leader → ResignedState → FollowerState`
 тоже норма.
 
+## Фантомный voter в controller.quorum.voters → потеря кворума при минусе одного ДЦ
+
+**Инцидент-референс**: INCALL-48972 (2026-08-25, кластер `maxb2b-console-notify-kafka`).
+Полный разбор — `history/INCALL-48972.md`. Вариация INCALL-42685: PMS уже починен,
+но файлы на части хостов — stale-рендер со старым значением.
+
+**Симптом**: кластер из 3 контроллеров (по одному на ДЦ) штатно работает, но при потере
+любого одного ДЦ лидер не переизбирается — `the leader is (none)` по кругу, кластер целиком
+недоступен. В `kafka-metadata-quorum describe --replication` виден voter с
+`LastFetchTimestamp=-1` и lag = весь лог (мёртвый voter, которого нет среди хостов кластера).
+
+**Причина**: `controller.quorum.voters` на части controller-хостов отрендерен из старого
+значения PMS `kafka.controller.quorum` (времени миграции ДЦ контроллеров): содержит voter
+выведенного ДЦ. Кворум фактически считается от N+1 голосующих → при минусе одного ДЦ живых
+N < majority(N+1) → выборы невозможны. В логе: `QuorumState ... voters=[10001, 12001, 11001, 13001]`,
+`CandidateState ... voteStates={10001=UNRECORDED, ...}` — кандидат набирает N голосов из N+1.
+
+**Диагностика**:
+1. Сравнить voters на ВСЕХ хостах (не только на одном):
+   `grep ^controller.quorum.voters /opt/kafka/config/controller.properties` (контроллеры)
+   и `.../broker.properties` (брокеры) — расхождение списков = маркер.
+2. `stat -c '%y'` конфигов: mtime старше последнего изменения `kafka.controller.quorum`
+   в PMS (проверить `pms-read.sh <queue>.clouds kafka.controller.quorum infra mdb`) = stale-рендер.
+3. `kafka-metadata-quorum describe --replication` — мёртвый voter с LastFetch=-1.
+
+**Фикс**: PMS НЕ трогать (он корректен). На каждом хосте со stale-конфигом по одному:
+`confp --oneshot` → проверить grep'ом (voters = актуальный PMS) → `systemctl restart
+kafka-controller`. Рестарт фолловера безопасен; после рестарта лидера — кратковременный
+metadata unavailable (секунды). Фантом исчезает из кворума, как только нода с 3-voter
+конфигом становится лидером. Верификация: `CurrentVoters` в `describe --status` = 3 voter'а.
+
+**Грабли**:
+- `kafka.layout` с «лишними» ДЦ (hc, rc при живых kc/pc/ec) — НЕ ошибка и НЕ трогать:
+  node.id рендерится по позиции ДЦ в layout, чистка layout сдвинет node.id всех живых
+  контроллеров (см. I48592).
+- В Kafka 3.8 `kafka-metadata-quorum.sh` принимает `--command-config` ТОЛЬКО до подкоманды
+  describe; конфиг — `/opt/kafka/config/client.properties` (`/etc/kafka/` пуст).
+- Скрипты Kafka на controller-хосте не в PATH — полный путь `/opt/kafka/bin/...`.
+
 ## Fenced брокер
 
 **Симптом**: брокер зарегистрировался, но controller его "заборнил" (fenced). В UI может
@@ -220,6 +308,43 @@ curl -s 'http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,nam
 ```
 
 `Value > 0` — есть under-replicated партиции.
+
+## Растущий follower lag при UnderReplicatedPartitions=0 (ранняя стадия)
+
+**Симптом**: панель «Broker Max Lag» в Grafana (`kafka_server_replicafetchermanager_maxlag`)
+растёт на конкретном брокере, но `UnderReplicatedPartitions=0`, `IsrShrinksPerSec=0`,
+`NetworkProcessorAvgIdlePercent`/`RequestHandlerAvgIdlePercent` высокие (тред-пулы не
+исчерпаны). Лаг не упирается в сеть/CPU/memory.
+
+**Корень**: `num.replica.fetchers=1` (дефолт) — один fetcher-тред на пару (этот брокер →
+лидер X) последовательно обслуживает все партиции лидера X. При высокой нагрузке на
+топик fetcher не успевает обойти партию за `replica.fetch.wait.max.ms` — lag копится,
+реплика на грани выпадения из ISR (`replica.lag.time.max.ms`, 30s по умолчанию).
+
+**Проверка** (только через JMX exporter 8080, **не Jolokia** — MBean `ReplicaFetcherManager,name=MaxLag`
+через 7777 отдаёт `InstanceNotFoundException`):
+```bash
+# Общий MaxLag по брокеру:
+curl -s --max-time 15 http://localhost:8080/metrics | grep '^kafka_server_replicafetchermanager_maxlag'
+
+# Per-partition лаг (какие партии отстают):
+curl -s --max-time 15 http://localhost:8080/metrics \
+  | grep '^kafka_server_fetcherlagmetrics_consumerlag' | grep -v ' 0.0$' | sort -k2 -n -r | head -20
+
+# MinFetchRate — нижняя граница скорости fetcher'ов:
+curl -s --max-time 15 http://localhost:8080/metrics | grep '^kafka_server_replicafetchermanager_minfetchrate'
+```
+
+**Фикс**: в pms `kafka.broker.properties` поднять `num.replica.fetchers` (с 1 до 4 — рабочий
+случай, MDBSUP-4649), затем `confp --oneshot` + поочерёдный рестарт брокеров.
+
+Подробности и грабли (Jolokia vs JMX exporter, нумерация fetcher-тредов, шум mdb-tos) —
+`history/MDBSUP-4649.md`. Второй подтверждённый кейс — MDBSUP-4737 (`auction-realtime-adtech-kafka`,
+2026-08-21): «застрявший remove broker» при видимых ~70 Мбит/с приняли за троттлинг CC, но
+throttle был пуст, reassignment завершён, kc-брокеры уже освобождены (0 replicas) — URP был
+хроническим lag'ом от `num.replica.fetchers=1`. Разбор-чеклист «как отличить троттлинг CC от
+fetcher-бутылочного-горлышка» — `history/MDBSUP-4737.md`. Сопутствующие метрики и таблица типов лага —
+`kafka-metrics-investigator/commands/check_metrics.md` → «Follower lag» и «Дедупликация лагов».
 
 Если при этом ещё и min ISR пробит — статус "Has N partitions with min in-sync replicas" +
 `rank=RANK_PREFAIL`. Проверить:
@@ -255,7 +380,7 @@ Topic: hashCalculationResult Partition: 6  Leader: none  Replicas: 22026,20012,2
 и **только он в `Isr`**. Этот broker:
 - preferred leader для всех проблемных партиций;
 - единственная ISR-реплика — другие реплики ранее выпали из ISR;
-- **недоступен** (хост удалён из mdb-data, `mcc` через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md) не подключается с `NamespaceMissingException`).
+- **недоступен** (хост удалён из mdb-data, `mcc` через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md) не подключается с `NamespaceMissingException`).
 
 Так как `unclean.leader.election.enable=false` (default в Kafka 3.x) и `min.insync.replicas=2`,
 controller не может выбрать лидера из не-ISR реплик → партиции висят `Leader: none`.
@@ -291,7 +416,7 @@ sudo -u kafka /opt/kafka/bin/kafka-leader-election.sh \
 #### Этап 2: Убрать мёртвый broker id из Replicas через reassign
 
 После unclean election брокер остаётся в `Replicas` как мёртвая реплика (в Isr его уже нет).
-Полный разбор — скилл `kafka-reassign-partiotions`, `history/MDBSUP-4166.md`.
+Полный разбор — скилл `kafka-reassign-partitions`, `history/MDBSUP-4166.md`.
 
 Кратко:
 1. `kafka-topics --describe | grep "Replicas:.*<dead_broker_id>"` — собрать все партиции.
@@ -317,12 +442,16 @@ Reassign проходит мгновенно, т.к. мёртвый брокер
    `incrementalAlterConfigs` для установки throttle через controller. Если controller перегружен
    или metadata quorum медленный — `TimeoutException` за 60 сек. Reassign при этом не
    запускается. Решение — `--execute` без `--throttle`, либо повторить позже.
+   Вариант (MDBSUP-5067, vkcluster-kafka): вместо таймаута — `InvalidRequestException:
+   Dynamic thread count update validation failed for num.replica.fetchers=8, value should
+   not be greater than double the current value 1`. Лечение то же — повторить `--execute`
+   без `--throttle`.
 5. **`grep "^Topic:"` не матчит строки партиций** — перед `Topic:` в строках партиций есть
    табуляция. Использовать `grep "Replicas:.*<broker_id>"` или `grep -E "^\s*Topic:"`.
 6. **tcl/expect + Python `[...]`**: `expect -c '...'` интерполирует `[...]` как tcl command
    substitution. List comprehensions ломаются. Решение — base64-кодировать python-скрипт
    локально, отправить через `echo '<b64>' | base64 -d > /tmp/script.py`.
-   Подробнее про грабли Tcl/expect — [`mcc-host-access/commands/pitfalls.md`](../../mcc-host-access/commands/pitfalls.md).
+   Подробнее про грабли Tcl/expect — [`mcc-host-worker/commands/pitfalls.md`](../../mcc-host-worker/commands/pitfalls.md).
 
 ### Похожий сценарий — Cruise Control не убирает мёртвый брокер
 

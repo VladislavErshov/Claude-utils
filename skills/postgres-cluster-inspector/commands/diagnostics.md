@@ -1,11 +1,11 @@
 # Диагностика MDB PostgreSQL хостов
 
-Доступ к хостам — через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md).
+Доступ к хостам — через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md).
 Здесь — только специфика PostgreSQL.
 
 ## Чеклист первичной разведки (read-only)
 
-При поступлении "хост лежит" — зайти на хост через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md)
+При поступлении "хост лежит" — зайти на хост через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md)
 и выполнить команды:
 
 ```bash

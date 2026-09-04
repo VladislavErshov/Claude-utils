@@ -1,7 +1,7 @@
 # Команды на Kafka-хосте
 
 Подключение к хосту и выполнение команд — через скилл
-[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc ssh` + expect, см.
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc ssh` + expect, см.
 `commands/ssh.md` для базового шаблона). Здесь — только специфика Kafka.
 
 ## sudo -u kafka и env
@@ -29,7 +29,7 @@ EOF
 bash /tmp/t.sh
 ```
 
-Heredoc-трюк загружается через `mcc ssh + expect` (см. [`mcc-host-access`](../../mcc-host-access/SKILL.md),
+Heredoc-трюк загружается через `mcc ssh + expect` (см. [`mcc-host-worker`](../../mcc-host-worker/SKILL.md),
 `commands/ssh.md` и `commands/pitfalls.md` — Tcl-эскейпы, промпт `/# `).
 
 ## Проверка после deploy
@@ -42,4 +42,4 @@ curl -s localhost:23570/metrics | head -10
 tail -10 /mnt/logs/dbms/share-group-lag-exporter.err.log
 ```
 
-Подключение к хосту — через скилл [`mcc-host-access`](../../mcc-host-access/SKILL.md).
+Подключение к хосту — через скилл [`mcc-host-worker`](../../mcc-host-worker/SKILL.md).

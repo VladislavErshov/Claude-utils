@@ -19,7 +19,7 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 (к Prometheus/Grafana напрямую).
 
 > Доступ к хостам и грабли Tcl/SSL/Namespace — в скилле
-> [`mcc-host-access`](../mcc-host-access/SKILL.md). Ниже — только специфика метрик.
+> [`mcc-host-worker`](../mcc-host-worker/SKILL.md). Ниже — только специфика метрик.
 
 ## Документация
 
@@ -55,7 +55,7 @@ host_checker для проверки состояния брокера, не Pro
 
 ## Что нужно
 
-- **Доступ к хостам** — через скилл [`mcc-host-access`](../mcc-host-access/SKILL.md).
+- **Доступ к хостам** — через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md).
   Специфика метрик — `commands/check_metrics.md`.
 - **Сопоставление имён графиков Grafana с метриками** — через скилл
   [`grafana-plot-creator`](../grafana-plot-creator/SKILL.md). Если на дашборде Grafana
@@ -104,6 +104,15 @@ host_checker для проверки состояния брокера, не Pro
 - **share-group-lag-exporter (23570) падает** — в env остались `KAFKA_OPTS` с `-javaagent` или `JMX_PORT=9000`.
 - **Fenced брокер** — `FencedBrokerCount > 0` на controller-хосте.
 - **Under-replicated partitions** — `UnderReplicatedPartitions > 0` на broker-хосте.
+- **Высокий CPU процесса Kafka (`process_cpu_seconds_total`)** — может быть вызван не самой Kafka,
+  а TOS agent (javaagent observability): у него были утечки памяти → частый GC → GC выжирал
+  все ядра. Подробности и диагностика — `commands/check_metrics.md`.
+- **Kafka 4.3 жрёт больше CPU, чем 3.8, при равной нагрузке (MDBDEV-3145)** — три фактора:
+  (1) share-group-lag-exporter спавнит 2 JVM (`kafka-share-groups.sh`) каждые 60с, даже когда
+  share groups 0 — на 3.8 скрипта нет и collect бесплатный; (2) /metrics у 4.3 тяжелее
+  (636KB vs 568KB, KRaft/share-coordinator MBean'ы); (3) data-plane треды на тихом брокере
+  0.20 ядра vs 0.011 у 3.8 (чистый idle-шум не вычленен). Разбор —
+  `history/2026-08-21-MDBDEV-3145-dsp-notices-cpu-throttled-4.3-vs-3.8.md`.
 
 ## Что НЕ покрывает скилл
 

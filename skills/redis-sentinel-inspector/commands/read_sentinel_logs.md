@@ -4,7 +4,7 @@
 
 Пользователь даёт список хостов вида `1.db.<cluster>-cfs-redis.<dc>.one-infra.ru`.
 Скачать `/mnt/logs/dbms/` со всех хостов — через скилл
-[`mcc-host-access`](../../mcc-host-access/SKILL.md) (`mcc scp`, см. `commands/scp.md`
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md) (`mcc scp`, шаблон массового скачивания — в скилле mcc-host-worker
 для шаблона массового скачивания).
 
 Скачаются: `redis.log`, `redis-sentinel.log`, `redis-server-systemd-service.log`.
@@ -83,7 +83,7 @@ grep "$TARGET_HOST" "$LOG" | grep "+sdown" | tail -10
 После выполнения `SENTINEL RESET <master>` на всех хостах — подождать 30-60 сек и
 проверить, что спам `Failed to resolve hostname` прекратился: ещё раз скачать
 `/mnt/logs/dbms/redis-sentinel.log` со всех хостов (через скилл
-[`mcc-host-access`](../../mcc-host-access/SKILL.md), `mcc scp`) и проверить:
+[`mcc-host-worker`](../../mcc-host-worker/SKILL.md), `mcc scp`) и проверить:
 
 ```bash
 for H in "${CLUSTER_HOSTS[@]}"; do
