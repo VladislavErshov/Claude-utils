@@ -5,6 +5,18 @@
 
 ## Грабли
 
+- **Команды выполнять БЕЗ `sudo`** — пользователь mcc уже имеет нужные права на хостах
+  MDB (docker/systemctl/файлы доступны напрямую). `sudo docker: command not found` —
+  признак лишнего sudo: PATH под sudo не содержит нужных бинарников.
+- **Первая попытка часто падает** (`Connection closed by remote host`, SSL handshake и т.п.) —
+  это норма, mcc при этом полностью рабочий. **Если упала первая попытка — всегда делать
+  несколько НОВЫХ попыток** (3-5, с паузой 3-5с), при необходимости сменить хост/ДЦ:
+  ```bash
+  for i in 1 2 3 4 5; do
+    OUT=$(mcc --local -n infra sshexec <host> "<cmd>" 2>&1) && echo "$OUT" && break
+    sleep 4
+  done
+  ```
 - **Требует namespace `-n infra`** — без него `NamespaceMissingException` даже на
   dev-кластерах (проверено на mcc 0.29.0, `2.broker.rescale-mdbdev-kafka.pc`). В отличие от
   scp, который на dev иногда проходит без флага, sshexec namespace обязателен.

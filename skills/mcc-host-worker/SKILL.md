@@ -26,6 +26,9 @@ mcc (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — внутрен�
 5. **`-n infra`** добавлять при `NamespaceMissingException`.
 6. **`SSL Handshake is not finished` / `Too early`** — туннель к minion не успел
    подняться. Повторить через 2-5 сек, `sleep 2-3` между заходами.
+   **mcc работает стабильно, но первый вызов может упасть — всегда ретрай 3-5 раз**
+   (цикл с паузой 3-5с: `for i in 1..5; do mcc ... && break; sleep 4; done`),
+   не считать ошибку с первого раза блокером.
 7. **expect + Tcl**: `[...]` → escape/переписать, `$VAR` → `\$VAR`, сложные команды —
    heredoc в файл, python с list comprehensions — base64. См.
    [commands/pitfalls.md](commands/pitfalls.md).
@@ -38,6 +41,10 @@ mcc (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — внутрен�
     `-n infra`. См. [commands/query.md](commands/query.md).
 12. **Проброс порта на localhost** возможен через `mcc tp-port-forward <host>:<port>`
     (Teleport, нужен доступ к tp.odkl.io). См. [commands/portforward.md](commands/portforward.md).
+    ⚠️ **tp-port-forward — ТОЛЬКО для БД** (postgres и т.п., там нет SSH-альтернативы).
+    Для выполнения команд на хостах телепорт НЕ прокидывать — использовать `mcc ssh`/`sshexec`
+    напрямую. Не строить схемы «туннель к сервисному порту + /etc/hosts» — это хрупко
+    (резолв AAAA в обход hosts, один туннель на все FQDN, sudo для hosts).
 
 ## FQDN-шаблоны хостов
 

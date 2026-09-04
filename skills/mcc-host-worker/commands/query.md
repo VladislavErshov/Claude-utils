@@ -88,6 +88,30 @@ state=FINISHED  outcome=LOST_MINION  outcome_text="Unreported by minions"
 Миньон (VM) умер, диск/сервис остались в облаке. В UI MDB симптомы — метрики хоста
 `unknown`. Лечение — полный флоу пересоздания хоста: [commands/lifecycle.md](lifecycle.md).
 
+Опций две: миграция volume'ов (`mcc migrate`) или дроп дисков с последующим
+передеплоем (lifecycle). На практике миграция на мёртвом минионе не взлетает:
+
+```bash
+mcc --local -n infra -c <dc> migrate <uuid1>,<uuid2> -f yaml
+# *** ERROR (ServiceValidationException): No devices found to make MIGRATING
+```
+
+(`No devices found to make MIGRATING` — копировать данные с недоступного минионa
+неоткуда; `--hint`/`--relocate` не помогают). Реально остаётся: delete volumes →
+start сервиса — облако аллоцирует новые volumes на живом минионе.
+
+Грабли и обязательные проверки:
+
+- **LOST_MINION ≠ VM мертва.** VM может жить и отдавать сервис (Redis отвечает на
+  26379/6379, sentinel-пинги проходят), пока модель облака FINISHED. `sshexec` на
+  такой хост падает `ServiceValidationException: ... is not scheduling on a minion,
+  please start it first` — ssh только через mcc, поэтому диагностика сервиса идёт с
+  живых соседей (например `redis-cli -h <lost-host> -p 26379 ...` с другого хоста).
+- **Перед дропом дисков проверить, не мастер ли этот хост для БД.** Для Redis
+  Sentinel: `sentinel get-master-addr-by-name <master>` с живого соседа. Если
+  потерянный хост — мастер, сначала `sentinel failover <master>`, иначе дроп дисков =
+  потеря данных.
+
 ## `mcc log-streams` / `mcc logs` — логи контейнера через master
 
 Без ssh/scp достать логи. Сначала список потоков:

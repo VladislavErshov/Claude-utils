@@ -6,6 +6,13 @@ sysconfig и т.п.). Порядок обязателен: сначала stop �
 Все команды: `mcc --local -n infra -c <dc> <cmd>` (без `-n infra` →
 NamespaceMissingException; `status` по имени сервиса может требовать `-c <DC>`).
 
+Типовой вход в этот флоу — `LOST_MINION` (маркеры и грабли:
+[query.md](query.md#маркеры-лежащих-хостов-lost_minion)): миграция volume'ов с
+мёртвого минионa невозможна (`No devices found to make MIGRATING`), остаётся
+пересоздание. ⚠️ Если лежащий хост — текущий мастер БД (Redis: `sentinel
+get-master-addr-by-name`), сначала failover на живого соседа — дроп дисков мастера =
+потеря данных.
+
 ## 0. Диагностика перед работой
 
 ```bash
