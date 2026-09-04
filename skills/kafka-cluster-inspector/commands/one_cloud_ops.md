@@ -92,3 +92,14 @@ withdraw через pexpect) — канон в [`mcc-host-worker`](../../mcc-hos
   ghost-хосты в модели оператора, полный ручной флоу + скрипты Decommission/Unregister/RackCheck.
 - [history/MDBSUP-4899](../history/MDBSUP-4899-2026-08-27.md) — оператор ничего не успел
   сделать; op_stop первым; reassign не потребовался (уже перелито); unregister + withdraw + SQL.
+- [history/MDBSUP-5051](../history/MDBSUP-5051-2026-09-03-upscale-broker-replicas-op-restart-false-success.md) —
+  upscale-аналог `kafka.upscale-broker-replicas`: op_stop + отмена add_hosts (canceled) +
+  удаление строки-призрака из host_state; ловушка «ложный успех get_result» после
+  рестарта оператора (все tasks done ≠ операция done).
+- [history/MDBSUP-5092](../history/MDBSUP-5092-2026-09-03-downscale-broker-isfresh-precondition.md) —
+  precondition false из-за `isFresh() false` (фейлы refresh user/topic/group state,
+  не «No one primary»); попытки операции перезаряжались на уровне операции; **операция
+  сошлась сама после op_stop + withdraw** (get_result увидел TASK_ABSENT → done →
+  update_db_connection_url + finish_task) — SQL не понадобился. Брокеры в 4 ДЦ — stop
+  только инстанса, не сервиса; BROKER-листенер PLAINTEXT (client.properties с SASL
+  ломает AdminClient).

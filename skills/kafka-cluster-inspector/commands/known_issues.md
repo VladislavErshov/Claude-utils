@@ -137,6 +137,55 @@ grep "Starting Cruise Control metrics reporter" /mnt/logs/dbms/kafka-broker.out.
 `metric.reporters` и весь блок `cruise.control.metrics.reporter.*`, рестартовать
 `kafka-broker.service`. Минус — Cruise Control перестанет получать метрики с брокеров.
 
+## Cruise Control: цели NotReady — BROKER_CPU_UTIL не идёт с одного брокера (JDK cgroup v1)
+
+**Инцидент-референс**: кластер `trg-190836-dwh-datatransfer-kafka`, брокер 21001 (kc), 2026-09-03.
+
+**Симптом**: в CC `state?substates=analyzer` — `isProposalReady: false`, capacity-цели
+(Disk/Cpu/NetworkInbound/OutboundCapacity, DiskUsageDistribution) `NotReady`, готовы только
+3 distribution-цели. `MonitorState`: 0 валидных окон из 5, полнота окон одинаковая и низкая
+(например 2/185 = 1.08%). В облаке — `availability_details: NO_TASK_IN_PROGRESS; Proposals are not ready`.
+
+**Диагностика по цепочке**:
+
+1. На cruise-хосте: `grep '] WARN Skip generating' /mnt/logs/dbms/cruise-control.out.log.1 | tail -5`
+   → `Skip generating metric sample for broker 21001 because the following required metrics are missing [BROKER_CPU_UTIL]`.
+   Сэмплы брокера не создаются → окна невалидны → capacity-цели требуют 95% полноты и не готовы.
+2. На брокере-виновнике: `grep -A 5 'Failed reporting CPU util' /mnt/logs/dbms/kafka-broker.out.log | tail -10`
+   → `java.io.IOException: Java Virtual Machine recent CPU usage is not available.`
+   от `CruiseControlMetricsReporter` (каждую минуту, с момента старта брокера).
+3. На брокере через Jolokia (порт 7777): `curl -s http://localhost:7777/jolokia/read/java.lang:type=OperatingSystem/ProcessCpuLoad,SystemCpuLoad`
+   → оба `-1.0` (на здоровых брокерах `0.0..1.0`).
+4. Свежая JVM на этом хосте воспроизводит NPE в JDK:
+   `CgroupV1Subsystem.getCpuQuota → CgroupUtil.readStringValue → Path.of(null)` — JDK не резолвит
+   путь cpu-контроллера cgroup v1 для процесса (у порто-контейнера процесс в
+   `pids-prod/libpod-…`, на здоровом хосте — `pids-idle`).
+
+**Причина**: на конкретной VM (host kc, 128 CPU, uptime 502 дня) состояние cgroup v1
+ломает JDK-контейнер-детекцию: `getProcessCpuLoad/getSystemCpuLoad` возвращают -1 →
+репортер CC не может отправить `BROKER_CPU_UTIL`. Конфиг CC и образ — нормальные
+(на соседних ДЦ тот же образ работает). Специфика хоста, не кластера.
+
+**Проверенный workaround** (тестовой JVM на том же хосте):
+`java -XX:-UseContainerSupport CpuTest.java` → `proc=0.0001 sys=0.15` — CPU load работает.
+Т.е. флаг `-XX:-UseContainerSupport` в JAVA-опциях брокера чинит репортинг CPU.
+Минус: JVM перестанет учитывать cgroup-лимиты (auto heap sizing); если Xmx задан явно —
+практически без последствий.
+
+**Ход фикса (факт)**: рестарт `kafka-broker` ✗, рестарт инстанса с `--relocate` на другой
+минион (srvk5977→srvk4440) ✗ — JVM по-прежнему отдавала -1. Однако после серии рестартов
+сэмплы брокера восстановились, окна наполнились.
+
+**Резолюция (2026-09-03 ~16:30, кластер trg-190836-dwh-datatransfer-kafka)**: RESOLVED —
+`isProposalReady: true`, все 8 целей Ready (включая capacity), NumValidWindows 3/5.
+Флаг `-XX:-UseContainerSupport` в итоге НЕ понадобился. Нюанс: MXBean может эпизодически
+возвращать -1 — если "цели не готовы" повторятся на kc-кластерах, возвращаться к этому
+чеклисту (далее — запасной фикс флагом через `/etc/sysconfig/kafka` ← PMS `kafka.j2`).
+
+**После фикса**: цели станут Ready через ~5 окон (25 мин) — по числу `num.partition.metrics.windows`;
+проверка: `curl 'http://localhost:8080/kafkacruisecontrol/state?substates=analyzer'` на cruise-хосте
+(REST порт CC в MDB — **8080**, не дефолтный 9090).
+
 ## Broker не регистрируется в controller quorum (рассинхрон `controller.quorum.voters`)
 
 **Инцидент-референс**: INCALL-42685 (2026-07-23, кластер `kafka-spd-adtech-kafka`).
@@ -393,6 +442,10 @@ Reassign проходит мгновенно, т.к. мёртвый брокер
    `incrementalAlterConfigs` для установки throttle через controller. Если controller перегружен
    или metadata quorum медленный — `TimeoutException` за 60 сек. Reassign при этом не
    запускается. Решение — `--execute` без `--throttle`, либо повторить позже.
+   Вариант (MDBSUP-5067, vkcluster-kafka): вместо таймаута — `InvalidRequestException:
+   Dynamic thread count update validation failed for num.replica.fetchers=8, value should
+   not be greater than double the current value 1`. Лечение то же — повторить `--execute`
+   без `--throttle`.
 5. **`grep "^Topic:"` не матчит строки партиций** — перед `Topic:` в строках партиций есть
    табуляция. Использовать `grep "Replicas:.*<broker_id>"` или `grep -E "^\s*Topic:"`.
 6. **tcl/expect + Python `[...]`**: `expect -c '...'` интерполирует `[...]` как tcl command
