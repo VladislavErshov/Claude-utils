@@ -9,8 +9,9 @@ description: Запусти MDB Data локально для тестирова�
 
 1. Запустить инфраструктуру (только postgres — не пытаемся поднимать sentinel):
 ```bash
-cd /Users/vl.ershov/Documents/Git/mdb-data && docker compose up -d pg_backstage_plugin_mdb
+cd /Users/vl.ershov/Documents/Git/mdb-data && docker compose up -d pg_backstage
 ```
+Сервис в compose называется `pg_backstage` (контейнер — `pg_backstage_plugin_mdb`, порт 6434).
 
 Если поднимать compose целиком (`docker compose up -d`), `redis_sentinel` падает с `Bind for 0.0.0.0:26379 failed: port is already allocated` — порт уже держит `stubs-sentinel-1` из `backstage/stubs`. Это **не блокирует** работу (mdb-data приложение подключается к sentinel из stubs), но `docker compose` пишет красную ошибку в stderr, которая выглядит фатально. Узкий запуск убирает шум.
 

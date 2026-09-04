@@ -10,18 +10,21 @@ allowed-tools: [bash, read_file, edit_file, write_file]
 
 ## Запуск
 
-1. **Инфраструктура mdb-data** — команда `/setup-local-mdb-data` (postgres, redis, сам mdb-data).
+1. **Инфраструктура mdb-data** — команда `/setup-local-mdb-data` (postgres 6434 + сам mdb-data на 8081).
 2. **mdb-processing + temporal** — обязателен для тестов, затрагивающих workflow (modify/resize/create кластеров). Команда `/setup-local-temporal` поднимает docker-compose (temporal, vault, kafka, wiremock) в `mdb-processing/localrun/`, затем запускает сам mdb-processing через `bootRun --args='--spring.profiles.active=local'`.
-3. **Backstage НЕ нужен** для базовых тестов modify-флоу (мимо UI). mdb-data сам стартует temporal workflow через processing.
-4. **UI (репозиторий mdb)** — Vite dev-сервер на порту **3012**: `pnpm run dev` в `/Users/vl.ershov/Documents/Git/mdb` (Node ^22, см. `/ui-developer`).
+3. **Backstage** (API для UI, 7007 + stubs 6432/6379) — команда `/setup-local-backstage`. НЕ нужен для базовых тестов modify-флоу (мимо UI): mdb-data сам стартует temporal workflow через processing.
+4. **mdb-health** (8082 + pg_health 5434, tiers/warnings для UI) — команда `/setup-local-mdb-health`.
+5. **UI (репозиторий mdb)** — команда `/setup-local-mdb-ui`: Vite dev-сервер на порту **3012** (`pnpm run dev` в `/Users/vl.ershov/Documents/Git/mdb`, Node ^22, см. `/ui-developer`) + vkone-stub (8090).
 
-## Полная локальная связка с UI (5 сервисов)
+## Полная локальная связка с UI (6 сервисов)
 
 UI — это отдельный фронт (репозиторий mdb), его API `/api/mdb/*` отдаёт **Backstage mdb-backend**, а НЕ mdb-data. Полная цепочка:
 
 ```
 UI (3012, vite) ──vite-proxy──▶ Backstage (7007) ──▶ mdb-data (8081) ──▶ mdb-processing (8080) ──▶ temporal (8233)
-        └──▶ vkone-stub (8090)
+         │                        mdb-health (8082) ◀── v1 /api/mdb-health/* (напрямую из vite)
+         │                        mdb-health (8082) ◀── mdb-data ◀── v2 /api/v2/mdb-health/* (прокси)
+         └──▶ vkone-stub (8090) ◀── user info + feature flags
 ```
 
 `.env` репозитория mdb (в `.gitignore`, правки безопасны):
@@ -29,18 +32,99 @@ UI (3012, vite) ──vite-proxy──▶ Backstage (7007) ──▶ mdb-data (8
 MDB_API_URL=http://localhost:7007
 VKONE_API_URL=http://localhost:8090
 MDB_DATA_LOCAL_URL=http://localhost:8081
+MDB_HEALTH_LOCAL_URL=http://localhost:8082
 PROXY_API_PREFIX=/proxy
 ```
-С `PROXY_API_PREFIX` запросы идут через vite-proxy — обходит CORS. Важно: прод-балансер `api.mdb.one-infra.ru` рутил `/api/mdb/*` → Backstage (7007), а **`/api/v2/*` (products, кластерные v2-ручки) → mdb-data (8081)** — в `vite.config.cts` добавлен opt-in прокси `/proxy/_mdb/api/v2/*` → `MDB_DATA_LOCAL_URL` (без переменной — no-op).
+С `PROXY_API_PREFIX` запросы идут через vite-proxy — обходит CORS. Важно: прод-балансер `api.mdb.one-infra.ru` рутил `/api/mdb/*` → Backstage (7007), а **`/api/v2/*` (products, кластерные v2-ручки) → mdb-data (8081)**, `/api/mdb-health/*` (v1) → mdb-health (8082), а **`/api/v2/mdb-health/*` → mdb-data (8081)**, который сам проксирует в mdb-health (см. ниже) — всё это разведено в `vite.config.cts` через opt-in переменные `MDB_DATA_LOCAL_URL`/`MDB_HEALTH_LOCAL_URL` (без них — no-op).
+
+**Grafana**: UI встраивает графики напрямую с прода `goc.vk.team` (d-solo iframe, см. `widgets/kafka-groups/lib/grafana.ts`) — локально настраивать нечего, работает из браузера с корпоративным доступом; Grafana-ссылки хостов приходят из сидированного `host_state.grafana_dashboard_link`.
+
+**Грабли UI-репо (mdb)**:
+- `git pull` конфликтует с локальными правками `vite.config.cts` (mdb-health-правила) — резолвить, сохраняя ОБА набора: upstream-правила (`/api/v2/warnings` и новые) + локальные mdb-health-правила; специфичные правила всегда ДО общего `/api/v2`. Схема: `git stash → git pull --rebase → правка конфликта → git add → git stash drop`.
+- После pull — `pnpm install` (package.json/pnpm-lock меняются) и рестарт vite (`lsof -ti:3012 | xargs kill -9; pnpm run dev` с Node ^22 в PATH).
+- «Не удалось загрузить список проектов / Internal Server Error» в UI — чаще всего лежит один из бэкендов: проверь `lsof -iTCP:8080,8081,8082,7007 -sTCP:LISTEN` и `/actuator/health/liveness` каждого; mdb-data на длинном аптайме может упасть (`BUILD FAILED` в /tmp/mdb-data.log) — просто перезапустить bootRun.
 
 ### Запуск Backstage (локально)
 
 1. Инфраструктура: `docker compose -f backstage/stubs/docker-compose.yml up -d` (postgres:6432, redis:6379, clickhouse, sentinel:26379).
    - **pg_boss**: `docker exec postgres psql -U dev -d postgres -c "CREATE DATABASE pg_boss;"` — иначе backend падает на старте.
-   - **Sentinel**: контейнер `stubs-sentinel-1` не слушает с хоста без `bind 0.0.0.0` + `protected-mode no` в `stubs/sentinel.conf` (уже поправлено в репо). Старый контейнер `redis_sentinel` из docker-compose mdb-data держит 26379 и это обычный redis, не sentinel — удалить (`docker rm -f redis_sentinel`), иначе «Project cache initialization failed Command timed out» (ioredis commandTimeout=1000).
+   - **Sentinel**: контейнер `stubs-sentinel-1` не слушает с хоста без `bind 0.0.0.0` + `protected-mode no` в `stubs/sentinel.conf` (уже поправлено в репо). Старый контейнер `redis_sentinel` из docker-compose mdb-data держит 26379 и это обычный redis, не sentinel — удалить (`docker rm -f redis_sentinel`), иначе «Project cache initialization failed Command timed out» (ioredis commandTimeout=1000). ⚠️ После остановки контейнеров поднимать sentinel только через `docker compose up -d` (пересоздание) — `docker start stubs-sentinel-1` стартует старый контейнер **без проброса порта 26379** → Backstage «All sentinels are unreachable» → UI «Internal Server Error» (ioredis сам восстанавливается после пересоздания sentinel).
 2. `app-config.mdb.local.yaml` — нужны `backend.mdb.abc.baseUrl` (http://localhost:8088 wiremock) и `backend.mdb.abc.ca` (любая строка, обязателен `getString`) — иначе `Missing required config value at 'backend.mdb.abc.ca'`. `backend.mdb.auth.enabled: false` уже стоит (локальная сессия `k.boblak` из ADMIN_LOGINS).
 3. Запуск: `yarn mdb-start-backend` в `backstage/` (лог `/tmp/backstage.log`), ждать «Project cache successfully initialized» + «Listening on :7007».
 4. **Устаревшая схема 6432**: если `Undefined column(s): [name]` на projects — снести `backstage_plugin_mdb` (`DROP DATABASE` + `CREATE DATABASE`) и рестартнуть backend (Flyway/knex пересоздаст).
+
+### mdb-health (порт 8082, отдельный сервис)
+
+UI дергает `/api/mdb-health/*` (v1) и `/api/v2/mdb-health/*` (tiers/warnings/hosts/pg-shards) — но **v2-пути обслуживает mdb-data (8081), а не mdb-health**: в mdb-data есть свои контроллеры `ClusterTierApi`/`ProductTiersApi`/`ClusterHostsController`/`PgClusterShardAvailabilityController` (`/api/v2/mdb-health/...`), которые через `HealthClientsConfig` (RestClient с baseUrl из `mdb-health.base-url`) **проксируют** в mdb-health по v1-путям (`@HttpExchange`-интерфейсы из api-модуля mdb-health). В репо mdb-health v2-путей нет вообще (ни в одной ветке, проверено по git history). UI-виджет тиров (`entities/tiers-info`) использует генерацию `mdb-alerts` → v2-пути → mdb-data. Итоговая цепочка: UI → vite → mdb-data (8081) → mdb-health (8082, v1).
+
+⚠️ Обязательные правки конфигов (уже внесены в репо):
+- mdb-data `application-local.yml`: **`mdb-health.base-url: http://localhost:8082`** — дефолт там 8080 (порт processing!), прокси молча ломается.
+- `vite.config.cts`: правило `/api/v2/mdb-health` → `MDB_DATA_LOCAL_URL` (8081), а НЕ `MDB_HEALTH_LOCAL_URL`; v1-правило `/api/mdb-health` → `MDB_HEALTH_LOCAL_URL` (8082). Оба правила — ДО общего `/api/v2`.
+
+Запуск:
+1. Инфраструктура: `docker compose -f mdb-health/docker-compose.yml up -d pg_health` (postgres 5434, БД health; pg_backstage/redis_storage НЕ нужны — читает 6432 stubs-postgres и redis 6379 stubs).
+2. На 6432: `ALTER TABLE operations ADD COLUMN IF NOT EXISTS last_status_sync_ts timestamp;` (mirror-джоба mdb-health ждёт эту колонку).
+3. `application-local.yml` mdb-health грабли (уже поправлены в репо): убрать устаревшие `create-jitter: 10s` (теперь Map с дефолтами); rtconfig — через локальный файл `src/main/resources/rtconfig/local.hjson` (host-info-source/tracing/tiers/warnings; tiers скопирован из прод-PMS `health.testing.rtconfig.tiers`); ssl-бандл pms-client → `~/.mccloud/*` (перезаписывается `--spring.ssl.bundle.pem.pms-client.*`).
+4. Запуск: `./gradlew bootRun --args='--spring.profiles.active=local --server.port=8082 --rtconfig.local-config.path=src/main/resources/rtconfig/local.hjson --spring.ssl.bundle.pem.pms-client.keystore.certificate=/Users/vl.ershov/.mccloud/client.cert --spring.ssl.bundle.pem.pms-client.keystore.private-key=/Users/vl.ershov/.mccloud/client.key --spring.ssl.bundle.pem.pms-client.truststore.certificate=/Users/vl.ershov/.mccloud/ca.crt --redis.storage.ttl.host_info_ttl=24h --redis.storage.ttl.cluster_availability_ttl=1m'` (JDK 21, лог `/tmp/mdb-health.log`). ⚠️ Пути к сертам — только **абсолютные**: `~` внутри `--args=` не раскрывается → `FileNotFoundException: ~/.mccloud/client.cert` → `Error creating bean 'pmsRestClient'` → BUILD FAILED. TTL-оверрайды обязательны: дефолтный `host_info_ttl=1m` протухает засеянные хосты за минуту.
+5. UI: в `.env` mdb `MDB_HEALTH_LOCAL_URL=http://localhost:8082` + `MDB_DATA_LOCAL_URL=http://localhost:8081`; в `vite.config.cts` прокси-правила `/proxy/_mdb/api/mdb-health` → 8082 и `/proxy/_mdb/api/v2/mdb-health` → 8081 (префикс пути СОХРАНЯЕТСЯ в target; правило `/api/v2/mdb-health` — ДО общего `/api/v2`).
+
+**V1-пути mdb-health** (прямые проверки curl на 8082):
+- `GET /api/mdb-health/tiers/clusters/{clusterId}` (+ `/history`, POST `/recalculate`); `/api/mdb-health/tiers/products/{productId}`
+- `GET /api/mdb-health/warnings/cluster/{clusterId}`; `/warnings/project/{projectId}/db-type/{dbType}`; `/warnings/project/{projectId}`
+- `POST /api/mdb-health/cluster/hosts` — body `{"clusterId":"...","hosts":["fqdn",...]}`, пустой hosts → 400 «No hosts present in request»; `GET /api/mdb-health/host/{host}`
+- Несуществующий путь → 500 JSON `{"trace_id":...,"message":"Unexpected error"}` (в логе NoResourceFoundException «No static resource ...» — значит неверный путь, не баг сервиса).
+
+**Варнинги-блок UI**: UI-генерация `src/shared/api/__generated__/warnings.ts` (репо mdb, master с конца сентября 2026; до неё виджета в UI не было — блок просто не рендерился) → mdb-data `WarningsController` — `GET /api/v2/warnings/cluster/{clusterId}` (+ `/project/{projectId}/db-type/{dbType}`, `/project/{projectId}`). `WarningsFacade` тянет варнинги из mdb-health и **рендерит Pebble-шаблонами из rtconfig** (`warnings.cluster`/`warnings.cluster_list`/`warnings.db_list`: `enabled`, `dbTypes`, `enabledWarningTypes`, `criticality`, `forceEnabled.projectIds` — без настройки всё фильтруется в пустой список). В проде rtconfig из PMS-ключа `mdb/data.prod.rtconfig.warnings.cluster` (ns=infra, app=mdb, host-mdb); локально mdb-data читает `rtconfig/local.hjson` (`rtconfig.local-config.path` в application-local.yml). **Варнинги НЕ протухают**: в Postgres нет TTL, сид живёт бесконечно; compute-таски пересчитывают их раз в 30m (`cluster-warnings.sync` / `tasks.compute.success-delay: 30m`) и локально сид не трогают.
+
+**⚠️ Санитайзер UI (rendered-html.ts) — что проходит в renderedContent**:
+- ALLOWED_TAGS: `a b strong i em br span ul ol li table thead tbody tr th td` — **`hr` и `div` ВЫРЕЗАЮТСЯ** (разделитель `<hr>` не работает!)
+- ALLOWED_STYLE_PROPS: `color background-color font-size font-style font-weight text-decoration text-transform letter-spacing white-space opacity padding margin border border-radius display` — **`border-top`/`padding-top` и прочие `-top/-bottom` вырезаются** (линия из border-top невидима!)
+- **Рабочий горизонтальный разделитель**: `<span style="display: block; background-color: #ccc; padding: 1px; margin: 12px 0"></span>` (padding-shorthand разрешён → высота 2px)
+- **Пустой `<span></span>` как per-type шаблон**: скрывает варнинг из contents (UI-фильтр `hasRenderedContent` вырезает теги → длина 0 → не рендерится), но mdb-data не падает на fallback (рендер непустой)
+- **Таблицы**: разметка без инлайн-стилей (`table/thead/tbody/tr/th/td`) — CSS виджета сам рисует рамку, скругления и разделители строк (как topology-таблица)
+- **Порядок секций в блоке**: title → header → contents (порядок = массив warnings, kafka раньше topology по алфавиту — НЕ управляется rtconfig) → footer (рендерится ПОСЛЕДНИМ). Чтобы свой блок показался ПОСЛЕДНИМ: per-type шаблон-заглушка `<span></span>` (скрыть из contents) + рендер в footer-шаблоне (контекст: `warnings` с `warningParams`, `warningTypes`, `dbType`)
+- evaluate() делает `.trim()` → чисто пробельный шаблон считается пустым → fallback на message
+
+Данные: mirror-джоба сама синкает mirror.* из 6432. Tier/warnings сеять из прод-health (туннель 53482, БД health — подключение см. скилл `db-worker`): `tier.tier_state`, `tier.tier_history` (setval id_seq!), `warnings.cluster_warnings` — фильтр по `mirror.db_cluster WHERE project_id=160 AND type='kafka'` (только Kafka из mdbdev, остальное — по явному запросу пользователя). Без tier-данных контроллер отдаёт 404 (это его нормальный ответ «нет данных», не роутинг-баг). Сид распространяется не на все кластеры (~36 из mirror) — если у открытого кластера пусто, досей его из прода по `cluster_id` (сначала проверить counts: warn/tier_state/tier_history). Колонки локальных таблиц: `warnings.cluster_warnings(id,db_type,cluster_id,project_id,warning_type,warning_params,warning_message,created_at,updated_at,product_id)`, `tier.tier_state(cluster_id,db_type,criticality,tier,last_calculated_at,details)`, `tier.tier_history(id,cluster_id,old_tier,new_tier,changed_at,details)`.
+
+**Статусы/роли хостов — сидировать в Redis mdb-health через save-эндпоинты.** Статусы/роли/утилизация хостов живут ТОЛЬКО в Redis mdb-health (6379, пароль в `application-local.yml` → `redis.storage.password`; в `host_state` 6432 их нет вообще, там только dc/links — UI-модель `entities/clusters/model/details.ts` мерджит список хостов Backstage с health из mdb-health). В проде Redis пишут воркеры; локально сеять самому:
+- `POST /api/mdb-health/host/` — HostDto `{"host":"<fqdn>","status":"AVAILABLE","role":"...","dbType":"kafka","timestamp":"<ISO>"}` (по одному на хост)
+- `POST /api/mdb-health/host/utilization/` — список `{"host","cpuPercent","memoryPercent","diskPercent","lanInPercent","lanOutPercent"}` (иначе `getHostsInfo` сочтёт данные неполными)
+- **status строго `"AVAILABLE"`** (`KafkaClusterStatusCalculator.isAvailable` — equalsIgnoreCase; `"ALIVE"` не считается → UNKNOWN)
+- **role по enum `HostRole` (KAFKA)**: `leader` (ровно один контроллер), `follower` (остальные контроллеры), `observer` (брокеры). НЕ `leader-controller`/`broker` — HostRole их не знает → roleName unknown; калькулятор доступности ждёт ровно 1 available leader + followers ≥ ctrl/2 + brokers ≥ (n+1)/2
+- Ключи в Redis вида `{<cluster-name>}:<fqdn>`; после сида работают `POST /api/v2/mdb-health/cluster/hosts` (таблица хостов UI, v1+v2), `GET /api/mdb-health/cluster/{id}/availability/`, `/internal/api/mdb-health/cluster/{id}/state`
+- **Доступность** пересчитывается джобой (`mdb-cluster-status` cron */30s) и кэшируется (`cluster_availability_ttl`); для state=available ещё нужен факт `kafka.offline_partitions.count` (Redis-ключ `facts.<clusterId>`, пишется коллекциятором с коннектом к реальным хостам Kafka — локально его нет → state будет UNKNOWN/unavailable даже при собранном кворуме; без факта это норма). Состояние кластера может отставать на минуты — это ожидаемо.
+
+Fallback в one-cloud (`NewSqlCassandraHostInfoService`) работает только для newsql/cassandra — dev-хосты `*.ic.vkcl.ru` не поддерживает. Статус кластера в UI (шапка) — из последней операции (см. сидирование `operations`).
+
+Грабли:
+- **HikariPool-1 exhaustion на старте** (total=10, waiting 30–38, «Connection is not available»): после первого mirror-синка (~2400 operations) task engine плодит задачи (`task_engine.tasks` running/pending) и забивает пул — временное, отпускает после начального синка; в этот период API отвечает «Unexpected error».
+- **Туннель 53482 может висеть мёртвым** (tsh стоит в LISTEN, но psql «server closed the connection unexpectedly»): убить процесс tsh и переподнять `mcc tp-port-forward 1.db.mdb-health-mdb-pgsql.hc.one-infra.ru:7432 --local-port 53482` (в фоне, ~10 сек до готовности).
+- Контейнер `pg_health`: юзер/БД `health` (НЕ `admin` — admin это юзер прод-БД); volume `pg_health_data` — сид-данные переживают пересоздание контейнера.
+- Контроллеры mdb-health обслуживают пути С префиксом `/api/mdb-health/...` — vite-proxy не должен его срезать (targetUrl с суффиксом).
+
+### Локальный тест warnings-чеков с реальным кворумом (пример — KafkaQuorumVotersCheck, MDBDEV-3237)
+
+Чеки warnings ходят в живые кластеры (`describeQuorum` через KafkaAdminClient). Полный рецепт:
+
+1. **rtconfig**: в mdb-health `rtconfig/local.hjson` включить чек (`warnings.kafkaQuorum: {enabled, dbTypes, forceEnableProjectIds}`) — ⚠️ файл **строгий JSON** (ключи в кавычках, запятые); незакавыченный ключ → `Failed to read local realtime config` → каскад `realtimeConfig → tracingFeatureFlags → observationRegistry → Tomcat` → BUILD FAILED (по стеку корень не очевиден, ищи бин `realtimeConfig`). **Для автономного цикла (sync сам создаёт compute-таски раз в ~5 мин) обязательны КОРНЕВЫЕ флаги `warnings.enabled: true` + `warnings.enabledDbTypes: ["kafka"]`** — без них sync молча скипается (`ClusterWarningsSyncProcessor.isDbTypeEnabled`), compute-таски не создаются, варнинги не пересчитываются. TopologyCheck дополнительно требует `warnings.topology.unreliableDatacenters` (например ["hc","kc"]) — без списка чек скипается.
+2. **Сеть до :9092**: прямые IP недоступны → `mcc tp-port-forward <controller>:9092 --local-port 9092` + `/etc/hosts: 127.0.0.1 <все FQDN контроллеров>` (все кластеры увидят кворум туннельного контроллера — для mismatch-сценариев достаточно). Правка /etc/hosts — `osascript ... with administrator privileges` (диалог с паролем, ждать ответа пользователя!).
+3. **SSL CA Kafka**: конфиг ждёт `${HOME}/app/infra/infra_kafka_ca.crt` — положить `mkdir -p ~/app/infra && cp ~/.mccloud/kafka-tls-ca.crt ~/app/infra/infra_kafka_ca.crt` (иначе «Modification time of key store could not be obtained» → «Failed to create new KafkaAdminClient»).
+4. **Пароль super-юзера**: mdb-health читает из Vault по `mirror.users.vault_path`. Локально: пароли в локальный vault из localrun (`mdb-processing-vault`, token `root`, engine `zkv` — включается `vault secrets enable -path=zkv kv-v2`, после пересоздания контейнера слетает!) + юзеры из прода в 6432 `users` (mirror синкнет) + запуск mdb-health с `--vault.vaults.infra.address=http://localhost:8200 --vault.vaults.infra.token=root`.
+5. **Данные кластера**: при необходимости докачать host_state из прода (туннель 53480) — upsert по (cluster_id, host); зеркалируется в 5434 автоматически (~1 мин).
+6. **Запуск чека вручную** (не ждать 30m-цикла): вставить compute-таску:
+   ```sql
+   INSERT INTO task_engine.tasks (type, task_key, status, attempt, state, next_retry_after)
+   VALUES ('clusterWarningsCompute.kafka.nonSharded', '<clusterId>', 'pending', 0,
+           '{"clusterId":"<id>","dbType":"kafka","shardingMode":"NON_SHARDED","projectId":160,"productId":null}', now());
+   ```
+   Воркер подхватывает за ~30-60с; упавшие таски сами ретраятся (после фикса проблемы просто дождаться ретрая).
+7. **⚠️ setval после сида**: `SELECT setval('warnings.cluster_warnings_id_seq', (SELECT max(id) FROM warnings.cluster_warnings))` — иначе INSERT чека ловит `DuplicateKeyException cluster_warnings_pkey` (id из прода > sequence).
+8. **Шум facts-тасок** (недостижимые хосты, ретраи каждые 30с): `DELETE FROM task_engine.tasks WHERE type IN ('clusterFactsCollect','clusterStatusCompute') OR type LIKE 'clusterStatusSync%'` — освобождает воркер.
+9. **Рендер новых типов в UI**: mdb-data `rtconfig/local.hjson` → `warnings.cluster`: добавить типы в `enabledWarningTypes` (обычный + forceEnabled) и секции title/header/summary/isRed (`{% if warningTypes contains "<type>" %}`); без шаблонов — title/header пустые (per-warning `renderedContent` работает как fallback на message чека). В проде это обновление PMS `mdb/data.prod.rtconfig.warnings.cluster`. После правки — рестарт mdb-data.
+10. Проверка: `GET localhost:8081/api/v2/warnings/cluster/{id}` — renderedTitle/renderedSummary/warnings[].renderedContent; UI-виджет — `__generated__/warnings.ts`.
+11. **Ground truth кворума через mcc** (без туннелей): на брокере кластера готовый `/opt/kafka/config/client.properties` (SASL_SSL+super) —
+    `mcc ssh` + expect: `/opt/kafka/bin/kafka-metadata-quorum.sh --bootstrap-server <broker-fqdn>:9092 --command-config /opt/kafka/config/client.properties describe --replication` (⚠️ FQDN, не localhost — SAN). Мёртвый voter виден как `LastFetchTimestamp=-1`; контроллеры слушают `CONTROLLER://:9093` (не 9092). Если чек не выдал ожидаемый варнинг — сначала смотри лог `failed to describe quorum` (сеть с ноутбука флапает — чек молча скипается by design).
 
 ### Сидирование из прода (для UI-данных)
 
@@ -48,6 +132,7 @@ PROXY_API_PREFIX=/proxy
 
 - `projects` (все, ~2k), `namespaces` (все, 4), `hardware_presets` (все, ~91)
 - по кластерам проекта (по умолчанию **mdbdev = project_id 160**, ~800 кластеров): `db_cluster`, `db_cluster_version`, `host_state`, `one_cloud_meta`, `db_shards`
+- ⚠️ **Фильтр сидирования по умолчанию: ТОЛЬКО `type='kafka'` AND `project_id=160` (mdbdev)**. Кластеры других типов (postgresql, redis, clickhouse, …) и других проектов — сеять ТОЛЬКО по явному запросу пользователя.
 - **`operations` (последние ~5 на кластер) — обязательно**: статус кластера в UI считается из последней операции (`ClusterManager.calculateClusterStatus` → `mapOperationEntityToModel` без null-check → 500 `Cannot read properties of undefined (reading 'id')` при отсутствии).
 
 Способ: `\copy (SELECT …) to '/dev/stdout' csv header` через туннель → отчистить хвостовой тэг `COPY N` (grep -v) → `docker cp` → `\copy … from csv header`. Грабли:
@@ -72,16 +157,21 @@ mdb-data локально открыт (`mdb.auth.enabled: false` → сесси
 
 ## Порты (важно!)
 
+**Watchdog v4**: `nohup ~/.claude/skills/mdb-local-tester/scripts/watchdog.sh &` (лог `/tmp/mdb-watchdog.log`, стоп `pkill -f mdb-watchdog`) — следит за 8080/8081/8082/7007/3012/8090. Рестарт только после **3 подряд неудач** (debounce, curl timeout 10с — не убивает медленно-но-живые). Перед стартом: `gradle --stop` + зачистка процессов проекта — **gradle-демоны и compile-воркеры не копятся** (именно их размножение → OOM → macOS SIGKILL(exit 137) приложений было причиной постоянных падений). Все JVM с `-Xmx1500m`, backstage только под homebrew `node@18` (yarn engines), vite под nvm node22. Упавшие логи сохраняются как `*.log.last` — причину смерти смотреть там + exit code 137 = убит по памяти.
+
 | Сервис | Порт | Как запустить |
 |---|---|---|
-| mdb-data | **8081** | `bootRun --args='--spring.profiles.active=local --server.port=8081'` |
+| mdb-data | **8081** | `bootRun --args='--spring.profiles.active=local --server.port=8081'`; в local `mdb-health.base-url: http://localhost:8082` (прокси `/api/v2/mdb-health/*` и `/api/v2/warnings/*`) |
 | mdb-processing | **8080** | дефолт в `application.yaml` mdb-processing |
 | mdb UI (vite dev) | **3012** | `pnpm run dev` в `/Users/vl.ershov/Documents/Git/mdb` |
 | Backstage (API для UI) | **7007** | `yarn mdb-start-backend` в `backstage/` + stubs compose |
+| mdb-health | **8082** | `bootRun` local-профиль в `mdb-health/` + pg_health (5434); нужен для tiers/warnings в UI (v2 — через mdb-data) |
 | vkone-stub (auth UI) | **8090** | `node ~/.claude/skills/mdb-local-tester/scripts/vkone-stub.mjs` |
 | temporal UI | 8233 | docker-compose mdb-processing |
 | postgres (mdb-data) | 6434 | docker-compose mdb-data, контейнер `pg_backstage_plugin_mdb` |
 | postgres (backstage) | 6432 | `backstage/stubs/docker-compose.yml`, контейнер `postgres` |
+| postgres (mdb-health) | 5434 | `mdb-health/docker-compose.yml`, контейнер `pg_health` |
+| прод-health БД (туннель) | 53482 | туннель к прод mdb-health (креды у пользователя), источник tier/warnings |
 | redis (backstage) | 6379 | `backstage/stubs/docker-compose.yml`, контейнер `redis` |
 | wiremock (processing) | 8088 | docker-compose mdb-processing |
 
@@ -312,8 +402,8 @@ mTLS-сертификат из `~/.mccloud/` работает — modify-фло�
 # 1. Java-процессы mdb-data (8081) и mdb-processing (8080)
 lsof -ti:8080,8081 | xargs -r kill -9
 
-# 2. Vite dev-сервер UI (3012), Backstage (7007), vkone-stub (8090)
-lsof -ti:3012,7007,8090 | xargs -r kill -9
+# 2. Vite dev-сервер UI (3012), Backstage (7007), vkone-stub (8090), mdb-health (8082)
+lsof -ti:3012,7007,8090,8082 | xargs -r kill -9
 
 # 3. Docker-инфраструктура mdb-data (pg + redis)
 docker compose -f /Users/vl.ershov/Documents/Git/mdb-data/docker-compose.yml down
@@ -323,6 +413,9 @@ cd /Users/vl.ershov/Documents/Git/mdb-processing/localrun && docker compose down
 
 # 5. Docker-инфраструктура Backstage (postgres 6432 + redis 6379 + clickhouse + sentinel)
 cd /Users/vl.ershov/Documents/Git/backstage/stubs && docker compose down
+
+# 6. Docker-инфраструктура mdb-health (pg_health 5434)
+cd /Users/vl.ershov/Documents/Git/mdb-health && docker compose down
 ```
 
 Проверка:
