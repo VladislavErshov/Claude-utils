@@ -31,6 +31,14 @@ mdb-data. Не содержит диагностики — только мето
 
 - Для выполнения команд на хосте — скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md)
   (команда `ssh` + expect, см. `commands/ssh.md`).
+- Kafka-скрипты НЕ в PATH при `mcc sshexec` (`which kafka-topics.sh` пусто) — запускать
+  с полным путём `/opt/kafka/bin/`. Для CLI-инструментов auth-конфиг —
+  `/opt/kafka/config/client.properties` (не `/etc/kafka/kafka-console-consumer.properties`,
+  которого на хосте нет):
+  ```bash
+  mcc --local -n infra sshexec <host> \
+    "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --command-config /opt/kafka/config/client.properties --describe --under-replicated-partitions"
+  ```
 - Для `sudo -u kafka` с env-переменными — `source` из `/etc/sysconfig/kafka`
   (см. `commands/run_commands.md`).
 - Для скачивания конфигов — скачать директорию целиком (`/opt/kafka/config/`),
