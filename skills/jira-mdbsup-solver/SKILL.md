@@ -56,6 +56,14 @@ stackTrace без кода непонятен, нужно сверить фак�
 | ClickHouse                    | **`clickhouse-cluster-inspector`**                                                                                                                                      | broken parts, Keeper quorum / split-brain, TOO_MANY_SIMULTANEOUS_QUERIES                                                                                                                                         |
 | PostgreSQL                    | **`postgres-cluster-inspector`**                                                                                                                                        | Stolon/etcd-состояние, stolonctl, pgbouncer                                                                                                                                                                      |
 
+## Найден баг продукта — предложи тикет
+
+Если при диагностике найден баг в продукте (mdb-processing, mdb-data, one-cloud-ops и т.д.),
+**сам предложи пользователю завести баг-тикет** о нём (и сослаться на уже известный, если
+был). Не ограничивайся комментарием в MDBSUP-тикет — баг иначе теряется. Пример:
+баг waiter'а failoverRedisCluster «цель-уже-мастер» отмечен в MDBSUP-4910 («завести тикет»),
+тикет не завели — тот же баг снова выстрелил в MDBSUP-5089.
+
 ## Сценарий: зависшие/упавшие операции
 
 Типовой тикет: «операция failed → блокирует следующую операцию "Already has unapplied
