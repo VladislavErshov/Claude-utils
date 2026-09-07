@@ -1,6 +1,6 @@
 ---
 name: scale-kafka-hosts-tester
-description: Локальное тестирование scale-операций с Kafka-хостами в mdb (upscale/downscale контроллеров и брокеров) — настройка инфраструктуры, seed dev-кластера из прода, симуляция падений по фазам workflow, проверка идемпотентности и контрактов mdb-data ↔ mdb-processing. Секции: upscale Kafka-контроллеров (MDBDEV-3180) и downscale Kafka-контроллеров (сценарии D1–D11 по прод-паттернам из Temporal). Используй когда нужно локально прогнать scale-флоу Kafka и проверить сходимость после падений.
+description: Локальное тестирование scale-операций с Kafka-хостами в mdb (upscale/downscale контроллеров и брокеров) — настройка инфраструктуры, seed dev-кластера из прода, симуляция падений по фазам workflow, проверка идемпотентности и контрактов mdb-data ↔ mdb-processing. Секции: upscale Kafka-контроллеров (MDBDEV-3180), downscale Kafka-контроллеров (сценарии D1–D11 по прод-паттернам из Temporal) и downscale Kafka-брокеров (MDBDEV-2900: reassign + drain + unregister + withdraw, сценарии B1–B14). Используй когда нужно локально прогнать scale-флоу Kafka и проверить сходимость после падений.
 allowed-tools: [bash, read_file, edit_file, write_file, grep, glob]
 ---
 
@@ -319,7 +319,14 @@ curl -s "http://localhost:8233/api/v1/namespaces/default/workflows/$WID/history"
 MDBSUP-4939 (кворум для миграции лидера читался после чистки). Полный разбор и план
 продолжения — `history/2026-09-03-downscale-incluster-first-runs-plait-prefail-block.md`.
 
-✅ Статус на 04.09: D-матрица закрыта на трёх кластерах параллельно —
+✅ Статус на 04.09 (партия 3): SAVE ПЕРЕДЕЛАН на remaining-контракт (processing шлёт
+  остающихся, mdb-data делает дифф с host_state; ДЦ без контроллеров уходит из
+  controllerDcs/units) — D11 теперь САМОЗЖИВАЕТСЯ: ретрай из ловушки «cloud чист /
+  host_state с хвостом» сошёлся за ~30с (det: kill mdb-data в окне save → FAILED → ретрай).
+  D5/D10 — PASS (ретрай доводит до конца включая save). Коммиты: processing `a1f6eaf5` (MR !440),
+  mdb-data `be484944` (MR !481, без version-bump). Все D-сценарии закрыты.
+
+✅ Статус на 04.09 (партии 1-2): D-матрица закрыта на трёх кластерах параллельно —
 D1+миграция лидера (modify4 `d69b1f3e`), D2 withdraw pc→0 (downgrade7 `9f75061d`),
 D2 ic→0 + D11-десинк (modify3 `9d14e5c3`/`298aaa4f`), D5 terminate-после-кворума +
 ретрай тем же id (`be6c5705`), D10 серия прерываний (`94bfc3ce`), D8 guard
@@ -333,9 +340,104 @@ mdb-data:8081. Разбор — `history/2026-09-04-D1-D2-D11-three-clusters-par
 ⚠️ Direct-start воркфлоу руками: task queue `kafka-activities-queue` (не `kafka-activities-worker`),
 payload encoding `application/json` (не `json`) — иначе workflow висит/падает на первом таске.
 
+⚠️ Версии processing-api: mavenLocal vs глобальный стор (находка 06.09). Если в mdb-data
+запинена РЕЛИЗНАЯ версия `processing-api:3.x.y`, Gradle возьмёт её из nexus — а релиз,
+опубликованный ДО переезда контракта, содержит старый DTO (`replicas` вместо
+`controllersPerDc`/`queueInfo`). MapStruct при этом молча собирает DTO без новых полей
+(unmapped target = WARNING, не ERROR) — сборка зелёная, а в Temporal улетают null'ы.
+mavenLocal перекрывает nexus только при СОВПАДЕНИИ GAV. Рецепт: публиковать api ветки
+под отдельной версией и пиннуть её в mdb-data:
+1. В processing: init-script `gradle.projectsEvaluated { rootProject.findProject(':api')?.version = '3.57.local' }`
+   + `./gradlew -I init.gradle :api:publishToMavenLocal`.
+2. В mdb-data: `implementation 'one.cloud.mdb:processing-api:3.57.local'`.
+3. Проверять ПОЧТИ сгенерённый MapStruct-имплементор
+   (`build/generated/.../KafkaHostMapperImpl.java` — в toDto должны быть
+   `controllersPerDc(...)` и `queueInfo(...)`), а не только EXIT код сборки.
+
 ⚠️ Downscale — операция отката для upscale-сценариев: после каждого upscale-теста
 возвращать состав через downscale (не руками). Для самих D-сценариев наоборот —
 восстановление upscale-ом.
+
+# Секция: Downscale Kafka-брокеров (MDBDEV-2900)
+
+## Что тестируем
+
+- **mdb-processing** (ветка `ershov/MDBDEV-2900-downscale-kafka-brokers`):
+  `DownscaleKafkaBrokerInClusterWorkflowImpl` (parent) + `DownscaleKafkaBrokerInDcWorkflowImpl`
+  (child по ДЦ) + переиспользуемый `ReassignKafkaPartitionsWorkflow` (child реассигна,
+  `topics=null` → все топики включая internal). Архитектура — `docs/kafka/downscale-broker.md`
+  (ЧИТАТЬ ОБЯЗАТЕЛЬНО).
+- Фазы parent (места падений): `resolveRemovedBrokerIds` (discovery удаляемых хостов по ДЦ +
+  `describeBrokerIds` реестра кластера) → `reassignPartitionsFromRemovedBrokers`
+  (child-реассигн round-robin по survivors + поллинг `isBrokerDrained` 30с до TTL →
+  `BROKER_NOT_DRAINED`) → `unregisterBrokers` (KRaft, идемпотентен) → `downscaleBrokers`
+  (параллельные InDc-child: rescale / при цели 0 stop+withdraw сервиса и стораджа).
+- API: `DELETE /api/v1/mdb/processing/kafka/clusters/{clusterId}/hosts/brokers`,
+  DTO `brokersPerDc` (абсолютные) + `queueInfo` + `connectionParams`.
+
+## Ограничения масштаба (обязательно)
+
+- **Выживающие ≥ max RF кластера**: survivors после удаления должны покрывать replication
+  factor (иначе guard `REASSIGN_INVALID_TARGET_BROKERS`). Для test-кластера с RF=3 минимум
+  3 выживающих брокера в кластере.
+- Seed-кластер test-modify3 — по 1 брокеру на ДЦ: перед B-сценариями обязателен
+  **upscale брокеров до 2 в целевом ДЦ** (через mdb-data), откат между сценариями — upscale'ом.
+- Пачка ≤2 брокеров за запуск (аналог лимита контроллеров): `{dc:1}` или `{dc:1,hc:1}` из 2×2.
+- НЕ гонять `{dc:0,hc:0,kc:0}` — вывод всех брокеров кластера.
+
+## Специфика брокеров (отличия от контроллеров)
+
+- Нужны **живые партиции**: до серии создать 2–3 тестовых топика (RF=3, 6–12 партиций) через
+  mdb-data API и записать данные — иначе reassign нечего двигать и drain мгновенный.
+- KafkaAdminClient обязан достучаться до :9092 — vault-секреты + PEM truststore по секции
+  «Локальный downscale: vault-секреты» выше; при отсутствии сети — `mcc tp-port-forward` на 9092.
+- Верификация reassign: после флоу `describePartitions` (по API reassign или kafka-topics.sh
+  через mcc) — ни одна партиция не содержит удалённые brokerIds; распределение по survivors
+  примерно равномерное (round-robin).
+- Верификация unregister: `describeCluster`/`kafka-broker-api-versions.sh` — удалённые id
+  отсутствуют в реестре.
+- ⚠️ Save в mdb-data (`saveDownscaledKafkaBrokers`) **не реализован** — после withdraw/rescale
+  host_state не обновляется: ожидаемый десинк, фиксировать поведение (см. B13).
+
+## План тестирования (downscale-брокеров)
+
+| # | Сценарий | Аналог контроллеров |
+|---|---|---|
+| B1 | Happy path −1 брокер (rescale-путь): discovery → reassign по survivors → drain → unregister → rescale; топики без удалённого brokerId, ISR полный, кластер жив | D1 |
+| B2 | Happy path пачкой из 2 ДЦ (`{dc:1,hc:1}` из 2×2): ОДИН общий reassign-план (survivors = все минус обе жертвы), InDc-children параллельно | — (новое: пачка) |
+| B3 | Happy path target=0 в одном ДЦ: stop + withdraw сервиса и стораджа broker.*; партиции заранее уведены reassign'ом | D2 |
+| B4 | Идемпотентный перезапуск после успеха: `current <= target` → `removedBrokerHosts` пуст, reassign/unregister/rescale скипаются, ноль side-effects | D3 |
+| B5 | Рестарт после unregister до rescale: жертвы уже вне `describeBrokerIds` → `mapToBrokerIds` пуст → reassign-фаза скип, downscaleBrokers доводит rescale | D4/D5 |
+| B6 | Terminate посреди поллинга drained: реассигн уже запущен в фоне Kafka → ретрай: тот же child-workflowId (`ignoreAlreadyStarted`), поллинг продолжается, сходится | D5 |
+| B7 | AdminClient недоступен (битый vault / нет сети на 9092): `describeBrokerIds`/`listTopicNames` исчерпывают ретраи → FAILED; после восстановления перезапуск сходится | D6 |
+| B8 | Partial failure: цель в 2 ДЦ, один InDc-child падает (terminate) → `PARTIAL_DOWNSCALE_FAILURE` non-retryable; ретрай доводит упавший ДЦ, reassign-фаза скипается (уже unregister) | D7 |
+| B9 | Guard увеличения: `target > current` → child non-retryable `DOWNSCALE_NOT_ALLOWED`, zero side-effects | D8 |
+| B10 | Capacity guard: survivors < max RF (например RF=3, после удаления остаётся 2) → non-retryable `REASSIGN_INVALID_TARGET_BROKERS` ДО каких-либо cloud/PMS изменений | D8 |
+| B11 | Drain timeout: реассигн не завершается до TTL (заглушить порт/заморозить репликацию) → `BROKER_NOT_DRAINED`; фон Kafka доезжает → ретрай сходится | — |
+| B12 | Контракт mdb-data ↔ processing: декодировать temporal input parent'а — `brokersPerDc` абсолютные, `connectionParams` (bootstrap + vault-path), child-реассигн: `topics=null`, `targetReplicationFactor=null`, TTL=6ч; MapStruct-импл проверить (грабля mavenLocal vs nexus) | T7 |
+| B13 | Десинк host_state после успеха: save в mdb-data отсутствует → после COMPLETED host_state содержит удалённые хосты; повторный запуск через mdb-data строит цель из устаревшего host_state — фиксировать фактическое поведение, критерий будущего фикса = аналог remaining-контракта контроллеров (MR !440/!481) | D11 |
+| B14 | Серия ретраев (3+ terminate на одном operationId): survivors детерминированы сортировкой по host — каждый ретрай строит тот же план, состояние не деградирует | D10 |
+
+### B13. Десинк host_state (главный известный пробел)
+
+Контроллерный аналог D11 был вылечен remaining-контрактом (processing шлёт остающихся,
+mdb-data делает дифф с host_state). Для брокеров save ещё не реализован — сценарий
+фиксирует текущее поведение, чтобы потом доказать фикс:
+
+1. Прогнать B1 до COMPLETED.
+2. Снять `host_state` — удалённые брокеры всё ещё в БД (облако уже rescale'нуто).
+3. Повторный запуск downscale через mdb-data с той же целью: цель строится из host_state
+   (по-прежнему 2) → reassign-фаза видит `current <= target` → ранний выход БЕЗ эффекта.
+4. Ручная починка до фикса: вырезать удалённые хосты из host_state (или пометить removed).
+5. Критерий фикса: после COMPLETED host_state расходится с облаком ровно на удалённых
+   брокерах, повторный запуск — no-op с корректной целью.
+
+### Порядок первой партии
+
+B1 → B4 (сходятся на том же состоянии) → B6/B5 (рестарты) → B9/B10 (guards, прямой запуск
+допустим) → B2 (пачка, после upscale до 2×2) → B3 → B8 → B7/B11 (по возможности) →
+B12 (контракт) → B13 (зафиксировать десинк). Откат между сценариями — upscale брокеров,
+не руками.
 
 ## Верификация кластера ДО и ПОСЛЕ каждого сценария
 
