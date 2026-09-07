@@ -87,3 +87,33 @@ confp при этом пишет "does not need updating" (значение per-
   tool-call (sleep в том же вызове убивает процесс-группу по таймауту).
 - Параллельный rolling: рестарт-команды каждые ~10с из фоновых subshell (mcc-коннект ~40с
   доминирует, но рестарты ложатся с нужным шагом); верификация отдельным проходом в конце.
+
+## 2026-09-04 — NotEnoughValidWindows: per-DC override pc без cruise-блока (рецидив 28.08)
+
+**Симптом**: `1.cruise.events-front-kafka.pc` → `Proposals are not ready`;
+`GET /state` (REST на **8080**, не 9090!): `NumValidWindows 0/5`, `NumValidPartitions 663/931
+(71.3% < 95%)`. Кластер вырос до 40 брокеров (dc12/hc12/uc8/pc8); 3.09 ~11:47 UTC все
+8 pc-брокеров разом рестартнули.
+
+**Root cause**: при upscale pc/uc для pc завели per-DC `events-front-kafka.pc`
+(`kafka.broker.properties`, j2 без utils-import и без cruise-блока) — он перекрыл кластерный
+`.clouds` (где блок есть). uc override нет → uc рендерит от `.clouds` и жив. Все 8 pc-брокеров
+пошли без `metric.reporters` → 28.7% партиций без метрик → порог 95% не набирается → все окна
+невалидны. Косвенный маркер: в `recentMetricAnomalies` CC нет ни одного pc brokerId.
+Проверка per-хостово: `grep -c metric.reporters /opt/kafka/config/broker.properties` (0 на всех 8).
+
+**Фикс (по принципу юзера — unify, без per-DC)**: значение `.dc` (полное: тюнинг + cruise-блок,
+байт-в-байт с работающего конфига) записали на кластерный `events-front-kafka.clouds`;
+per-DC `kafka.broker.properties` удалены на `.pc`/`.dc`/`.hc` через
+`DELETE /api/conf/delete.do` c JSON-телом (POST/GET → 405). Затем rolling 8 pc-брокеров:
+`confp --oneshot` → проверка `metric.reporters` в рендере → `systemctl restart kafka-broker`
+по одному (старт ~30-60с). Через ~15 мин `/state`: `NumValidWindows 2/5` и растёт.
+
+**Грабли**:
+- REST CC в dzen-образе — `webserver.http.port=8080`; на 9090 connection refused (exit 7).
+- mcc ssh к cruise: сервис живёт в контейнере `main` → `mcc sshexec --container main`
+  (без флага — хостовый контекст: java/порт не видны).
+- маркер репортера в хвсте `tail -c 200000` может не попасть при активном брокере —
+  grep `kafka-producer-network-thread | CruiseControlMetricsReporter` по всему логу.
+- `mcc sshexec` добавляет `*** Connection closed by remote host ***` в хвост удачного вывода —
+  парсить через `head -1`/`grep -E '^[0-9]+$'`, не сравнивать вывод целиком.
