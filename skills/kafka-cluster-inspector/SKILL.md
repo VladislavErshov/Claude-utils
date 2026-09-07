@@ -106,6 +106,8 @@ Temporal — по operationId в Temporal будет пусто. Диагнос�
 ## Структура скилла
 
 - `SKILL.md` — этот файл.
+- `scripts/` — рабочие скрипты: `fix_phantom.sh` + `fix_by_pms.sh` (массовый фикс фантомного
+  voter'а, процедура MDBSUP-5044; копия в `~/Documents/utils/`).
 - `commands/runbook.md` — дежурный ранбук: ссылка на вики + наши дополнения (mcc, kafkactl).
 - `commands/troubleshooting.md` — типовые проблемы: ссылка на вики-секцию «Проблемы» +
   дополнения (mcc-очистка `-stray` партиций, место в логах).
@@ -137,6 +139,11 @@ Temporal — по operationId в Temporal будет пусто. Диагнос�
 Подробности — `commands/known_issues.md`. Разбор типовых дежурных проблем —
 `commands/troubleshooting.md`.
 
+- **Фантомный voter в KRaft-кворуме** — `kafka_controller_quorum_voters_mismatch` в mdb-health:
+  живой кворум держит voter'а выведенного контроллера (PMS правильный, конфиги 2/3 контроллеров
+  старые). Массовый фикс 2026-09-04 (51 кластер) — скрипты `scripts/fix_phantom.sh` +
+  `scripts/fix_by_pms.sh`, разбор `history/2026-09-04-mass-quorum-phantom-voters-cleanup.md`,
+  детали — `commands/known_issues.md`.
 - **"Broker is dead" в UI** — rscheck/host_checker падает на MBean `kafka.server:type=raft-metrics/current-state`,
   удалённом в Kafka 4.x. Фикс — `kafka.server:name=BrokerState,type=KafkaServer`. Разбор —
   скилл `kafka-metrics-investigator` (`commands/diagnose_broker_dead.md`).
