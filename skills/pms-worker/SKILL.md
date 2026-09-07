@@ -46,6 +46,15 @@ FQDN → ключ (Kafka): `1.broker.<queue>.<dc>.one-infra.ru → <queue>.cloud
 `1.controller.<queue>... → controller.<queue>.clouds`, cruise делит ключ с broker.
 Скрипт `bin/pms-read.sh` конвертирует автоматически.
 
+⚠️ **Per-DC override'ы (`<queue>.<dc>`) — нежелательны, заводить/менять только по явному согласованию с пользователем.**
+Ключ `<queue>.<dc>` полностью перекрывает одноимённую property кластерного ключа `<queue>.clouds`:
+расхождение ломает конфиг только одного ДЦ и всплывает как частичная деградация, которую легко
+пропустить (пример: per-DC `kafka.broker.properties` без cruise-блока → половина брокеров молчит →
+CC `NotEnoughValidWindows`, events-front-kafka 2026-09-04; до этого — тот же кластер 2026-08-28).
+Канон: полное значение держать на кластерном ключе; per-DC — только для точечных override'ов
+типа `kafka.isWanCluster` из ранбука. pms-read.sh per-DC ключи не видит — для них дёргать
+values.do напрямую и смотреть всю мапу.
+
 ## Чтение: values.do
 
 ```bash
@@ -85,6 +94,21 @@ curl -s --cert ~/.mccloud/client.cert --key ~/.mccloud/client.key --cacert ~/.mc
   }'
 # HTTP 200 + тело "0" = успех. Верифицировать повторным values.do байт-в-байт.
 ```
+
+### Удаление: delete.do — метод DELETE, тело обязательено
+
+```bash
+jq -n '{applicationName:"mdb", hostName:"<pms-ключ>", propertyName:"<property>"}' > /tmp/del.json
+curl -s -w "\nHTTP:%{http_code}\n" -X DELETE \
+  --cert ~/.mccloud/client.cert --key ~/.mccloud/client.key --cacert ~/.mccloud/ca.crt \
+  -H "x-namespace: <namespace>" -H "Content-Type: application/json" \
+  "https://pms.cloud.vk.team/api/conf/delete.do" \
+  --data-binary @/tmp/del.json
+# HTTP 200 + тело "0" = успех. POST/GET → 405 Method Not Allowed; DELETE без тела → 400.
+```
+
+⚠️ Удаляй override только убедившись, что кластерный ключ содержит полное значение
+(иначе хосты отрендерят дефолт/усечённый конфиг при следующем confp).
 
 ## Namespaces
 
