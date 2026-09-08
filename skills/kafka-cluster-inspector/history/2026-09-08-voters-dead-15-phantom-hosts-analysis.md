@@ -104,3 +104,12 @@ ya-yt-channel kc; main-yt pc.
   Фикс: поднять MEM в манифесте (mcc edit/submit) + свести составы mcc ↔ mdb-data. Владельцу.
 - Утилиты: `mcc instances <pattern>` даёт hierarchy/service/queue/outcome (в т.ч. «Container dead: OOM»);
   `mcc migrate --relocate` ищет storage/shard/minion, по FQDN инстанса не ищет.
+
+## Миграция дисков adb-users / do-12738 (ночь 2026-09-08)
+
+Обе миграции ЗАПУЩЕНЫ (`mcc migrate --relocate --auto_solve`, storage =
+`<queue>.datatransfer.db.production.mdb.prod/controller`, 1/1 shard requested).
+Методика и грабли вынесены в скилл: `mcc-host-worker/commands/migrate.md`.
+После завершения миграции: sshexec по FQDN, `df /mnt/data` без I/O error,
+`systemctl start kafka-controller`, вход в кворум (фантомные voter'ы оживут —
+`voters_dead` погаснет в mdb-health).

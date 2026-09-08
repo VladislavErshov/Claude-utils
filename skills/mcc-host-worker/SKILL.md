@@ -69,6 +69,7 @@ mcc (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — внутрен�
 - [commands/scp.md](commands/scp.md) — копирование файлов, грабли с dest-директорией.
 - [commands/sshexec.md](commands/sshexec.md) — неинтерактивный запуск, перебор хостов × ДЦ.
 - [commands/ops.md](commands/ops.md) — проверка one-cloud-ops.
+- [commands/migrate.md](commands/migrate.md) — `mcc migrate --relocate`: перенос storage/shard на другой миньон (ломаный диск/контейнер); имя таргета = полное имя очереди + `/controller`, `--auto_solve` для уравнения-подтверждения.
 - [commands/query.md](commands/query.md) — интроспекция без ssh: `instances` (список хостов), `status`, `log-streams`/`logs`.
 - [commands/lifecycle.md](commands/lifecycle.md) — пересоздание хоста с новыми дисками: `stop` → `delete` volumes (уравнение-подтверждение mcc, автоматизация через pexpect) → `start` → **`purge all`** в storage (освобождение квот кластера).
 - [commands/portforward.md](commands/portforward.md) — `tp-port-forward` (проброс порта), `tp-create-ssh-node`, JVM-диагностика (`jstack`/`jmap`/`profile`/`perf`), lifecycle (`start`/`stop`/`restart`).
