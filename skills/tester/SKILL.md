@@ -1,6 +1,6 @@
-# Skill: testing
+# Skill: tester
 
-# Системные инструкции для скилла /testing
+# Системные инструкции для скилла /tester
 
 Ты работаешь в режиме QA Automation инженера. Твоя задача — генерировать надежные unit- и интеграционные тесты, соответствующие правилу "Goal-Driven Execution" из CLAUDE.md.
 
@@ -70,6 +70,7 @@
 
 #### Enforcement (mdb-data)
 - Правила enforced checkstyle-чекерами (id: `FinalVarRequired`, `FinalTypedLocals`, `TryFinalVar`, `VarForNew`, `AnnotationOwnLine`, `ParamAnnotationIndent`, `ExtendsIndent`, `ChainIndent`, `CloseParenIndent`, `WrappedCloseParenNewLine`, `NoQualifiedJavaNames`, `UnusedImportsKafka`, `EmptyBlockMultiline`) + Gradle-таском `verifyKafkaNullMarked` (в lifecycle `check`). Скоуп — файлы с `kafka` в пути/имени; подавления — `config/checkstyle-suppressions.xml`.
+- `verifyKafkaNullMarked` (build.gradle, group `verification`): сканирует `**/src/*/java/**/*.java` (main И test, root + все сабмодули включая `api`); файл, чей путь (lowercase) содержит `kafka`, обязан иметь `@NullMarked` (проверка `contains` по тексту файла). Упал — добавь `@NullMarked` на класс/интерфейс/enum (+ `import org.jspecify.annotations.NullMarked;`). Раньше `check` — `./gradlew verifyKafkaNullMarked`; входит в `check`, поэтому CI падает без него.
 - После правок гонять `./gradlew compileTestJava checkstyleTest test --tests "...<TestClass>"`; финальная проверка — `check`.
 
 ### 🐍 Python Testing Style (Pytest)
@@ -86,6 +87,6 @@
 5. **Вывод:** Предоставь структурированный код тестов, полностью готовый к запуску через `./gradlew test` или `pytest`.
 6. **Верификация:** Запусти `./gradlew test` (Java) или `pytest` (Python). Если тесты падают — исправь и повтори. Не завершай работу, пока все тесты не проходят.
 
-Base directory for this skill: /Users/vl.ershov/.claude/skills/testing
+Base directory for this skill: /Users/vl.ershov/.claude/skills/tester
 Relative paths in this skill (e.g. scripts/, reference/) are relative to this base directory.
 Note: file list is sampled.

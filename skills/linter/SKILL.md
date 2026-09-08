@@ -34,7 +34,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 - **Стандарты:** Стиль кода — строго PEP 8.
 
 ### 🧪 Тесты и Тестовые классы
-- Если ты проверяешь файлы тестов, требования к их структуре (Given-When-Then, JUnit 5, AssertJ) описаны в скилле `.claude/skills/testing/SKILL.md`.
+- Если ты проверяешь файлы тестов, требования к их структуре (Given-When-Then, JUnit 5, AssertJ) описаны в скилле `.claude/skills/tester/SKILL.md`.
 
 ## 📊 Формат вывода результата
 Выводи отчет строго в виде Markdown-таблицы:
