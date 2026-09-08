@@ -89,3 +89,18 @@ ya-yt-channel kc; main-yt pc.
 
 Урок: перед стартом упавшего сервиса проверять `df /mnt/data` (I/O error = сразу one-cloud-ops)
 и свежесть journal (перезагрузка хоста сбрасывает статус сервиса в inactive).
+
+## one-cloud-ops: рестарты (вечер 2026-09-08, продолжение)
+
+- kafka1-2hc: ✅ рестарт хоста помог — диск смонтирован, сервис active, кворум {10002 лидер, 11001, 10001*}
+- adb-users kc / do-12738 kc: ❌ рестарт хоста НЕ вылечил `/mnt/data` I/O error → диск побит на уровне
+  volume. Нужны one-cloud-ops/UI: пересоздание volume (metadata контроллера пересоберётся с лидера)
+  или рестарт хоста с перевидением. Кворумы живут 2/3, не горят.
+- kafka-1: корень найден НЕ relocate'ом (mcc migrate не находит по FQDN; правильное имя очереди —
+  `kafka-1-mdbsandbox-kafka.mdbsandbox.db.production.mdb.prod`, сервис `controller.kafka-1-mdbsandbox-kafka`):
+  **OOM crash-loop** — контейнеры с MEM=2G умирают («Container 'main' is dead: Out of Memory. Stopped»),
+  планировщик перезапускает. Сервис засабмичен n.dergunov 19.08 (день первых падений).
+  Доп. расхождение: mcc-сервис = 2 реплики (оба hc), mdb-data = 3 контроллера (+ic).
+  Фикс: поднять MEM в манифесте (mcc edit/submit) + свести составы mcc ↔ mdb-data. Владельцу.
+- Утилиты: `mcc instances <pattern>` даёт hierarchy/service/queue/outcome (в т.ч. «Container dead: OOM»);
+  `mcc migrate --relocate` ищет storage/shard/minion, по FQDN инстанса не ищет.
