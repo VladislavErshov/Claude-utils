@@ -317,7 +317,7 @@ docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
 
 ## Получение реальных данных кластера
 
-Используй `/db-seed`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их на удалённом хосте (через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md), `mcc ssh` + `psql`), результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
+Используй `/db-worker`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их на удалённом хосте (через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md), `mcc ssh` + `psql`), результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
 
 ### Обязательный шаблон: один SQL через `jsonb_build_object`
 
@@ -339,7 +339,7 @@ SELECT jsonb_build_object(
 
 ⚠️ **`one_cloud_meta` обязательна для cruise-creation** — без записи `params_type='cruise-control-service'` workflow `createKafkaCruise` падает с `404` на `MdbDataKafkaHostsActivityImpl.savedCreatedKafkaCruiseInfo`. У таблицы UNIQUE-индекс по `(cluster_id, params_type)` — ВСЕГДА `jsonb_agg`, не скалярный `to_jsonb`.
 
-Правила из `/db-seed` (важно):
+Правила из `/db-worker` (важно):
 - `ORDER BY` — только **внутри** `jsonb_agg(... ORDER BY col)`, не снаружи подзапроса.
 - Для таблиц с unique-индексом по `(cluster_id, <другая колонка>)` (например `one_cloud_meta` по `(cluster_id, params_type)`) — ВСЕГДА `jsonb_agg`, не скалярный `to_jsonb`, иначе `more than one row returned`.
 - `operations.created_ts` (с `d`), `db_cluster_version.create_ts` (без `d`) — имена различаются, проверяй через `\d <table>` на удалённой БД.

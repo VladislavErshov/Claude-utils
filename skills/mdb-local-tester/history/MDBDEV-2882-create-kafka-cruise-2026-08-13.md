@@ -41,7 +41,7 @@
 
 ## Запуск
 
-Сначала засев БД через `/db-seed` одним SQL через `jsonb_build_object` (см.
+Сначала засев БД через `/db-worker` одним SQL через `jsonb_build_object` (см.
 обновлённый шаблон в `SKILL.md`). Тянем ОБЯЗАТЕЛЬНО:
 
 - `db_cluster`, `db_cluster_version` (LIMIT 3), `host_state`
@@ -138,7 +138,7 @@ PMS-переменных — через скилл `kafka-config-inspector`.
 ## Подводные камни
 
 1. **`one_cloud_meta` обязательна** — без `params_type='cruise-control-service'` workflow
-   падает с `404` на финальном шаге `savedCreatedKafkaCruiseInfo`. В шаблоне db-seed
+   падает с `404` на финальном шаге `savedCreatedKafkaCruiseInfo`. В шаблоне db-worker
    в `SKILL.md` теперь явно указано тянуть эту таблицу.
 
 2. **Имя workflow-типа — `createKafkaCruise`**, не `createCruiseControl` (устарело).

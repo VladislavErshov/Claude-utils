@@ -40,7 +40,7 @@ cd /Users/vl.ershov/Documents/Git/mdb-processing && \
   ./gradlew bootRun --args='--spring.profiles.active=local' > /tmp/mdb-processing.log 2>&1 &
 ```
 
-## db-seed
+## db-worker
 
 SQL для удалённой БД (выполнить через `mcc ssh` + `psql` на проде):
 

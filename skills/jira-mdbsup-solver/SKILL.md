@@ -149,7 +149,7 @@ mcc --local -n infra -c <dc> ops "queue://<fullQueue>" -f json | jq '.[0] | {ale
 - Исключение — кейсы **без кластерной специфики** (Temporal UI API, vault, mdb-backend):
   остаются полными файлами здесь (например, MDBSUP-4887, MDBSUP-4894).
 - Перед новым разбором смотреть `history/` здесь, эталонный разбор
-  `/Users/vl.ershov/Documents/Git/backstage/.claude/skills/db-worker/history/MDBSUP-4752-add-hosts-stuck-ops.md`
+  `/Users/vl.ershov/.claude/skills/db-worker/history/MDBSUP-4752-add-hosts-stuck-ops.md`
   (два кейса: ecom-fsa uc-контроллер, ads-kafka ec-контроллер) и `history/` скилла-инспектора
   нужного типа БД.
 
