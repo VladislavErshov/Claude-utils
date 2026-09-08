@@ -68,3 +68,22 @@ mcc --local -n infra migrate --relocate --auto_solve "<queue>.<project>.db.produ
   тогда только migrate/пересоздание.
 - Проверка после миграции: `sshexec <fqdn>` по FQDN снова отвечает + `df -h /mnt/data` без
   I/O error + `systemctl is-active <service>`.
+
+## Связанный кейс: старт остановленных mdb-инстансов (класс voters_dead)
+
+Остановленный в облаке контроллер (mdb-health `voters_dead`, `systemctl` на хосте:
+«Task Instance is not scheduling on a minion») поднимается так:
+```bash
+mcc --local -n infra start <fqdn>          # запрос старта инстанса
+# ждать загрузку 2-3 мин, затем внутри:
+systemctl start kafka-controller && systemctl restart rscheck@kafka
+# проверить роль: curl localhost:7777/jolokia/read/kafka.server:type=raft-metrics
+```
+- Часть стартует сразу и входит в кворум фоловером; часть уходит в автостарт-очередь
+  с ошибкой «cannot start by either reason. Once resolved, it will start automatically» —
+  ретраить mcc start через минуты; если не стартует долго — планировщик/ёмкость ДЦ,
+  дальше UI/one-cloud-ops.
+- Кворум из 3 при одном живом voter'е не собирается: поднять ВТОРОГО члена (старт
+  инстанса/add_hosts), выборы пройдут сами, лидером станет тот, у кого свежее лог.
+- Если у кандидата разошёлся metadata log (вечный candidate при живом лидере) — вайп
+  `/mnt/data/log` + `/mnt/data/metadata` + старт (только НЕ на лидере).

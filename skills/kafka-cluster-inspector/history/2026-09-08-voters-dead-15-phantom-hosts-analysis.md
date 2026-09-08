@@ -113,3 +113,21 @@ ya-yt-channel kc; main-yt pc.
 После завершения миграции: sshexec по FQDN, `df /mnt/data` без I/O error,
 `systemctl start kafka-controller`, вход в кворум (фантомные voter'ы оживут —
 `voters_dead` погаснет в mdb-health).
+
+## Тип B: старт инстансов (ночь 2026-09-08)
+
+`mcc start <fqdn>` по 6 остановленным инстансам:
+- ✅ СТАРТОВАЛИ СРАЗУ И ВОШЛИ В КВОРУМ: mediascope kc, ya-yt-channel kc, search-phrase kc
+  (все — фоловеры лидера 10001, unk=0). Процедура: mcc start → ждать загрузку ~2-3 мин →
+  `systemctl start kafka-controller` → jolokia роль.
+- ⏳ УШЛИ В АВТОСТАРТ-ОЧЕРЕДЬ («cannot start by either reason. Once resolved, it will
+  start automatically», mcc start повторять через минуты): dp-api-pg2pg uc,
+  gmt-geoblock-s zc, communities-p zc — за вечер не стартовали; планировщик/ёмкость ДЦ,
+  дальние шаги в UI/one-cloud-ops.
+- main-yt: ✅ ВОССТАНОВЛЕН — после старта pc инстанса выборы прошли, kc (11001) стал
+  ЛИДЕРОМ. Кворум полный.
+- events (пр.17): ✅ ec починен ранее (вайп метадата).
+- Итого voters_dead: из 15+1 снято 12 (mediascope, ya-yt, search-phrase, main-yt, events-17
+  + ранее one-flow, events-4 и другие). Остались: adb-users (миграция диска запущена),
+  do-12738 (миграция диска запущена), dp-api-pg2pg/gmt-geoblock-s/communities-p
+  (автостарт-очередь), kafka-1 (OOM, владельцу), zen-max/news-pub (add_hosts, владельцу).
