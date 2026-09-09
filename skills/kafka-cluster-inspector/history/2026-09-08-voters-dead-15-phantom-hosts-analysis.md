@@ -131,3 +131,14 @@ ya-yt-channel kc; main-yt pc.
   + ранее one-flow, events-4 и другие). Остались: adb-users (миграция диска запущена),
   do-12738 (миграция диска запущена), dp-api-pg2pg/gmt-geoblock-s/communities-p
   (автостарт-очередь), kafka-1 (OOM, владельцу), zen-max/news-pub (add_hosts, владельцу).
+
+## Повторная проверка оставшихся (ночь 2026-09-08, финал)
+
+- do-12738: ✅ ИСПРАВЛЕН — миграция диска завершилась (df 2%, без I/O error), сервис
+  active, фоловер лидера 12001, MaxFollowerLag=0. Migrate --relocate сработал полностью.
+- main-yt: ✅ ИСПРАВЛЕН — kc лидер (11001), pc фоловер; hc — ghost (чистка host_state).
+- adb-users: миграция диска ещё идёт (хост недоступен = перенос). После — старт сервиса.
+- dp-api-pg2pg uc / gmt-geoblock-s zc / communities-p zc: автостарт-очередь планировщика
+  не двигается — дальше UI/one-cloud-ops.
+- kafka-1: ic снова failed, 2hc activating, 1hc контейнер мёртв — OOM-класс, владельцу.
+- zen-max/news-pub: add_hosts, владельцу.
