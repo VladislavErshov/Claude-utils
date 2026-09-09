@@ -142,3 +142,11 @@ ya-yt-channel kc; main-yt pc.
   не двигается — дальше UI/one-cloud-ops.
 - kafka-1: ic снова failed, 2hc activating, 1hc контейнер мёртв — OOM-класс, владельцу.
 - zen-max/news-pub: add_hosts, владельцу.
+
+## Повторный mcc start для трёх автостарт-очередей (поздняя ночь)
+
+dp-api-pg2pg uc / gmt-geoblock-s zc / communities-p zc — mcc start всё так же отвечает
+«cannot start by either reason. Once resolved, it will start automatically». Мастер mdb
+сильно флапает (status то находит сервис, то EntityNotFound вперемешку с i/o timeout) —
+похоже на деградацию самого облака вечером. Инстансы в очереди автостарта планировщика —
+ждать; если за сутки не поднимутся — UI облака/one-cloud-ops вручную.
