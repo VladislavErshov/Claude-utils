@@ -74,6 +74,8 @@
   шардированный PostgreSQL).
 - `history/` — каталог разобранных инцидентов:
   - `history/2026-07-23-timeline-gap-shard1.md` — кейс timeline-gap после failover, переналивка через pg_basebackup.
+  - `history/2026-09-10-incall-52118-running-unavailable-disk-recreated.md` — алерт «RUNNING UNAVAILABLE replica 8h»: облако пересоздало диск, stolon сам сделал полную переналивку (~8.5 ч); как отличить штатную переналивку от лежащего хоста.
+  - `history/2026-09-10-incall-52122-stolon-proxy-dead-sc.md` — тот же алерт, другой корень: stolon-proxy вышел с кодом 0 после рестарта инстанса и не рестартовал (`Restart=on-failure`); фикс — один `systemctl restart stolon-proxy`.
 
 ## Диагностика по симптомам
 
@@ -86,6 +88,8 @@
 | `requested WAL segment ... has already been removed` | `postgres.log` + S3 archive | `commands/reinit_replica.md` (Простой случай) |
 | `requested timeline N does not contain minimum recovery point ...` | `postgres.log` + S3 archive (.history files) | `history/2026-07-23-timeline-gap-shard1.md` |
 | `different local dbUID but init mode is none` | `stolon-keeper.log` | кто-то удалил диск → `commands/reinit_replica.md` (Простой случай) |
+| Алерт RUNNING UNAVAILABLE реплика (mdb-health) | `/mnt/logs/system/host-checker.log` + `stolon-keeper.log` | сначала проверить, не идёт ли штатная переналивка (pg_basebackup с прогрессом) — `history/2026-09-10-incall-52118-running-unavailable-disk-recreated.md` |
+| `stolon proxy is dead` в availability_details | `systemctl status stolon-proxy` + `journalctl -u stolon-proxy` | прокси мог выйти с кодом 0 (`Restart=on-failure` не рестартует) — лечится `systemctl restart stolon-proxy`; `history/2026-09-10-incall-52122-stolon-proxy-dead-sc.md` |
 
 ## Известные проблемы (кратко)
 
