@@ -20,10 +20,20 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 - **Современный синтаксис:** Используй возможности Java 21 (Records для DTO/моделей на границах слоев, Pattern Matching, Switch Expressions).
 - **Фреймворки:** Строго Spring Boot 3.x (Spring Web для эндпоинтов, Spring Data JPA для работы с БД).
 - **Архитектура классов:** Все новые классы пиши строго как `final` или `abstract`.
-- **Переменные:** Внутри методов всегда используй `final var` для локальных переменных.
-- **Аннотации и Null-безопасность:** Обязательно используй `@NullMarked` и Lombok (`@RequiredArgsConstructor`, `@Data`).
+- **Переменные:** Внутри методов всегда используй `final var` для локальных переменных. `final` на параметры методов НЕ ставить.
+- **Аннотации и Null-безопасность:** Обязательно используй `@NullMarked` и Lombok (`@RequiredArgsConstructor`, `@Data`). `@NullMarked` ставится ТОЛЬКО на классы и интерфейсы — никогда на методы. `@Nullable` — на параметры/возвраты, которые реально могут быть null.
 - **Коллекции и Потоки:** Используй Stream API в бизнес-логике, где читаемость важнее микро-оптимизаций. Возвращай неизменяемые коллекции (`Collections.emptyList()`, `List.of()`, `Collections.unmodifiableList()`). Для пустых списков используй `Collections.emptyList()`.
+- **`@Unmodifiable`:** на метод, возвращающий коллекцию, если хотя бы один `return` отдаёт немутабельную коллекцию (`Collections.emptyList()`, `List.of`, `.toList()`, `Collectors.toUnmodifiable*`) — `org.jetbrains.annotations.Unmodifiable` есть в classpath mdb-*.
+- **Валидация контракта API:** через DTO с bean-validation аннотациями на границе (`@Valid @RequestBody` + `@NotEmpty Map<@NotBlank String, @NotNull @PositiveOrZero Integer>` и т.п. — Spring сам вернёт 400). НЕ ручными if-проверками в контроллере и НЕ guard'ами в сервисе; ручная проверка — только если не выражается аннотациями.
+- **`assertThatThrownBy`-лямбда:** внутри лямбды — ровно один вызов, способный бросить исключение; аргументы (билдеры, `Map.of` и т.п.) строить ДО лямбды в локальной переменной (IDE-inspection «Refactor the code of the lambda…»).
+- **Javadoc публичных DTO:** описание контракта + `@param` по каждому компоненту рекорда (пример: `PartitionReplicasDto` в mdb-processing). Указывай семантику неочевидных полей (приоритет при конфликте, формат сериализации).
 - **Форматирование:** Тернарные операторы разноси строго на 3 строчки (вне сторонних вызовов).
+- **Тесты — структура:** Каждый тест размечай комментариями `// Given` → `// When` → `// Then` (для ожидаемых исключений `// When` и `// Then` разделяй: подготовка → вызов → проверки).
+- **Тесты — хелперы, именование по семантике действия:**
+  - `create*` — фабрика, создающая НОВЫЙ объект с нуля без параметров контекста (`createBaseDto()`, `createInstanceInfo(host)`, `createConnectionParams()`);
+  - `build*` — сборка объекта из переданных параметров через билдер (`buildRequest(Duration ttl)`);
+  - `get*` — получение/обёртка уже существующего (`getWorkflowStub(id)`, `getCloudActivity()` — вернуть мок-обёртку активности).
+- **Тесты — гигиена:** Ресурсы с AutoCloseable (ValidatorFactory и т.п.) — поле + `@AfterEach close()` либо try-with-resources; строковые пути/сообщения сверяй через `hasToString(...)`, не через `.toString().isEqualTo(...)`; намеренный `null` в негативных кейсах — `@SuppressWarnings({"NullAway", "DataFlowIssue"})` на классе с комментарием почему.
 
 ### 🐍 Реализация на Python (FastAPI)
 - **Типизация:** Прописывай Type Hints для всех аргументов и возвращаемых значений без исключений.
@@ -33,3 +43,51 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 ## 📋 Алгоритм работы
 1. **Surgical Changes:** Если ты правишь существующий код, затрагивай только то, что необходимо. Не форматируй соседний код, не удаляй старый мертвый код (если не просили). Каждый измененный символ должен быть связан с ТЗ.
 2. Сгенерируй код классов или модулей целиком, без плейсхолдеров вроде `// тут логика`.
+
+## 🔀 MR и ветки (GitLab mdb/*)
+- На каждый MR ставь ревьюером сервисный аккаунт **@svc-gena** — это наш бот-ревьюер.
+- Ветки называй с префиксом `ershov/`: `ershov/<TICKET>-<slug>`.
+- Коммит-стиль: mdb-data — `MDBDEV-XXXX сообщение` (без двоеточия); mdb-processing — `MDBDEV-XXXX: [Kafka] Сообщение` (с двоеточием и тегом подсистемы).
+- Правки по ревью фолди в исходные коммиты (`git commit --fixup=<sha>` + `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash <base>`), раскладывая по задачам; пуш `--force-with-lease`. Ответы на замечания — в тредах, resolve после пуша.
+- Грабля: `reply_to_discussion` в GitLab иногда отдаёт 404 на валидный discussion-id — фолбэк: обычный note на MR с `@<discussion-id-prefix>`.
+
+## 📜 История доработок
+
+- **2026-09-10, Kafka broker downscale save (MR mdb-processing !454 + mdb-data !496).**
+  Map-контракт колбека: processing шлёт `remainingBrokersPerDc` as-is, mdb-data сам считает
+  жертв по host_state. Ревью-паттерны @svc-gena (повторяются из MR в MR — ждать их и закрывать
+  заранее):
+  1. **Тест полного пути vs shortcut**: если fixture скипает основные фазы (жертва «уже
+     незарегистрирована»), ревьюер требует отдельный тест, где идут ВСЕ фазы, и порядок
+     «save строго после успеха детей» зафиксирован журналом событий
+     (`containsSubsequence("unregister:…", "rescale:1", "save")`).
+  2. **Regression на контракт порядка**: тест «child упал (DOWNSCALE_NOT_ALLOWED →
+     PARTIAL_DOWNSCALE_FAILURE) → save НЕ вызван» — иначе «докажи, что host_state не
+     меняется при незавершённом downscale».
+  3. **Mixed-rollout контракт**: на «а если consumer/provider разных версий?» валиден ответ
+     «порядок релиза + естественный гейт» (processing не собирается без data-api версии,
+     которой нет до релиза mdb-data) — feature flag для внутреннего колбека без других
+     потребителей не заводим.
+  4. Валидация тела внутреннего API — DTO c bean-validation на границе, не if-проверки
+     в контроллере и не guard в сервисе.
+- **2026-09-10 (позже), MDBSUP-5288 — валидация пароля CC: НЕ UUID.**
+  Первая реализация (UUID + canonical 8-4-4-4-12) была неверной по требованиям: пароль
+  Cruise Control — просто латинские буквы и цифры без спецсимволов (`[a-zA-Z0-9]+`,
+  пример `pV3RdxXPj48JdBFU`). Реальное ограничение внизу — `fix_htpasswd.py` на хосте
+  (`split(":")` + ascii-encode: роняют `:` и кириллица). Правка семантики влетела amend'ом:
+  два промежуточных коммита схлопнуты в один (`amend` в HEAD → `GIT_SEQUENCE_EDITOR="sed … 2s/^pick/fixup/" rebase -i` → reword), ветка = 2 коммита по задачам. Урок: перед
+  валидацией формата сверять требование с первоисточником (разбор кейса — в истории
+  kafka-cluster-inspector MDBSUP-5289), не изобретать формат.
+- **2026-09-11, MDBDEV-3301 — checkstyle-чекер скобочек: границы возможного.**
+  Record*-чеки (kafka-only, разворот рекордов) работают и живут в ветке; обобщение
+  на ВСЕ вызовы регекспами провалилось и откатано: регексы слепы к строковым
+  литералам (автофиксер ломал SQL-строки), MatchXpath в checkstyle 11 не отдаёт
+  `@line`/`@column` (только `@text`), RegexpMultiline без MULTILINE (`$` = только
+  конец файла), `<` в XML-атрибуте формата молча ломает конфиг. Для общего стиля
+  вызовов нужен AST-чек (кастомный Java-модуль). MR !493 доведён до зелёного:
+  unused import + мастер-тест против processing-api 3.62.1 (`@JsonInclude(NON_NULL)`
+  на `KafkaTopicConfigDto` → null-поле пропускается, not `:null`), фиксы amend'ом
+  в первый коммит. Гит-паттерны: fixup в не-головной коммит (detached amend +
+  `rebase --onto`), пуш одного sha (`git push origin <sha>:branch --force-with-lease`),
+  revert/reapply для «в истории, но не в коде». Подробности —
+  history/2026-09-11-mdbdev-3301-checkstyle-wrap-rules-mr493.md.
