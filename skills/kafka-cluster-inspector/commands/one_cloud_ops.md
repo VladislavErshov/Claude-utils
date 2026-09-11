@@ -11,6 +11,17 @@ mdb-processing/Temporal. По таким operationId в Temporal будет ПУ
 (mdb-backend): DONE он ставит только когда задача исчезает из `operators.kafka.tasks`
 в статусе оператора.
 
+Второй операторский тип — **`sys_update_cluster` (обновление docker-образа, задача
+`kafka.update`)**: шаг `get_result_service_sys_update_operator` ждёт исчезновения задачи
+из tasks точно так же; Temporal по operationId пуст — это норма, а не «потерявшаяся
+история» (MDBSUP-5216). Диагностика та же: `ops -f json` → `operators.kafka.tasks`;
+если задачи `update` нет — сверить фактическую версию на хостах (`/opt/kafka/libs`,
+`kafka_2.13-<ver>.jar`) с `db_cluster_version` и фактом алертов (failed hosts держали
+задачу в precondition-ожидании). ⚠️ Ловушка 5216: задача исчезла (следа нет ни в tasks,
+ни в `taskinfos`/`persisted` — историю задач оператор не хранит), а операция замерла
+`in_progress/in_processing=false` — TASK_ABSENT никто не увидит, закрытие только SQL +
+перезапуск обновления как новой операции.
+
 Код оператора: `~/Documents/Git/one-cloud-ops/one-cloud-ops-server/src/main/java/one/cloud/ops/impl/kafka/`
 (`tasks/DownscaleKafkaBrokerTask.java`, `DownscaleMdbReplicasTask.java`, `KafkaClusterInfo.java`).
 
@@ -103,3 +114,7 @@ withdraw через pexpect) — канон в [`mcc-host-worker`](../../mcc-hos
   update_db_connection_url + finish_task) — SQL не понадобился. Брокеры в 4 ДЦ — stop
   только инстанса, не сервиса; BROKER-листенер PLAINTEXT (client.properties с SASL
   ломает AdminClient).
+- [history/MDBSUP-5216](../history/MDBSUP-5216-2026-09-08-sys-update-operator-task-absent-op-parked.md) —
+  sys_update_cluster/kafka.update: задача исчезла из оператора, пока операция была
+  запаркована (in_progress/in_processing=false) → самосхождения не случилось; хосты не
+  обновлены вовсе; закрытие SQL + повторный запуск обновления.

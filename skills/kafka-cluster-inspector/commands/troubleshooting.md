@@ -32,6 +32,12 @@ rm -rf *-stray
 Полный скрипт с expect-раннером и параллелизмом — в вики, секция «Кончилось место на
 брокерах».
 
+⚠️ **После `rm -rf *-stray` сверять `df -h`, а не `du`**: брокер может держать утёкшие
+fd на stray-сегменты (deleted-but-open, сотни ГБ) — rm место не освобождает. Проверка
+`lsof -nP +L1 | grep deleted`; освобождение — рестарт `kafka-broker` либо truncate
+утёкших fd через `/proc/<pid>/fd/*` (приём I49678). Разбор —
+`history/MDBSUP-5279-2026-09-10-extdbpu-stray-fd-leak.md`.
+
 ### Кончилось место в логах
 
 Зайти на хост через [`mcc-host-worker`](../../mcc-host-worker/SKILL.md). Сначала чистим
