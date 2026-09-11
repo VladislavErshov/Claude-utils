@@ -22,6 +22,19 @@
   scp, который на dev иногда проходит без флага, sshexec namespace обязателен.
 - **Не использовать к cloud-ops узлам** — TLS handshake timeout.
 - Для остальных кейсов — работает.
+- **Долгие фоновые задачи (`nohup ... &` внутри sshexec) умирают вместе с сессией** —
+  сбор полного describe на 100+ топиков дал 0 строк. Писать команду в script-файл
+  на хосте и запускать детачем:
+  ```bash
+  mcc --local sshexec -n infra <host> "printf '%s\n' 'while read t; do ...; done < /tmp/in.txt | grep \"Replicas:\" > /tmp/out.txt; touch /tmp/out.done' > /tmp/job.sh; setsid nohup bash /tmp/job.sh </dev/null >/dev/null 2>&1 & sleep 3; wc -l < /tmp/out.txt"
+  ```
+  ⚠️ **`& sleep 3+` (лучше `sleep 5`) обязателен** — без паузы процесс умирает вместе с
+  сессией, даже с setsid+nohup (MDBSUP-5291: два запуска без sleep дали чистый /tmp —
+  скрипт не стартовал вообще; с `sleep 5` детач взлетел с первого раза).
+  Прогресс polling'ом по `wc -l` / маркерному файлу. Применялось в
+  kafka-reassign-partitions (MDBSUP-5158/5159).
+  Скрипт на хост удобно класть через base64 (не ломается о кавычки/Tcl):
+  `B64=$(printf '%s' "$SCRIPT" | base64 | tr -d '\n'); sshexec <host> "echo $B64 | base64 -d > /tmp/job.sh"`.
 
 ```bash
 mcc --local sshexec -n infra <host> "hostname -f; echo OK"

@@ -83,6 +83,12 @@ expect + mcc ssh (генератор чанковой заливки — [scp.md
 OneCloud API (`mcc instances`) или UI mdb-data. Как проявляется на Kafka —
 `kafka-metrics-investigator/commands/check_metrics.md` (грабля nproc).
 
+То же с `/proc/net/sockstat`: внутри porto-контейнера он показывает **общесистемные**
+цифры миньона (`TCP alloc 11547`), тогда как `/proc/net/{tcp,tcp6}` — только netns
+контейнера (~83 записи). Вывод «утечка сокетов в контейнере» по `alloc` из sockstat —
+ошибка; реальное число сокетов контейнера считать по `/proc/net/tcp*`.
+(разбор — `history/2026-09-09-mdb-front-sc2-no-return-tcp-to-pg.md`).
+
 ## Tcl expect — `[...]` в send = command substitution
 
 Квадратные скобки в команде (`grep -oE '[0-9,]+'`, `\x1b[[0-9;]`) роняют expect
@@ -109,6 +115,14 @@ TLS handshake timeout — не использовать `sshexec` к cloud-ops. 
 Хост временно потерял сеть (ping 100% loss, порты 22/9093 timeout,
 `mcc ssh` → `Container not found`). Восстанавливается сам через ~5 минут.
 Инфраструктурная проблема, не KRaft/сервисная.
+
+То же состояние (`container state improper` / `not scheduling` / `Container ...
+is not found`) у crash-loop-ящего хоста при редеплое — ssh не откроется, пока
+контейнер пересоздаётся, ретраи с паузой 5-12с. **`mcc logs` при этом работает**
+(читает через мастер): stderr/stdout/systemd/rscheck-стримы доступны даже в фазе
+редеплоя. `@console` есть не везде (у mdb-nodejs контейнера нет — только
+stdout.log/stderr.log). Диагностику асимметрии сети делаю tcpdump'ом на целевом
+хосте + коннект с проблемного (разбор — `history/2026-09-09-mdb-front-sc2-no-return-tcp-to-pg.md`).
 
 ## Self-update мусор в выводе
 
