@@ -25,7 +25,19 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 - **Null-безопасность:** `@NullMarked` (package-level или class-level), `@Nullable` из `org.jspecify.annotations` для отдельных полей/параметров.
   - **Правило:** всегда вешай `@NullMarked` на новый код. Если создаёшь новый класс/интерфейс/record — `@NullMarked` на тип. Если добавляешь новые методы в существующий класс/интерфейс — предпочтительно повесить `@NullMarked` на сам тип (класс/интерфейс), если это не ломает существующий код. После добавления запусти `./gradlew check` — если NullAway выдаёт ошибки `@Nullable` → `@NonNull` в чужих вызовах, откатай `@NullMarked` с типа на отдельные новые методы. Если ошибок нет — оставляй на типе, это правильнее.
 - **Lombok:** `@RequiredArgsConstructor`, `@Slf4j`, `@Builder` для records через `@Jacksonized`.
-- **Коллекции:** Stream API в бизнес-логике, неизменяемые коллекции (`List.of`, `.toList()`, `Collections.emptyList()`).
+- **Коллекции:** Stream API в бизнес-логике, неизменяемые коллекции (`.toList()`, `Collections.emptyList()`).
+  - **Пустой список** — всегда `Collections.emptyList()`, не `List.of()`.
+  - **`@Unmodifiable`** (`org.jetbrains.annotations.Unmodifiable`, есть в classpath mdb-processing
+    и mdb-data) на метод, возвращающий коллекцию, если хотя бы один `return` отдаёт немутабельную
+    коллекцию (`Collections.emptyList()`, `List.of`, `.toList()`, `Collectors.toUnmodifiable*`).
+- **Валидация контракта API:** через DTO с bean-validation аннотациями на границе
+  (`@Valid @RequestBody` + `@NotEmpty Map<@NotBlank String, @NotNull @PositiveOrZero Integer>`
+  и т.п. — Spring сам вернёт 400), НЕ ручными if-проверками в контроллере и НЕ защитными
+  guard'ами в сервисе. Ручная проверка в контроллере/сервисе — только если её нельзя выразить
+  аннотациями.
+- **`assertThatThrownBy`-лямбда:** внутри лямбды — ровно один вызов, способный бросить
+  исключение; аргументы этого вызова (билдеры, `Map.of` и т.п.) строить ДО лямбды в локальной
+  переменной (иначе IDE-inspection «Refactor the code of the lambda…» и хуже читается).
 - **Checkstyle:** Google Java Style, длина строк ≤120, лексикографический порядок импортов. Финальный прогон — см. «Финальная проверка» ниже.
 
 ### Temporal workflow/activity паттерны
@@ -106,3 +118,21 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
      дочерние test/checkstyle) — для честного прогона только `clean`;
    - упавший тест проверяй точечно: `./gradlew test --tests "<Class>" --rerun`.
 6. Обнови `docs/` если менял workflow/activity.
+
+## 📜 История доработок
+
+Архитектурные решения и грабли фиксируются здесь, отдельные файлы под них не создаются.
+
+- **2026-09-10, downscale брокеров Kafka — колбек в mdb-data (data-api 1.103.0, переведён на мапу).**
+  Итоговый контракт: processing отправляет в `KafkaHostsDataInternalApi.saveDownscaledKafkaBrokers`
+  ту же карту `remainingBrokersPerDc` (ДЦ → целевое число остающихся), что пришла в реквесте;
+  mdb-data сам считает жертв по своему host_state (в ДЦ карты — брокеры сверх цели со старшими
+  индексами hostname, ДЦ без записи не меняется; helper `HostUtils.hostIndex`). Инварианты:
+  - карта иммутабельна в реквесте → колбек детерминирован при replay/ретрае, повтор идемпотентен;
+  - вызов только при полном успехе — `PARTIAL_DOWNSCALE_FAILURE` кидается раньше колбека;
+  - первая версия контракта (processing считал список remaining хостов из
+    `connectionParams.kafkaBrokerHosts`) отвергнута как дублирование логики: мапа уже в реквесте,
+    а host_state — источник истины на стороне mdb-data.
+  Бонус-грабля: LSP в этих репо не обрабатывает Lombok — «builder() is undefined» и «log cannot
+  be resolved» это шум, вердикт по `./gradlew compileJava`. NullAway в mdb-data строже —
+  `map.get(key)` в non-null параметр не пройдёт, бери `getOrDefault(key, Collections.emptyList())`.
