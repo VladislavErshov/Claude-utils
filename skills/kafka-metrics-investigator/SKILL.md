@@ -68,6 +68,7 @@ host_checker для проверки состояния брокера, не Pro
 
 - `SKILL.md` — этот файл.
 - `commands/check_metrics.md` — проверка метрик на 4 портах (8080 JMX, 7777 Jolokia, 23569 kafka-exporter, 23570 share-group-lag-exporter), дедупликация лагов в Grafana.
+- `commands/cloud_metrics.md` — облачные CPU/vcores-метрики Porto через `mcc status` очереди (utilization/demand/allocated — источник цифр UI/goc), без доступа к Grafana/VictoriaMetrics.
 - `commands/jolokia_inspect.md` — Jolokia MBean'ы, разница Kafka 3.x vs 4.x, Kafka CLI.
 - `commands/diagnose_broker_dead.md` — пошаговый разбор "Broker is dead" (через Jolokia MBean'ы).
 - `history/` — разобранные кейсы из продакшена. Полезно перед диагностикой смотреть, не похож ли случай на уже разобранный.
