@@ -73,6 +73,7 @@ mcc (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — внутрен�
 - [commands/query.md](commands/query.md) — интроспекция без ssh: `instances` (список хостов), `status`, `log-streams`/`logs`.
 - [commands/lifecycle.md](commands/lifecycle.md) — пересоздание хоста с новыми дисками: `stop` → `delete` volumes (уравнение-подтверждение mcc, автоматизация через pexpect) → `start` → **`purge all`** в storage (освобождение квот кластера).
 - [commands/portforward.md](commands/portforward.md) — `tp-port-forward` (проброс порта), `tp-create-ssh-node`, JVM-диагностика (`jstack`/`jmap`/`profile`/`perf`), lifecycle (`start`/`stop`/`restart`).
+- [commands/perf.md](commands/perf.md) — CPU-профайлер из облака: `mcc perf` (движок perf, формат `f(level,left,width,type,'title')`), парсинг флеймграфа, грабли jattach/[unknown].
 - [commands/pitfalls.md](commands/pitfalls.md) — Tcl/expect грабли, ANSI, self-update, EOF на tar header, SSL Handshake.
 
 ## Конфигурация mcc
