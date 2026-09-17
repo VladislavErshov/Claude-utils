@@ -260,6 +260,95 @@ workflowId запрещён. Поэтому каждый синхронный/а
 без обёртки). ВTemporal-истории это видно как `START_CHILD_WORKFLOW_EXECUTION_FAILED` сразу после
 старта run'а.
 
+## Kafka: топики (изменение и sync — локальные сценарии)
+
+Тестирует путь processing→mdb-data и sync-путь без temporal: внутренние эндпоинты дёргаются curl'ом
+(эмуляция колбэка processing после workflow). Пользовательский `POST /api/v2/mdb/kafka/clusters/{id}/databases`
+годится только для негативной валидации (400 с `errors[]` по полям, операция не создаётся) — позитив уходит
+в processing workflow к реальному Kafka и падает на коннекте.
+
+⚠️ Перед прогоном пересобрать/перезапустить mdb-data (8081) с тестируемой ветки — долгоживущий bootRun
+почти наверняка держит старый код.
+
+### Эндпоинты
+
+| Назначение | Метод и путь | Тело |
+|---|---|---|
+| Update топика (колбэк processing) | `PUT /internal/api/mdb/kafka/clusters/{cid}/databases` | `UpsertKafkaTopicDto` |
+| Batch-сохранение после create | `POST /internal/api/mdb/kafka/clusters/{cid}/databases/multi` | `UpsertKafkaTopicsDto {operationId, namespace, kafkaConnectionParams, topics:[KafkaTopicDto]}` |
+| Удаление (колбэк processing) | `DELETE /internal/api/mdb/kafka/clusters/{cid}/databases` | `DeleteKafkaTopicDto {topicName}` |
+| Sync от ops | `POST /internal/api/v2/sync/kafka/clusters/{cid}/databases` | `SyncDatabasesDto {kafkaTopics: {topicInfoMap: {<name>: {topicName, partitionCount, replicationFactor, configs: KafkaTopicConfigRequest}}}}` |
+| User API (валидация) | `POST /api/v2/mdb/kafka/clusters/{cid}/databases` | `UpsertKafkaTopicRequest {topicName, partitionCount(@NotNull @Min(1)), replicationFactor(@NotNull @Min(3)), configs}` |
+
+`UpsertKafkaTopicDto`: `{operationId, namespace, topicName, partitionCount, replicationFactor, configs: KafkaTopicConfigDto, kafkaConnectionParams}`.
+`configs` (KafkaTopicConfigDto) — типизированные поля (retentionMs, cleanupPolicy, compression{...}, …) + `otherProperties: {"remote.storage.enable":"true"}`.
+
+### Seed (кластер + существующий топик)
+
+Стандартные тестовые кластера (см. `/scale-kafka-hosts-tester`): **test-modify3** `9fc47c1b-011d-4aaa-b411-de5345a0204e`,
+test-modify4 `3fb46c41-fec6-4c78-9b94-bbfb34ef08cd`, test-downgrade7 `23f108ac-1907-434e-a67b-dda01df316f4` —
+сценарии топиков гонять на **test-modify3**. Топик вставить руками со «старым» форматом settings
+(без otherProperties, maxCompactionLagMs числом):
+
+```sql
+INSERT INTO databases (cluster_id, name, created_by, created_ts, settings, is_deleted, is_system)
+VALUES ('9fc47c1b-011d-4aaa-b411-de5345a0204e'::uuid, 'test-topic-3301', 'service.mdb-processing', NOW(),
+'{"kafkaSettings":{"partitions":3,"replicationFactor":3,"config":{"retentionMs":604800000,"maxCompactionLagMs":9223372036854775807,"minInsyncReplicas":2}}}'::jsonb,
+false, false);
+```
+
+### Сценарии
+
+| # | Сценарий | Ожидание в `databases.settings` |
+|---|---|---|
+| TP1 | internal PUT с полным configs (typed + otherProperties), partitionCount=6 | partitions=6, rf перезаписаны; config перезаписан целиком; **otherProperties в jsonb**; `maxCompactionLagMs` — строка (`jsonb_typeof='string'`); created_by/created_ts не тронуты; updated_by='service.mdb-processing' |
+| TP2 | internal PUT с `configs=null` (конфиг-онли не менялся) | partitions/rf перезаписаны; **старый config сохранён байт-в-байт** (контракт patchSettings: null = «не меняется») |
+| TP3 | internal PUT с частичным configs (только retentionMs) | config перезаписан ЦЕЛИКОМ (replace, не merge) — otherProperties из старого пропадут: это ожидаемо для update-пути (processing всегда шлёт полный конфиг) |
+| TP4 | `/databases/multi` с 2 топиками | строки созданы, created_by='service.mdb-processing', settings полные |
+| TP5 | sync: в БД топик с otherProperties, ops присылают тот же конфиг БЕЗ otherProperties | upsert НЕ вызывается (settingsChanged без otherProperties = равны); в логах нет лишнего upsert |
+| TP6 | sync: ops присылают ИЗМЕНЁННЫЙ конфиг (retentionMs другой) без otherProperties | upsert вызван; **otherProperties подтянуты из сохранённого топика** (mergeOtherProperties); partitions/rf — из actual |
+| TP7 | user API `POST /databases` с retentionMs=-1 | 400 `{"errors":[{field:"retentionMs",...}]}`; операция в `operations` НЕ создаётся |
+| TP8 | compat: строка в legacy-формате (maxCompactionLagMs числом, без otherProperties) + TP1 по ней | прочиталась без потерь (число→Long), после update перезаписана в новом формате со строкой |
+
+### Проверка (SQL)
+
+```sql
+SELECT settings, created_by, updated_by FROM databases
+WHERE cluster_id='123e4567-...' AND name='test-topic';
+-- jsonb-детали:
+SELECT jsonb_typeof(settings->'kafkaSettings'->'config'->'maxCompactionLagMs') AS mclm_type,
+       settings->'kafkaSettings'->'config'->'otherProperties' AS other_props
+FROM databases WHERE name='test-topic';
+```
+
+Sync-вызов (TP5/TP6):
+
+```bash
+curl -s -X POST localhost:8081/internal/api/v2/sync/kafka/clusters/123e4567-e89b-12d3-a456-426614174000/databases \
+  -H 'Content-Type: application/json' -d '{
+    "kafkaTopics": {"topicInfoMap": {"test-topic": {
+      "topicName": "test-topic", "partitionCount": 3, "replicationFactor": 3,
+      "configs": {"retentionMs": 604800001}}}}}'
+# upsert-факт — в логе mdb-data: grep upsertKafkaTopicInfo /tmp/mdb-data.log
+```
+
+### Грабли
+
+- Прогон 15.09.2026 (реверт на own-модель, ветка !493): все TP1–TP8 — PASS, результаты и seed —
+  `history/MDBDEV-3301-topic-otherproperties-local-2026-09-15.md`.
+- **Internal/sync эндпоинты — 403/401 даже при `mdb.auth.enabled=false`**: `@PreAuthorize("@serviceAuth.isService('mdb-processing')")`
+  требует сервисный JWT в заголовке `Authorization` (raw, без Bearer). HS256 подписывается секретом из
+  `application-local.yml` (`mdb.auth.jwt.secret-key`), claim `serviceName` = `mdb-processing` (для sync — `one-cloud-ops`).
+  Генератор: `/tmp/mdb-jwt.py` (hmac+hashlib, без зависимостей).
+- User API без заголовка — работает (default-сессия), но только негативные кейсы (guard/валидация до workflow).
+- `messageTimestampType` в persisted-модели — enum (`CreateTime`/`LogAppendTime`), в Dto/Request — строка:
+  конверсия только через `KafkaTopicConfigMapper` (граница processing). В internal PUT слать строку.
+- `maxCompactionLagMs` пишется строкой (JsonFormat STRING в own-модели и ToStringSerializer в Dto);
+  старые строки с числом читаются без потерь (Jackson coercion).
+- patch-контракт: partitions/rf НЕ могут быть null в settings (compact-ctor NPE) — на API они @NotNull;
+  конфиг-онли «не меняется» выражается configs=null, а не null-полями.
+- sync мёржит только otherProperties; типизированные поля берутся из actual (ops их не присылают).
+
 ## Смежные скиллы
 
 - **`upscale-kafka-controller-tester`** — тестирование upscale Kafka-контроллеров (MDBDEV-3180): seed test-modify3, симуляция падений из прод-Temporal, планы T1–T7.
