@@ -91,3 +91,17 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
   `rebase --onto`), пуш одного sha (`git push origin <sha>:branch --force-with-lease`),
   revert/reapply для «в истории, но не в коде». Подробности —
   history/2026-09-11-mdbdev-3301-checkstyle-wrap-rules-mr493.md.
+- **2026-09-17, MDBDEV-3458 — стиль лямбд/ассертов/Javadoc (правки пользователя).**
+  Лямбда-параметры полными словами (`permission`, не `p`); сложная лямбда — блок
+  с локальными `final var` (значение и сообщение отдельно, вызов получает переменную,
+  не цепочку); сложный предикат в ассерте — именованный `Predicate<...> predicate`
+  перед `anyMatch(predicate)`; Javadoc — только контракт, без ссылок на тикеты и
+  «почему»; сообщения валидации короче без потери смысла. Разбор —
+  history/2026-09-17-mdbdev-3458-user-code-style-lambdas-asserts.md.
+- **2026-09-17, MDBDEV-3458 — подавление checkstyle LineLength для одной строки (mdb-data).**
+  Длинную строку не переносить: комментарий строкой выше
+  `// CHECKSTYLE.SUPPRESS: LineLength for +1 lines` — формат с « for +N lines»
+  обязателен (Checker-фильтр SuppressWithNearbyTextFilter). Короткая форма без
+  « for +N lines» молча не работает; `@SuppressWarnings("checkstyle:linelength")`
+  — на весь класс, для одной строки не использовать. Подробности —
+  history/2026-09-17-mdbdev-3458-checkstyle-linelength-nearby-suppress.md.
