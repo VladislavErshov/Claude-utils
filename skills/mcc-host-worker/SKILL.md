@@ -59,6 +59,11 @@ mcc (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — внутрен�
 | Redis Sentinel | `1.db.<cluster>-cfs-redis.<dc>.one-infra.ru` |
 | Redis Cluster | `1.shard{N}-db.<cluster>.<dc>.one-infra.ru` |
 | mdb-data | `1.mdb-data.mdb-data.{hc,pc,uc,kc}.one-infra.ru` |
+
+⚠️ **dzen-кластеры (ns=`dzen`)**: FQDN `*.<dc>.idzn.ru`, mcc всегда с `-n dzen`.
+Грабля: в прод-БД (`host_state.host`) хосты хранятся как `*.<dc>.wan.idzn.ru` — с `wan`,
+а mcc их знает **без** `wan` (`1.shard1-db.social-redis-social-redis.kc.idzn.ru`).
+Если `sshexec` по имени из БД падает `EntityNotFoundException` — убери `.wan`.
 | mdb-processing | `1.mdb-processing.java.{hc,pc,uc,kc}.one-infra.ru` |
 
 ДЦ: `hc`, `pc`, `uc`, `kc`, `ec`, `dc`, `rc`, `ic`, `nc`, `zc`, `sc`, ...
@@ -69,6 +74,7 @@ mcc (`/Users/vl.ershov/Documents/mcc/mcc`, есть в PATH) — внутрен�
 - [commands/scp.md](commands/scp.md) — копирование файлов, грабли с dest-директорией.
 - [commands/sshexec.md](commands/sshexec.md) — неинтерактивный запуск, перебор хостов × ДЦ.
 - [commands/ops.md](commands/ops.md) — проверка one-cloud-ops.
+- [commands/queues.md](commands/queues.md) — one-cloud очереди: диагностика (`queues`/`audit`), создание родительской очереди проекта манифестом (state RUNNING), грабли addqueue/STOPPED и пересоздание через withdraw.
 - [commands/migrate.md](commands/migrate.md) — `mcc migrate --relocate`: перенос storage/shard на другой миньон (ломаный диск/контейнер); имя таргета = полное имя очереди + `/controller`, `--auto_solve` для уравнения-подтверждения.
 - [commands/query.md](commands/query.md) — интроспекция без ssh: `instances` (список хостов), `status`, `log-streams`/`logs`.
 - [commands/lifecycle.md](commands/lifecycle.md) — пересоздание хоста с новыми дисками: `stop` → `delete` volumes (уравнение-подтверждение mcc, автоматизация через pexpect) → `start` → **`purge all`** в storage (освобождение квот кластера).
