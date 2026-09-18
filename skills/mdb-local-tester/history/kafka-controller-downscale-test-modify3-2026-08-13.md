@@ -22,10 +22,10 @@
 
 ### 1. Seed БД из прода
 
-См. `/Users/vl.ershov/.claude/skills/db-seed/` — единый SELECT через `jsonb_build_object` для: `db_cluster`, `db_cluster_version` (последние 3), `host_state`, `one_cloud_meta`, `operations` (последние 5), `projects`, `namespaces`, `hardware_presets`, `db_versions`, `db_version_dockers`.
+См. `/Users/vl.ershov/.claude/skills/db-worker/` — единый SELECT через `jsonb_build_object` для: `db_cluster`, `db_cluster_version` (последние 3), `host_state`, `one_cloud_meta`, `operations` (последние 5), `projects`, `namespaces`, `hardware_presets`, `db_versions`, `db_version_dockers`.
 
 Важно:
-- `db_versions` не имеет колонки `version` — только `id`, `type`, `sharded`, `version_name`, `is_default`. См. `db-seed/history/gotchas-remote-schema.md`.
+- `db_versions` не имеет колонки `version` — только `id`, `type`, `sharded`, `version_name`, `is_default`. См. `db-worker/history/gotchas-remote-schema.md`.
 - `db_cluster_version.db_version` — jsonb, не FK.
 - Baseline version поставить `status='scheduled'` (не `draft`).
 - Все `operations.in_processing=false` (иначе 409 "Already has active or failed operation").

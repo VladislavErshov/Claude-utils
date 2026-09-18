@@ -62,9 +62,11 @@ Service name на всех — `cdb.cloud-ops.batch` (queue `cloud-ops.batch`), 
 | Сервис | Путь на хосте | Что искать |
 |---|---|---|
 | mdb-data | `/mnt/logs/mdb-data.err.log` | stacktrace с `at one.cloud.mdb.data...` |
-| mdb-processing | `/one/logs/` (директория) | `java.log` (текущий) + `java.log.{1..6}.gz` (ротация) |
+| mdb-processing | до 05.09: `/one/logs/`; с 05.09: `/mnt/logs/mdb-processing.app.log` | см. warning ниже |
 
-⚠️ `/mnt/logs/` на mdb-processing пустой — логи в `/one/logs/`.
+⚠️ **С рестарта 05.09.2026 01:01 живые логи mdb-processing — `/mnt/logs/mdb-processing.app.log`**
+(fd нового процесса). `/one/logs/java.log` заморожен на 05.09 01:01, `/one/logs/systemd.log` —
+протухшая копия с 29.05. Проверять свежесть: `ls -la /proc/$(pgrep -f mdb-processing | head -1)/fd | grep log`.
 
 ## Скачивание
 

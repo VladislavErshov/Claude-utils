@@ -2,6 +2,37 @@
 
 Подробный разбор симптомов, причин и фиксов. В `SKILL.md` только краткие ссылки сюда.
 
+## Фантомный voter в KRaft-кворуме (`kafka_controller_quorum_voters_mismatch`)
+
+**Симптом**: mdb-health warning «Состав KRaft-кворума не соответствует контроллерам кластера»;
+`describe --status` показывает на 1 voter больше, чем контроллеров в кластере
+(MaxFollowerLag у фантома = весь лог). Таблица варнингов — `warnings.cluster_warnings`
+в прод-БД mdb-health (`1.db.mdb-health-mdb-pgsql.hc`, туннель 53482).
+
+**Причина**: контроллер выведен (обычно hc при миграции layout `hc,kc,pc,uc` → `kc,pc,uc`),
+PMS-кворум обновлён, но 2 из 3 живых контроллеров держат старый отрендеренный
+`controller.quorum.voters` с фантомом. Бомба (MDBSUP-4970): failover на узел с рассинхроном
+→ фенсинг брокеров.
+
+**Фикс** (процедура MDBSUP-5044, массово применена 2026-09-04 на 51 кластере —
+[`history/2026-09-04-mass-quorum-phantom-voters-cleanup.md`](../history/2026-09-04-mass-quorum-phantom-voters-cleanup.md)):
+1. PMS сверить и НЕ править (`kafka.layout` не трогать — сдвиг node.id, I48592).
+2. `scripts/fix_by_pms.sh <queue>` — обёртка: ДЦ живых контроллеров из PMS-кворума,
+   затем `scripts/fix_phantom.sh` — конфп расходившимся, рестарт follower'а → верификация →
+   лидера → rscheck@kafka.
+3. Верификация: `CurrentVoters` = PMS-лист, `MaxFollowerLag: 0`; варнинг гаснет сам
+   (цикл mdb-health ~5 мин).
+
+**Грабли**:
+- Файл чистый ≠ процесс чистый: не рестартованный контроллер держит старый набор в памяти;
+  лидера чистить обязательно.
+- Скрипт считает 1 контроллер на ДЦ — кластеры с 2 контроллерами в одном ДЦ (как
+  `logs-adtech-kafka`: 10001+10002 на hc) разбирать вручную по всем `N.controller.*`.
+- ДЦ живых контроллеров выводить из PMS-кворума, не из host_state (там зомби-записи
+  выведенных хостов, как у ads-kafka-hdd).
+- `describe --status` — только с брокера по FQDN (`/opt/kafka/config/client.properties`,
+  `/opt/kafka/bin/kafka-metadata-quorum.sh`); на контроллере localhost не в SAN.
+
 ## "Broker is dead" в UI mdb-data
 
 **Симптом**: в UI mdb-data брокер отображается как `unknown` / `dead`, хотя процесс
@@ -346,6 +377,15 @@ throttle был пуст, reassignment завершён, kc-брокеры уж�
 fetcher-бутылочного-горлышка» — `history/MDBSUP-4737.md`. Сопутствующие метрики и таблица типов лага —
 `kafka-metrics-investigator/commands/check_metrics.md` → «Follower lag» и «Дедупликация лагов».
 
+Третий кейс — `maildwh1-mail-dwh-kafka` (2026-09-04): ~2 ГБ/с продьюса в `mailru_splash` +
+меж-ДЦ репликация (kc/pc/rc), follower-лаг на rc миллионы сообщений, URP-волны после
+рестартов. **Помогло `num.replica.fetchers` 1→6** (PMS + поочерёдные рестарты).
+Динамический `kafka-configs --alter` для `replica.fetch.*`/`replica.socket.*` отклоняется
+(`Cannot update these configs dynamically` — read-only); CLI-конфиг для admin-команд —
+`/opt/kafka/config/client.properties` (не broker.properties — в нём metric.reporters роняет
+AdminClient) + `unset KAFKA_OPTS JMX_PORT`. Разбор —
+`history/2026-09-04-maildwh1-mail-dwh-kafka-urp-num-replica-fetchers-6.md`.
+
 Если при этом ещё и min ISR пробит — статус "Has N partitions with min in-sync replicas" +
 `rank=RANK_PREFAIL`. Проверить:
 ```bash
@@ -459,3 +499,16 @@ Reassign проходит мгновенно, т.к. мёртвый брокер
 `oneme_antispam_pr_idsEntityFacts`), но он **не убрал** 22026 из Replicas автоматически.
 `ReassigningPartitions` MBean = 0. Вероятно, CC не настроен на auto-removal dead brokers, либо
 был отключён. Если CC есть, но проблема не устраняется — действовать вручную по этапу 2.
+
+## Прогресс «there are N subnets for peer ...» в `mcc status` — шум, не диагностический сигнал
+
+**Симптом**: в `mcc status <service>` в поле `progress` инстанса висит строка вида
+`there are 37991 subnets for peer pl-i-sg_onecloud-infra_**.db.production.mdb.prod:
+recommended value is 5000` — большое число подсетей peer'а против рекомендации.
+
+**Важно**: это шум платформы, а НЕ причина проблем сервиса и НЕ признак сетевой
+политики, которую надо чинить. Строка висит и на полностью здоровых сервисах.
+Не строить на ней гипотез (квоты, «застрявшее применение сетевой политики») и не
+тащить её в тикеты как диагноз — проверять связность фактически (v4/v6 `/dev/tcp`,
+см. MDBSUP-5137), а сетевые проблемы эскалировать дежурным облака без опоры на эту
+строку. Пользователь подтвердил 05.09.2026 (MDBSUP-5137).

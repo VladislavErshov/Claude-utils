@@ -67,10 +67,18 @@ URP + api-versions + log-dirs 20001.
   expect непобедимы; рабочий генератор: локальный script.sh → base64 → .exp с
   `printf %s <chunk> >> /tmp/b64.txt` (см. /tmp/opencode/push_and_run.sh в сессии).
 
-## Открытые хвосты
+## Открытые хвосты → закрыты 08.09
 
-- channel-info и dzen-comments2: дозакрыть после перелива (unregister/withdraw проверять
-  по месту — у dzen оператор делает сам).
+- channel-info и dzen-comments2: перелив доигрался ~04.09, задачи `downscale-broker`
+  исчезли из `operators.kafka.tasks` сами (channel-info — без op_stop, задача довела всё
+  сама как dzen), 20001 не в составе брокеров (21001/22001/23001), hc-сервисы withdrawn
+  (EntityNotFoundException). SQL done обеим операциям.
+- ⚠️ trg-195060-dwh `85c02238` (Тип 3) закрыли 03.09 неполным UPDATE — in_processing=t и
+  finished_ts=NULL остались. Повторный modify `36732ce2` 07.09 упал «Couldn't find
+  workflow in processing to sync status» (workflow отсутствовал, Temporal пуст). 08.09
+  оба закрыты полным шаблоном. Урок: ручное закрытие — всегда все 4 поля
+  (status/in_processing/finished_ts/error_message).
 - Скорость перелива ~8.6 МБ/с без throttle-конфигов (ни на топике, ни на брокерах) —
   упор в сеть/диск hc→uc; причина не копалась.
-- Тикет: Тип 2 (add_hosts pc, 2 кластера) и Тип 3 (modify 85c02238) — не разобраны.
+- Тип 2 (add_hosts pc, 2 кластера) и Тип 3 (modify 85c02238) — разобраны:
+  [отдельный разбор](MDBSUP-5103-2026-09-03-add-hosts-broker-upscale-submit-timeout.md).

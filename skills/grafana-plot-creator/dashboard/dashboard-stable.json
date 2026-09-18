@@ -6476,7 +6476,7 @@
                 "uid": "${vm_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by (mdb_kafka_cluster, instance) (kafka_server_socketservermetrics_connection_count{mdb_kafka_cluster=\"$cluster\",instance=~\"$instance\"}[$__rate_interval])",
+              "expr": "sum by (mdb_kafka_cluster, instance) (kafka_server_socketservermetrics_connection_count{mdb_kafka_cluster=\"$cluster\",instance=~\"$instance\"}[$__rate_interval])\nor on (mdb_kafka_cluster, instance)\nsum by (mdb_kafka_cluster, instance) (rate(kafka_network_requestmetrics_requestspersec{mdb_kafka_cluster=\"$cluster\",instance=~\"$instance\",request=~\"Produce|FetchConsumer\"}[$__rate_interval]))",
               "legendFormat": "{{ instance }}",
               "range": true,
               "refId": "A"
@@ -6680,7 +6680,7 @@
                 "uid": "${vm_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by (mdb_kafka_cluster, instance, client_software_name, client_software_version) (kafka_server_socketservermetrics_connections{mdb_kafka_cluster=\"$cluster\",instance=~\"$instance\"})",
+              "expr": "sum by (mdb_kafka_cluster, instance, client_software_name, client_software_version) (kafka_server_socketservermetrics_connections{mdb_kafka_cluster=\"$cluster\",instance=~\"$instance\"})\nor on (mdb_kafka_cluster, instance)\nsum by (mdb_kafka_cluster, instance) (rate(kafka_network_requestmetrics_requestspersec{mdb_kafka_cluster=\"$cluster\",instance=~\"$instance\",request=~\"Produce|FetchConsumer\"}[$__rate_interval]))",
               "legendFormat": "{{ instance }} - {{client_software_name}} {{client_software_version}}",
               "range": true,
               "refId": "A"
@@ -9705,7 +9705,7 @@
             "type": "victoriametrics-datasource",
             "uid": "${vm_datasource}"
           },
-          "description": "Утилизация CPU процессом Kafka (ядра*сек).\n\n🟢 < 70% | 🟠 70-85% | 🔴 > 85%.",
+          "description": "Утилизация CPU процессом Kafka, в ядрах.",
           "fieldConfig": {
             "defaults": {
               "color": {

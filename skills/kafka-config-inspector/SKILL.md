@@ -46,7 +46,7 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ## Шаг 1: получить хосты кластера
 
 ```bash
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -tA -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -tA -c \
   "SELECT host, params->>'dc' AS dc FROM host_state
    WHERE cluster_id='<CLUSTER_ID>' ORDER BY host;"
 ```
@@ -291,7 +291,7 @@ PMS-переменная была удалена, но файл остался.
 
 ```bash
 # 1. Хосты кластера 7569c837 (test-resize) — все broker-хосты (1.broker, 2.broker, 3.broker, …)
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -tA -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -tA -c \
   "SELECT host FROM host_state WHERE cluster_id='7569c837-37ba-4041-9046-92329683237e' AND host LIKE '%.broker.%';"
 
 # 2. PMS-API: что записано в kafka.sysconfig

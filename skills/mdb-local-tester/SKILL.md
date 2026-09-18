@@ -47,7 +47,7 @@ PROXY_API_PREFIX=/proxy
 ### Запуск Backstage (локально)
 
 1. Инфраструктура: `docker compose -f backstage/stubs/docker-compose.yml up -d` (postgres:6432, redis:6379, clickhouse, sentinel:26379).
-   - **pg_boss**: `docker exec postgres psql -U dev -d postgres -c "CREATE DATABASE pg_boss;"` — иначе backend падает на старте.
+   - **pg_boss**: `psql -h localhost -p 6432 -U dev -d postgres -c "CREATE DATABASE pg_boss;"` — иначе backend падает на старте.
    - **Sentinel**: контейнер `stubs-sentinel-1` не слушает с хоста без `bind 0.0.0.0` + `protected-mode no` в `stubs/sentinel.conf` (уже поправлено в репо). Старый контейнер `redis_sentinel` из docker-compose mdb-data держит 26379 и это обычный redis, не sentinel — удалить (`docker rm -f redis_sentinel`), иначе «Project cache initialization failed Command timed out» (ioredis commandTimeout=1000). ⚠️ После остановки контейнеров поднимать sentinel только через `docker compose up -d` (пересоздание) — `docker start stubs-sentinel-1` стартует старый контейнер **без проброса порта 26379** → Backstage «All sentinels are unreachable» → UI «Internal Server Error» (ioredis сам восстанавливается после пересоздания sentinel).
 2. `app-config.mdb.local.yaml` — нужны `backend.mdb.abc.baseUrl` (http://localhost:8088 wiremock) и `backend.mdb.abc.ca` (любая строка, обязателен `getString`) — иначе `Missing required config value at 'backend.mdb.abc.ca'`. `backend.mdb.auth.enabled: false` уже стоит (локальная сессия `k.boblak` из ADMIN_LOGINS).
 3. Запуск: `yarn mdb-start-backend` в `backstage/` (лог `/tmp/backstage.log`), ждать «Project cache successfully initialized» + «Listening on :7007».
@@ -137,7 +137,7 @@ Fallback в one-cloud (`NewSqlCassandraHostInfoService`) работает тол
 
 Способ: `\copy (SELECT …) to '/dev/stdout' csv header` через туннель → отчистить хвостовой тэг `COPY N` (grep -v) → `docker cp` → `\copy … from csv header`. Грабли:
 - **Экспортировать по явному списку колонок локальной таблицы** — схемы прода и локали дрейфуют (6434 не знает `fake_id` в one_cloud_meta, другой порядок колонок в projects).
-- **Enum'ы прода шире** — добавлять значения перед импортом: `version_type` (+add_shard/add_hosts/delete_hosts), `db_type` (6434: +newsql/cassandra/temporal), `operation_type` (почти весь список прода). Каждый `ALTER TYPE … ADD VALUE IF NOT EXISTS` — отдельным `docker exec` (новая psql-сессия): значения, добавленные в той же сессии, COPY иногда не видит.
+- **Enum'ы прода шире** — добавлять значения перед импортом: `version_type` (+add_shard/add_hosts/delete_hosts), `db_type` (6434: +newsql/cassandra/temporal), `operation_type` (почти весь список прода). Каждый `ALTER TYPE … ADD VALUE IF NOT EXISTS` — отдельным вызовом psql (новая сессия): значения, добавленные в той же сессии, COPY иногда не видит.
 - `host_state.grafana_dashboard_link`/`onecloud_ui_link` и `operations.error_message` — `ALTER COLUMN … TYPE text` (varchar(255) мало для прод-значений).
 - Порядок вставки: projects/namespaces/hardware_presets → db_cluster → db_shards → db_cluster_version → host_state → one_cloud_meta → operations. После — `setval` для serial-pk (projects, hardware_presets, db_shards) и рестарт Backstage (кэш проектов в redis строится на старте).
 
@@ -260,6 +260,95 @@ workflowId запрещён. Поэтому каждый синхронный/а
 без обёртки). ВTemporal-истории это видно как `START_CHILD_WORKFLOW_EXECUTION_FAILED` сразу после
 старта run'а.
 
+## Kafka: топики (изменение и sync — локальные сценарии)
+
+Тестирует путь processing→mdb-data и sync-путь без temporal: внутренние эндпоинты дёргаются curl'ом
+(эмуляция колбэка processing после workflow). Пользовательский `POST /api/v2/mdb/kafka/clusters/{id}/databases`
+годится только для негативной валидации (400 с `errors[]` по полям, операция не создаётся) — позитив уходит
+в processing workflow к реальному Kafka и падает на коннекте.
+
+⚠️ Перед прогоном пересобрать/перезапустить mdb-data (8081) с тестируемой ветки — долгоживущий bootRun
+почти наверняка держит старый код.
+
+### Эндпоинты
+
+| Назначение | Метод и путь | Тело |
+|---|---|---|
+| Update топика (колбэк processing) | `PUT /internal/api/mdb/kafka/clusters/{cid}/databases` | `UpsertKafkaTopicDto` |
+| Batch-сохранение после create | `POST /internal/api/mdb/kafka/clusters/{cid}/databases/multi` | `UpsertKafkaTopicsDto {operationId, namespace, kafkaConnectionParams, topics:[KafkaTopicDto]}` |
+| Удаление (колбэк processing) | `DELETE /internal/api/mdb/kafka/clusters/{cid}/databases` | `DeleteKafkaTopicDto {topicName}` |
+| Sync от ops | `POST /internal/api/v2/sync/kafka/clusters/{cid}/databases` | `SyncDatabasesDto {kafkaTopics: {topicInfoMap: {<name>: {topicName, partitionCount, replicationFactor, configs: KafkaTopicConfigRequest}}}}` |
+| User API (валидация) | `POST /api/v2/mdb/kafka/clusters/{cid}/databases` | `UpsertKafkaTopicRequest {topicName, partitionCount(@NotNull @Min(1)), replicationFactor(@NotNull @Min(3)), configs}` |
+
+`UpsertKafkaTopicDto`: `{operationId, namespace, topicName, partitionCount, replicationFactor, configs: KafkaTopicConfigDto, kafkaConnectionParams}`.
+`configs` (KafkaTopicConfigDto) — типизированные поля (retentionMs, cleanupPolicy, compression{...}, …) + `otherProperties: {"remote.storage.enable":"true"}`.
+
+### Seed (кластер + существующий топик)
+
+Стандартные тестовые кластера (см. `/scale-kafka-hosts-tester`): **test-modify3** `9fc47c1b-011d-4aaa-b411-de5345a0204e`,
+test-modify4 `3fb46c41-fec6-4c78-9b94-bbfb34ef08cd`, test-downgrade7 `23f108ac-1907-434e-a67b-dda01df316f4` —
+сценарии топиков гонять на **test-modify3**. Топик вставить руками со «старым» форматом settings
+(без otherProperties, maxCompactionLagMs числом):
+
+```sql
+INSERT INTO databases (cluster_id, name, created_by, created_ts, settings, is_deleted, is_system)
+VALUES ('9fc47c1b-011d-4aaa-b411-de5345a0204e'::uuid, 'test-topic-3301', 'service.mdb-processing', NOW(),
+'{"kafkaSettings":{"partitions":3,"replicationFactor":3,"config":{"retentionMs":604800000,"maxCompactionLagMs":9223372036854775807,"minInsyncReplicas":2}}}'::jsonb,
+false, false);
+```
+
+### Сценарии
+
+| # | Сценарий | Ожидание в `databases.settings` |
+|---|---|---|
+| TP1 | internal PUT с полным configs (typed + otherProperties), partitionCount=6 | partitions=6, rf перезаписаны; config перезаписан целиком; **otherProperties в jsonb**; `maxCompactionLagMs` — строка (`jsonb_typeof='string'`); created_by/created_ts не тронуты; updated_by='service.mdb-processing' |
+| TP2 | internal PUT с `configs=null` (конфиг-онли не менялся) | partitions/rf перезаписаны; **старый config сохранён байт-в-байт** (контракт patchSettings: null = «не меняется») |
+| TP3 | internal PUT с частичным configs (только retentionMs) | config перезаписан ЦЕЛИКОМ (replace, не merge) — otherProperties из старого пропадут: это ожидаемо для update-пути (processing всегда шлёт полный конфиг) |
+| TP4 | `/databases/multi` с 2 топиками | строки созданы, created_by='service.mdb-processing', settings полные |
+| TP5 | sync: в БД топик с otherProperties, ops присылают тот же конфиг БЕЗ otherProperties | upsert НЕ вызывается (settingsChanged без otherProperties = равны); в логах нет лишнего upsert |
+| TP6 | sync: ops присылают ИЗМЕНЁННЫЙ конфиг (retentionMs другой) без otherProperties | upsert вызван; **otherProperties подтянуты из сохранённого топика** (mergeOtherProperties); partitions/rf — из actual |
+| TP7 | user API `POST /databases` с retentionMs=-1 | 400 `{"errors":[{field:"retentionMs",...}]}`; операция в `operations` НЕ создаётся |
+| TP8 | compat: строка в legacy-формате (maxCompactionLagMs числом, без otherProperties) + TP1 по ней | прочиталась без потерь (число→Long), после update перезаписана в новом формате со строкой |
+
+### Проверка (SQL)
+
+```sql
+SELECT settings, created_by, updated_by FROM databases
+WHERE cluster_id='123e4567-...' AND name='test-topic';
+-- jsonb-детали:
+SELECT jsonb_typeof(settings->'kafkaSettings'->'config'->'maxCompactionLagMs') AS mclm_type,
+       settings->'kafkaSettings'->'config'->'otherProperties' AS other_props
+FROM databases WHERE name='test-topic';
+```
+
+Sync-вызов (TP5/TP6):
+
+```bash
+curl -s -X POST localhost:8081/internal/api/v2/sync/kafka/clusters/123e4567-e89b-12d3-a456-426614174000/databases \
+  -H 'Content-Type: application/json' -d '{
+    "kafkaTopics": {"topicInfoMap": {"test-topic": {
+      "topicName": "test-topic", "partitionCount": 3, "replicationFactor": 3,
+      "configs": {"retentionMs": 604800001}}}}}'
+# upsert-факт — в логе mdb-data: grep upsertKafkaTopicInfo /tmp/mdb-data.log
+```
+
+### Грабли
+
+- Прогон 15.09.2026 (реверт на own-модель, ветка !493): все TP1–TP8 — PASS, результаты и seed —
+  `history/MDBDEV-3301-topic-otherproperties-local-2026-09-15.md`.
+- **Internal/sync эндпоинты — 403/401 даже при `mdb.auth.enabled=false`**: `@PreAuthorize("@serviceAuth.isService('mdb-processing')")`
+  требует сервисный JWT в заголовке `Authorization` (raw, без Bearer). HS256 подписывается секретом из
+  `application-local.yml` (`mdb.auth.jwt.secret-key`), claim `serviceName` = `mdb-processing` (для sync — `one-cloud-ops`).
+  Генератор: `/tmp/mdb-jwt.py` (hmac+hashlib, без зависимостей).
+- User API без заголовка — работает (default-сессия), но только негативные кейсы (guard/валидация до workflow).
+- `messageTimestampType` в persisted-модели — enum (`CreateTime`/`LogAppendTime`), в Dto/Request — строка:
+  конверсия только через `KafkaTopicConfigMapper` (граница processing). В internal PUT слать строку.
+- `maxCompactionLagMs` пишется строкой (JsonFormat STRING в own-модели и ToStringSerializer в Dto);
+  старые строки с числом читаются без потерь (Jackson coercion).
+- patch-контракт: partitions/rf НЕ могут быть null в settings (compact-ctor NPE) — на API они @NotNull;
+  конфиг-онли «не меняется» выражается configs=null, а не null-полями.
+- sync мёржит только otherProperties; типизированные поля берутся из actual (ops их не присылают).
+
 ## Смежные скиллы
 
 - **`upscale-kafka-controller-tester`** — тестирование upscale Kafka-контроллеров (MDBDEV-3180): seed test-modify3, симуляция падений из прод-Temporal, планы T1–T7.
@@ -295,29 +384,29 @@ Temporal UI: http://localhost:8233
 
 ## База данных
 
-Контейнер: `pg_backstage_plugin_mdb`, БД `backstage_plugin_mdb`, пользователь `dev`.
+Клиент — локальный psql: `psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb` (НЕ docker exec).
 
 ```bash
 # Список кластеров по типу
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "SELECT id, name, type FROM db_cluster WHERE type = 'kafka';"
 
 # Текущая версия кластера
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "SELECT id, status, hardware_preset_id, cluster_params->'kafkaParams'->'brokerConfig' AS bc FROM db_cluster_version WHERE cluster_id = '...' ORDER BY create_ts DESC LIMIT 3;"
 
 # Хосты
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "SELECT id, host, params->>'dc' AS dc FROM host_state WHERE cluster_id = '...' ORDER BY id;"
 
 # Операции
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "SELECT id, status, type FROM operations WHERE cluster_id = '...';"
 ```
 
 ## Получение реальных данных кластера
 
-Используй `/db-seed`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их на удалённом хосте (через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md), `mcc ssh` + `psql`), результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
+Используй `/db-worker`: сгенерируй SELECT-запросы для удалённой БД, пользователь выполнит их на удалённом хосте (через скилл [`mcc-host-worker`](../mcc-host-worker/SKILL.md), `mcc ssh` + `psql`), результат вставляется в локальную БД. Выдуманные хосты не работают — one-cloud master вернёт `404 EntityNotFoundException`.
 
 ### Обязательный шаблон: один SQL через `jsonb_build_object`
 
@@ -339,7 +428,7 @@ SELECT jsonb_build_object(
 
 ⚠️ **`one_cloud_meta` обязательна для cruise-creation** — без записи `params_type='cruise-control-service'` workflow `createKafkaCruise` падает с `404` на `MdbDataKafkaHostsActivityImpl.savedCreatedKafkaCruiseInfo`. У таблицы UNIQUE-индекс по `(cluster_id, params_type)` — ВСЕГДА `jsonb_agg`, не скалярный `to_jsonb`.
 
-Правила из `/db-seed` (важно):
+Правила из `/db-worker` (важно):
 - `ORDER BY` — только **внутри** `jsonb_agg(... ORDER BY col)`, не снаружи подзапроса.
 - Для таблиц с unique-индексом по `(cluster_id, <другая колонка>)` (например `one_cloud_meta` по `(cluster_id, params_type)`) — ВСЕГДА `jsonb_agg`, не скалярный `to_jsonb`, иначе `more than one row returned`.
 - `operations.created_ts` (с `d`), `db_cluster_version.create_ts` (без `d`) — имена различаются, проверяй через `\d <table>` на удалённой БД.
@@ -388,7 +477,7 @@ mTLS-сертификат из `~/.mccloud/` работает — modify-фло�
 
 ## Правила
 
-1. **PSQL через `-f`** — `docker exec ... <<'SQL'` (heredoc в stdin) тихо не применяет UPDATE. Копируй файл через `docker cp` и запускай `psql -f /tmp/file.sql`.
+1. **PSQL через `-f`** — heredoc в stdin (`psql ... <<'SQL'`) тихо не применяет UPDATE. Пиши SQL в файл и запускай `psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -f /tmp/file.sql`.
 2. **enum values** в БД всегда lowercase (`kafka`, `in_progress`, `done`, `draft`).
 3. **Логи**: mdb-data — `/tmp/mdb-data.log`, mdb-processing — `/tmp/mdb-processing.log`.
 4. **Health**: mdb-data на 8081 возвращает `DOWN` на агрегированный `/actuator/health`, но `liveness`/`readiness` — `UP`. Это нормально, можно работать.

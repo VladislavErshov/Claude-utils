@@ -102,7 +102,7 @@ Baseline-поля брать из БД (иначе валидатор lan/heap �
 посчитает лишние изменения):
 
 ```bash
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "SELECT cluster_params->>'diskType', cluster_params->>'diskGb', cluster_params->>'lanIn',
           cluster_params->>'lanOut', cluster_params->'kafkaParams'->'jvmHeapSizeMb',
           hardware_preset_id

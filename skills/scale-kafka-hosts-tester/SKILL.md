@@ -1,6 +1,6 @@
 ---
 name: scale-kafka-hosts-tester
-description: Локальное тестирование scale-операций с Kafka-хостами в mdb (upscale/downscale контроллеров и брокеров) — настройка инфраструктуры, seed dev-кластера из прода, симуляция падений по фазам workflow, проверка идемпотентности и контрактов mdb-data ↔ mdb-processing. Секции: upscale Kafka-контроллеров (MDBDEV-3180) и downscale Kafka-контроллеров (сценарии D1–D11 по прод-паттернам из Temporal). Используй когда нужно локально прогнать scale-флоу Kafka и проверить сходимость после падений.
+description: Локальное тестирование scale-операций с Kafka-хостами в mdb (upscale/downscale контроллеров и брокеров) — настройка инфраструктуры, seed dev-кластера из прода, симуляция падений по фазам workflow, проверка идемпотентности и контрактов mdb-data ↔ mdb-processing. Секции: upscale Kafka-контроллеров (MDBDEV-3180), downscale Kafka-контроллеров (сценарии D1–D11 по прод-паттернам из Temporal) и downscale Kafka-брокеров (MDBDEV-2900: reassign + drain + unregister + withdraw, сценарии B1–B14). Используй когда нужно локально прогнать scale-флоу Kafka и проверить сходимость после падений.
 allowed-tools: [bash, read_file, edit_file, write_file, grep, glob]
 ---
 
@@ -43,6 +43,7 @@ allowed-tools: [bash, read_file, edit_file, write_file, grep, glob]
 | temporal (local) | 8233 | docker-compose в `mdb-processing/localrun/` (`/setup-local-temporal`) |
 | postgres (mdb-data) | 6434 | контейнер `pg_backstage_plugin_mdb`, БД `backstage_plugin_mdb`, юзер `dev` |
 | wiremock | 8088 | docker-compose mdb-processing |
+| **ABC-стаб квот** | 3000 | mdb-data local ходит за квотами в `http://localhost:3000/v1/quotas/one-cloud/product/{id}` (AbcClient). Без стаба — 500 «Connection refused»; стаб `/tmp/seed-2900/abc-stub.py` (python http.server): ответ — список по ДЦ (dc/hc/kc/pc/rc/ic/uc) с resourceType **VCPU/RAM/NVME/SSD/HDD/LAN_IN/LAN_OUT**, большими `quota` и `demand: 0`; `dc: null` в записях даёт NPE `DcProductQuota.dc() is null`; без NVME/LAN_* — «Quota is insufficient» 400 |
 
 Auth в mdb-data local-профиле отключён — curl без токена.
 ⚠️ local-профиль mdb-processing пишет в РЕАЛЬНЫЙ `pms.cloud.vk.team` (bean `pmsRestClient`, `PmsAutoConfiguration.java:36`). Только dev-кластеры (project 160, mdbdev). Снапшот PMS до/после обязателен.
@@ -83,8 +84,7 @@ WHERE cluster_id='9fc47c1b-011d-4aaa-b411-de5345a0204e' AND status='draft';
 Готовый JSON с продовым снапшотом: `/tmp/test-modify3.json` (если жив). Обновить:
 
 ```bash
-docker exec -e PGPASSWORD='HDX!cpw5yxf0ypd5tgd' pg_backstage_plugin_mdb \
-  psql -h host.docker.internal -p 53480 -U backstage -d backstage_plugin_mdb -At -c "
+PGPASSWORD='HDX!cpw5yxf0ypd5tgd' psql -h localhost -p 53480 -U backstage -d backstage_plugin_mdb -At -c "
 SELECT jsonb_build_object(
   'db_cluster', (SELECT json_agg(t) FROM (SELECT * FROM db_cluster WHERE id='9fc47c1b-011d-4aaa-b411-de5345a0204e') t),
   'db_cluster_version', (SELECT json_agg(t ORDER BY create_ts DESC) FROM (SELECT * FROM db_cluster_version WHERE cluster_id='9fc47c1b-011d-4aaa-b411-de5345a0204e' ORDER BY create_ts DESC LIMIT 5) t),
@@ -101,7 +101,7 @@ SELECT jsonb_build_object(
 ### Вставка локально
 
 Грабли: в проде у `one_cloud_meta` есть колонка `fake_id`, в локальной схеме её НЕТ — дропать при INSERT.
-Шаблон генерации SQL — python-скрипт из `history/2026-08-24-seed-test-modify3.md` (delete по cluster_id + INSERT ON CONFLICT DO NOTHING, порядок: namespaces → projects → hardware_presets → db_cluster → db_cluster_version → host_state → one_cloud_meta → operations → settings). Затем `docker cp` + `psql -f` (НЕ heredoc в stdin).
+Шаблон генерации SQL — python-скрипт из `history/2026-08-24-seed-test-modify3.md` (delete по cluster_id + INSERT ON CONFLICT DO NOTHING, порядок: namespaces → projects → hardware_presets → db_cluster → db_cluster_version → host_state → one_cloud_meta → operations → settings). Затем `psql -f` (НЕ heredoc в stdin).
 
 ## Прод-Temporal: откуда брать типовые ошибки — общая для всех операций
 
@@ -319,7 +319,14 @@ curl -s "http://localhost:8233/api/v1/namespaces/default/workflows/$WID/history"
 MDBSUP-4939 (кворум для миграции лидера читался после чистки). Полный разбор и план
 продолжения — `history/2026-09-03-downscale-incluster-first-runs-plait-prefail-block.md`.
 
-✅ Статус на 04.09: D-матрица закрыта на трёх кластерах параллельно —
+✅ Статус на 04.09 (партия 3): SAVE ПЕРЕДЕЛАН на remaining-контракт (processing шлёт
+  остающихся, mdb-data делает дифф с host_state; ДЦ без контроллеров уходит из
+  controllerDcs/units) — D11 теперь САМОЗЖИВАЕТСЯ: ретрай из ловушки «cloud чист /
+  host_state с хвостом» сошёлся за ~30с (det: kill mdb-data в окне save → FAILED → ретрай).
+  D5/D10 — PASS (ретрай доводит до конца включая save). Коммиты: processing `a1f6eaf5` (MR !440),
+  mdb-data `be484944` (MR !481, без version-bump). Все D-сценарии закрыты.
+
+✅ Статус на 04.09 (партии 1-2): D-матрица закрыта на трёх кластерах параллельно —
 D1+миграция лидера (modify4 `d69b1f3e`), D2 withdraw pc→0 (downgrade7 `9f75061d`),
 D2 ic→0 + D11-десинк (modify3 `9d14e5c3`/`298aaa4f`), D5 terminate-после-кворума +
 ретрай тем же id (`be6c5705`), D10 серия прерываний (`94bfc3ce`), D8 guard
@@ -333,9 +340,192 @@ mdb-data:8081. Разбор — `history/2026-09-04-D1-D2-D11-three-clusters-par
 ⚠️ Direct-start воркфлоу руками: task queue `kafka-activities-queue` (не `kafka-activities-worker`),
 payload encoding `application/json` (не `json`) — иначе workflow висит/падает на первом таске.
 
+⚠️ Версии processing-api: mavenLocal vs глобальный стор (находка 06.09). Если в mdb-data
+запинена РЕЛИЗНАЯ версия `processing-api:3.x.y`, Gradle возьмёт её из nexus — а релиз,
+опубликованный ДО переезда контракта, содержит старый DTO (`replicas` вместо
+`controllersPerDc`/`queueInfo`). MapStruct при этом молча собирает DTO без новых полей
+(unmapped target = WARNING, не ERROR) — сборка зелёная, а в Temporal улетают null'ы.
+mavenLocal перекрывает nexus только при СОВПАДЕНИИ GAV. Рецепт: публиковать api ветки
+под отдельной версией и пиннуть её в mdb-data:
+1. В processing: init-script `gradle.projectsEvaluated { rootProject.findProject(':api')?.version = '3.57.local' }`
+   + `./gradlew -I init.gradle :api:publishToMavenLocal`.
+2. В mdb-data: `implementation 'one.cloud.mdb:processing-api:3.57.local'`.
+3. Проверять ПОЧТИ сгенерённый MapStruct-имплементор
+   (`build/generated/.../KafkaHostMapperImpl.java` — в toDto должны быть
+   `controllersPerDc(...)` и `queueInfo(...)`), а не только EXIT код сборки.
+
 ⚠️ Downscale — операция отката для upscale-сценариев: после каждого upscale-теста
 возвращать состав через downscale (не руками). Для самих D-сценариев наоборот —
 восстановление upscale-ом.
+
+# Секция: Downscale Kafka-брокеров (MDBDEV-2900)
+
+## Что тестируем
+
+- **mdb-processing** (ветка `ershov/MDBDEV-2900-downscale-kafka-brokers`):
+  `DownscaleKafkaBrokerInClusterWorkflowImpl` (parent) + `DownscaleKafkaBrokerInDcWorkflowImpl`
+  (child по ДЦ) + переиспользуемый `ReassignKafkaPartitionsWorkflow` (child реассигна,
+  `topics=null` → все топики включая internal). Архитектура — `docs/kafka/downscale-broker.md`
+  (ЧИТАТЬ ОБЯЗАТЕЛЬНО).
+- Фазы parent (места падений): `resolveRemovedBrokerIds` (discovery удаляемых хостов по ДЦ +
+  `describeBrokerIds` реестра кластера) → `reassignPartitionsFromRemovedBrokers`
+  (child-реассигн round-robin по survivors + поллинг `isBrokerDrained` 30с до TTL →
+  `BROKER_NOT_DRAINED`) → `unregisterBrokers` (KRaft, идемпотентен) → `downscaleBrokers`
+  (параллельные InDc-child: rescale / при цели 0 stop+withdraw сервиса и стораджа).
+- API: `DELETE /api/v1/mdb/processing/kafka/clusters/{clusterId}/hosts/brokers`,
+  DTO `brokersPerDc` (абсолютные) + `queueInfo` + `connectionParams`.
+
+## Ограничения масштаба (обязательно)
+
+- **Выживающие ≥ max RF кластера**: survivors после удаления должны покрывать replication
+  factor (иначе guard `REASSIGN_INVALID_TARGET_BROKERS`). Для test-кластера с RF=3 минимум
+  3 выживающих брокера в кластере.
+- Seed-кластер test-modify3 — по 1 брокеру на ДЦ: перед B-сценариями обязателен
+  **upscale брокеров до 2 в целевом ДЦ** (через mdb-data), откат между сценариями — upscale'ом.
+- Пачка ≤2 брокеров за запуск (аналог лимита контроллеров): `{dc:1}` или `{dc:1,hc:1}` из 2×2.
+- НЕ гонять `{dc:0,hc:0,kc:0}` — вывод всех брокеров кластера.
+
+## Специфика брокеров (отличия от контроллеров)
+
+- Нужны **живые партиции**: до серии создать 2–3 тестовых топика (RF=3, 6–12 партиций) через
+  mdb-data API и записать данные — иначе reassign нечего двигать и drain мгновенный.
+- KafkaAdminClient обязан достучаться до :9092 — vault-секреты + PEM truststore по секции
+  «Локальный downscale: vault-секреты» выше; при отсутствии сети — `mcc tp-port-forward` на 9092.
+- Верификация reassign: после флоу `describePartitions` (по API reassign или kafka-topics.sh
+  через mcc) — ни одна партиция не содержит удалённые brokerIds; распределение по survivors
+  примерно равномерное (round-robin).
+- Верификация unregister: `describeCluster`/`kafka-broker-api-versions.sh` — удалённые id
+  отсутствуют в реестре.
+- ✅ Save в mdb-data (`saveDownscaledKafkaBrokers`) **реализован map-контрактом** (10.09,
+  mdb-data `ershov/MDBDEV-2900-downscale-brokers-save-map` `4d8eef12`): processing шлёт ту же
+  карту `remainingBrokersPerDc`, mdb-data сам считает жертв по host_state (старшие индексы,
+  `HostUtils.hostIndex`). Хвостов в host_state после COMPLETED больше нет; no-op ретрай
+  закрывается валидатором mdb-data (400 Nothing to downscale). Разбор —
+  `history/2026-09-10-B-save-map-contract-party.md`.
+
+## Подготовка B-сценариев: upscale 4-го брокера в новый ДЦ (контракт brokersPerDc)
+
+`POST /api/v2/mdb/kafka/clusters/{clusterId}/hosts/brokers`, тело `{"brokersPerDc": {...}}` —
+**абсолютные цели по ВСЕМ ДЦ кластера**: существующие ДЦ остаются с текущим числом (child —
+no-op), новый ДЦ получает первую реплику. Слать только новый ДЦ НЕЛЬЗЯ:
+`UpscaleKafkaBrokerWorkflowImpl.resolveSourceDc` ищет broker-сервис-источник манифеста только
+среди целевых ДЦ запроса → `NO_SOURCE_BROKER_SERVICE` non-retryable.
+
+Прод-доказательство (скан 30 прогонов 01–07.09.2026, прод-Temporal): COMPLETED всегда с полной
+картой — `{pc:1,kc:1,hc:1,ec:1}` (dzen-common, ec новый), `{nc:2,zc:2,ic:2}` (dsp-notices),
+`{nc:1,ic:1,dc:1,pc:1}`; FAILED карты тоже полные (`PARTIAL_UPSCALE_FAILURE` — уже после
+source-фазы). Ни одного прогона с картой из одиночного нового ДЦ.
+
+Рабочие вызовы (06.09/07.09, 202 на всех):
+- test-modify3: `{"pc":1,"kc":1,"hc":1,"ic":1}`
+- test-modify4: `{"rc":1,"pc":1,"kc":1,"ic":1}`
+- test-downgrade7: `{"pc":1,"kc":1,"hc":1,"ic":1}`
+
+⚠️ Перед перезапуском закрывать упавшие операции (`UPDATE operations SET status='done'`),
+иначе mdb-data вернёт 409. Наблюдение: без стаба ABC (:3000) upscale не доходит даже до
+Temporal (500 на квотах) — см. таблицу инфраструктуры.
+
+## План тестирования (downscale-брокеров)
+
+| # | Сценарий | Аналог контроллеров |
+|---|---|---|
+| B1 | Happy path −1 брокер (rescale-путь): discovery → reassign по survivors → drain → unregister → rescale; топики без удалённого brokerId, ISR полный, кластер жив | D1 |
+| B2 | Happy path пачкой из 2 ДЦ (`{dc:1,hc:1}` из 2×2): ОДИН общий reassign-план (survivors = все минус обе жертвы), InDc-children параллельно | — (новое: пачка) |
+| B3 | Happy path target=0 в одном ДЦ: stop + withdraw сервиса и стораджа broker.*; партиции заранее уведены reassign'ом | D2 |
+| B4 | Идемпотентный перезапуск после успеха: `current <= target` → `removedBrokerHosts` пуст, reassign/unregister/rescale скипаются, ноль side-effects | D3 |
+| B5 | Рестарт после unregister до rescale: жертвы уже вне `describeBrokerIds` → `mapToBrokerIds` пуст → reassign-фаза скип, downscaleBrokers доводит rescale | D4/D5 |
+| B6 | Terminate посреди поллинга drained: реассигн уже запущен в фоне Kafka → ретрай: тот же child-workflowId (`ignoreAlreadyStarted`), поллинг продолжается, сходится | D5 |
+| B7 | AdminClient недоступен (битый vault / нет сети на 9092): `describeBrokerIds`/`listTopicNames` исчерпывают ретраи → FAILED; после восстановления перезапуск сходится | D6 |
+| B8 | Partial failure: цель в 2 ДЦ, один InDc-child падает (terminate) → `PARTIAL_DOWNSCALE_FAILURE` non-retryable; ретрай доводит упавший ДЦ, reassign-фаза скипается (уже unregister) | D7 |
+| B9 | Guard увеличения: `target > current` → child non-retryable `DOWNSCALE_NOT_ALLOWED`, zero side-effects | D8 |
+| B10 | Capacity guard: survivors < max RF (например RF=3, после удаления остаётся 2) → non-retryable `REASSIGN_INVALID_TARGET_BROKERS` ДО каких-либо cloud/PMS изменений | D8 |
+| B11 | Drain timeout: реассигн не завершается до TTL (заглушить порт/заморозить репликацию) → `BROKER_NOT_DRAINED`; фон Kafka доезжает → ретрай сходится | — |
+| B12 | Контракт mdb-data ↔ processing: декодировать temporal input parent'а — `brokersPerDc` абсолютные, `connectionParams` (bootstrap + vault-path), child-реассигн: `topics=null`, `targetReplicationFactor=null`, TTL=6ч; MapStruct-импл проверить (грабля mavenLocal vs nexus) | T7 |
+| B13 | Десинк host_state после успеха: save в mdb-data отсутствует → после COMPLETED host_state содержит удалённые хосты; повторный запуск через mdb-data строит цель из устаревшего host_state — фиксировать фактическое поведение, критерий будущего фикса = аналог remaining-контракта контроллеров (MR !440/!481) | D11 |
+| B14 | Серия ретраев (3+ terminate на одном operationId): survivors детерминированы сортировкой по host — каждый ретрай строит тот же план, состояние не деградирует | D10 |
+| B15 | Обрыв withdraw-ребёнка в частичном состоянии: terminate после `stopService`, до `withdrawService`/`withdrawStorage` → ретрай тем же opId: ребёнок повторяет isServiceExists→stopService (идемпотентен на остановленном) → withdraw → storage → converge | D11-зона риска для брокеров (save нет — ручная чистка host_state хвоста обязательна после) |
+| B16 | Обрыв в drain-поллинге при drain=**false** (Kafka переливает в фоне): fill ВСЕХ топиков перед запуском → terminate в поллинге → ретрай: поллинг возобновляется и ждёт фактического конца переливки → converge | D5-аналог по брокерскому drain |
+| B17 | Обрыв внутри reassign-child ДО apply alter: terminate родителя убивает ребёнка (PARENT_CLOSE_POLICY_TERMINATE) → ретрай: child TERMINATED реюзабелен (ALLOW_DUPLICATE_FAILED_ONLY) → пересоздаётся и повторяет идемпотентный alter → converge | — |
+
+**Карта покрытия обрывов (08.09):** reconcile ✓(все ретраи) / discovery ✓(read-only) /
+reassign-child до alter = B17 ✓ / drain при false = B16 ✓ / drain при true = B14#1 ✓ /
+unregister = B5 ✓ / rescale-дети = B8, B14#2 ✓ / withdraw-частичное = B15 ✓ / kill воркера —
+механизм T3c/D5 (контроллеры), для брокеров эквивалентен terminate-ретраю. **Полное покрытие.**
+
+### Статусы B-сценариев (партия 08.09, три кластера параллельно)
+
+| # | Статус | Суть проверки (кратко) | Примечание |
+|---|---|---|---|
+| B1 | ✅ PASS 08.09 | Полный цикл rescale ic 2→1: reassign 76 партиций (вкл. CC-топики) → drain → unregister 23002 → rescale | modify3 `1f3e2c71`; 2 рана на инвертированном цикле (баг #2) терминированы, 3-й COMPLETED |
+| B2 | ✅ PASS 08.09 | Пачка 2 ДЦ (2.pc+2.ic из 2×2): ОДИН reassign-план, параллельные InDc | modify4 `62c713bf`; survivors [25001,21001,22001,23001] — сортировка по host |
+| B3 | ✅ PASS 08.09 | Withdraw ic→0: stop → withdrawService → withdrawStorage | downgrade7 `ad9430ce`; вскрыл баг #1 (TOPIC_NOT_EXISTS на `__consumer_offsets`) — фикс, ретрай тем же opId довёл |
+| B4 | ✅ PASS 08.09 | Повтор цели после успеха: все фазы skip, ноль side-effects | modify3, новый opId |
+| B5 | ✅ PASS 08.09 | Рестарт после unregister до rescale: 23002 вне реестра → reassign/unregister skip → дети доводят | modify3 `f44bc768` (ран1 terminate в ic-child, ран2 COMPLETED) |
+| B6 | ⚠️ покрыт косвенно | Terminate строго В drain-поллинге | окно <30с при мелких партициях не ловится; семантика ретрая покрыта B1-retry/B5/B14 |
+| B7 | ✅ PASS 08.09 | Битый vault `super` → AdminClient ретраи → восстановление секрета → тем же раном сошёлся | modify3 `c873b90b` |
+| B8 | ✅ PASS 08.09 | Terminate одного InDc в пачке → `PARTIAL_DOWNSCALE_FAILURE [pc]` → ретрай доводит | modify4 `91aaf192`; siblings не страдают |
+| B9 | ✅ PASS 08.09 | Увеличение ic:1→2 → `DOWNSCALE_NOT_ALLOWED`, zero side-effects | downgrade7 `fccb2997` |
+| B10 | ✅ PASS 08.09 | Survivors 2 < RF 3 → `REASSIGN_INVALID_TARGET_BROKERS` до изменений | downgrade7; только listTopics+describe в истории |
+| B11 | ⏸️ не воспроизведён | Drain timeout до TTL (`BROKER_NOT_DRAINED`) | нет локального рычага замедлить репликацию; отложен на стенд |
+| B12 | ✅ PASS 08.09 | Контракт: `brokersPerDc` абсолютные, TTL=6ч, child `topics=null`/`targetRF=null`, survivors по host | декод history parent+child |
+| B13 | ✅ подтверждён 08.09 | Десинк host_state после COMPLETED (save не реализован) | хвосты 2.broker.* чистились перед каждым rollback-upscale |
+| B14 | ✅ PASS 08.09 | 2× terminate на одном opId (drain-фаза, дети) → ретрай №3 COMPLETED | modify4 `c59e59f6`; состояние не деградировало |
+| B15 | ✅ PASS 08.09 | Terminate mid-withdraw (stop сделан, withdraw нет) → ретрай: повторный stop на остановленном → withdraw → converge | downgrade7 `5d1827fc`; ловля — поллинг ic-child до появления `cloud_stopService` |
+| B16 | ✅ PASS 08.09 | Terminate в drain при drain=false (fill-ALL перед запуском) → ретрай: поллинг возобновился, дождался фоновой переливки 76 партиций → COMPLETED | modify3 `8d6fc604`; последний полл перед terminate = `false` |
+| B17 | ✅ PASS 08.09 | Terminate внутри reassign-child (list done, describe в полёте, alter НЕ применён) → ретрай: ребёнок пересоздан (TERMINATED реюзабелен), полный план повторно, alter применён → COMPLETED | modify3, ловля поллингом 3с за ~12с до старта ребёнка |
+
+**Баги, найденные партией (фиксы в ветке MDBDEV-2900, к коммиту):**
+1. `validateTopicsExist` сверял с `listTopics(listInternal(false))` → `__consumer_offsets` давал
+   non-retryable `TOPIC_NOT_EXISTS` в reassign-child (любой кластер с consumer-группами).
+   Фикс: `listAllTopicNames()`.
+2. **Инверсия цикла drain-поллинга**: `while (noneMatch(notDrained))` = «пока все дренированы —
+   спать»; флоу висел вечно при успехе и пропускал ожидание при недренаже. Фикс: `anyMatch`.
+3. Ретрай тем же operationId падал `WORKFLOW_ALREADY_EXISTS` на reassign-child (COMPLETED в
+   прошлом ране; reconcile был обёрнут, reassign — нет). Фикс: `runIgnoringAlreadyStarted`.
+4. (Minor, фикс) `KafkaHostActivityImplTest` — мок обновлён под семантику фикса №1.
+
+Разбор — `history/2026-09-08-B-broker-downscale-party1.md`.
+
+### B13. Десинк host_state — ВЫЛЕЧЕН 10.09 (map-контракт)
+
+Контроллерный аналог D11 лечился remaining-списком; брокеры пошли дальше — processing
+шлёт map-контракт (`remainingBrokersPerDc` as-is), жертв считает сам mdb-data по host_state.
+Проверено живым прогоном (test-modify3, kill mdb-data в окне save → FAILED → ретрай тем же
+requestом самолечил host_state за 15с, хвостов нет, PMS не тронут). Критерий п.5 выполнен:
+после COMPLETED host_state сходится с облаком, повторный запуск — 400 no-op в валидаторе.
+Разбор — `history/2026-09-10-B-save-map-contract-party.md`.
+
+### Ре-чек на финальном коде (11.09, после влития MDBDEV-2900 в master + mdb-data !496)
+
+Один deploy-контур: processing master `8bf5f3fa` + mdb-data `ershov/MDBDEV-3301-topic-other-properties`
+(merge `a2e643f2`), оба пина релизные и содержат контракт (`data-api:1.104.0`,
+`processing-api:3.62.1` — проверено по jar-ам gradle-кеша, mavenLocal-грабля снята).
+
+- ✅ B1+save (`bc4bc5af`): reconcile(isWan)→…→save последним, host_state чист сразу.
+- ✅ B2 (`4156a19e`), ✅ B8 (terminate pc-InDc → `failed in 1 DC(s): [pc]` → ретрай `49f5097f`
+  дослал rescale, save снёс оба хвоста), ✅ B15 (`effad900`→`224f9594`: stop идемпотентен →
+  withdrawService → withdrawStorage → save).
+- ✅ НОВОЕ (mdb-data валидации, 400 до Temporal): B4 «Nothing to downscale», B9 «must not be
+  greater than current», min-3 «min value of brokers is 3» — processing-side guard'ы остались
+  defense-in-depth, недостижимы через mdb-data.
+- ✅ B12: isWan=false + TTL=6ч в parent input; child topics/targetRF null, жертвы исключены.
+- ✅ B13 самолечение ×2: каждый COMPLETED без хвостов + стартовый десинк downgrade7
+  (ic-сервис отсутствовал в облаке с 08.09, host_state с хвостом → запуск ic:0 → save удалил).
+- Пропущено с обоснованием: B5/B6/B7/B14/B16/B17 (код путей не менялся, save идёт после
+  детей — ретрай-семантика подтверждена B8/B15), B10 processing-side (не менялся, через
+  mdb-data недостижим), B11 (нет рычага, стенд).
+- ⚠️ Находка: после withdraw-партий сверять ОБЛАКО, а не только host_state (хвост 08.09
+  вскрывался только запуском). ⚠️ В COMPLETED-событиях истории `activityType.name=null` —
+  имена брать из SCHEDULED. ⚠️ Перед ре-чеком проверять lstart сервисов против коммитов.
+
+Разбор — `history/2026-09-11-B-recheck-final-code.md`.
+
+### Порядок первой партии
+
+B1 → B4 (сходятся на том же состоянии) → B6/B5 (рестарты) → B9/B10 (guards, прямой запуск
+допустим) → B2 (пачка, после upscale до 2×2) → B3 → B8 → B7/B11 (по возможности) →
+B12 (контракт) → B13 (зафиксировать десинк). Откат между сценариями — upscale брокеров,
+не руками.
 
 ## Верификация кластера ДО и ПОСЛЕ каждого сценария
 
