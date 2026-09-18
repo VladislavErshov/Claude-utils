@@ -1,6 +1,6 @@
 ---
 name: db-worker
-description: Используй этот скилл для работы с БД MDB — локальной backstage_plugin_mdb, продовой backstage_plugin_mdb (mdb-etp-pgsql) и продовой mdb-health (health). Четыре сценария. 1) Локальный сидинг: наполнить локальную БД данными из прода для тестирования API. 2) Прямые SELECT к прод-БД через port-forward (read-only по умолчанию) — операции, кластеры, хосты, миграции. 3) DML на проде — ТОЛЬКО с явного разрешения пользователя (закрытие зависших операций MDBSUP и т.п.). 4) Прод-БД mdb-health — tier/warnings. Если туннель не поднят — генерирует SQL для удалённой БД, пользователь выполняет и отдаёт результат.
+description: Используй этот скилл для работы с БД MDB — локальной backstage_plugin_mdb, продовой backstage_plugin_mdb (mdb-etp-pgsql) и продовой mdb-health (health). Четыре сценария. 1) Локальный сидинг: наполнить локальную БД данными из прода для тестирования API. 2) Прямые SELECT к прод-БД через port-forward (read-only по умолчанию) — операции, кластеры, хосты, миграции. 3) DML на проде — ТОЛЬКО с явного разрешения пользователя (закрытие зависших операций MDBSUP и т.п.). 4) Прод-БД mdb-health — tier/warnings.
 allowed-tools: [bash]
 ---
 
@@ -49,23 +49,23 @@ mcc tp-port-forward 1.db.mdb-health-mdb-pgsql.hc.one-infra.ru:7432 --local-port 
 Docker: postgres (postgres:14-alpine, порт 6432:5432)
 БД: backstage_plugin_mdb
 Пользователь: dev
-Команда: docker exec postgres psql -U dev -d backstage_plugin_mdb -c "<SQL>"
+Команда: psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c "<SQL>"
 ```
 
-Контейнер запускается через `cd stubs && docker-compose up -d`.
+Контейнер запускается через `cd stubs && docker-compose up -d` (это сервер локальной БД).
 
-Локального `psql` на macOS нет — используй psql из postgres-контейнера (`pg_backstage_plugin_mdb`), подключаясь к localhost-порту через `host.docker.internal`.
+⚠️ **Клиент — только локальный `psql` из терминала** (Homebrew 16.15): `psql -h localhost -p <порт> ...`.
+Docker-контейнер как psql-клиент (`docker exec`, `host.docker.internal`) не использовать.
 
 ## Прод backstage_plugin_mdb: SELECT (read-only по умолчанию)
 
 Подключайся к продовой БД напрямую сам — **разрешение пользователя не нужно, но только SELECT (read-only)**. Никаких INSERT/UPDATE/DELETE без явного разрешения.
 
 - Туннель: `localhost:53480`, БД `backstage_plugin_mdb`, пользователь `backstage`, пароль `HDX!cpw5yxf0ypd5tgd`
-- Клиент — из контейнера `pg_backstage_plugin_mdb`, хост внутри docker — `host.docker.internal`:
+- Клиент — локальный `psql` из терминала (без докера):
 
 ```bash
-docker exec -e PGPASSWORD='HDX!cpw5yxf0ypd5tgd' pg_backstage_plugin_mdb \
-  psql -h host.docker.internal -p 53480 -U backstage -d backstage_plugin_mdb -At -c "<SELECT ...>"
+PGPASSWORD='HDX!cpw5yxf0ypd5tgd' psql -h localhost -p 53480 -U backstage -d backstage_plugin_mdb -At -c "<SELECT ...>"
 ```
 
 На проде работает вся схема `public` (db_cluster, one_cloud_meta, db_cluster_version и т.д.).
@@ -77,8 +77,6 @@ docker exec -e PGPASSWORD='HDX!cpw5yxf0ypd5tgd' pg_backstage_plugin_mdb \
 ⚠️ Грабли:
 - **`ORDER BY` в `jsonb_agg` — только внутри скобок агрегата.** ❌ `SELECT jsonb_agg(to_jsonb(v)) FROM ... ORDER BY v.create_ts DESC` — конфликт с агрегацией. ✅ `SELECT jsonb_agg(to_jsonb(v) ORDER BY v.create_ts DESC) FROM ...` или подзапрос с `ORDER BY ... LIMIT N` во `FROM`.
 - **Скалярный подзапрос `to_jsonb(t)` падает с `more than one row returned`**, если у таблицы уникальность по `(cluster_id, X)` (пример — `one_cloud_meta`, UNIQUE по `(cluster_id, params_type)`). Для таких таблиц всегда `jsonb_agg(to_jsonb(t) ORDER BY t.<колонка>)`. Перед подзапросом проверяй индексы через `\d <table>`.
-
-Ручной запасной путь (туннель не поднят): сгенерировать SQL, пользователь выполняет на удалённом хосте через `mcc ssh` + `psql` и отдаёт результат.
 
 ### Шаблон: один запрос на все данные кластера
 
@@ -101,7 +99,7 @@ SELECT jsonb_build_object(
 ⚠️ Это прод: любые INSERT/UPDATE/DELETE — показать пользователю и получить явное разрешение до выполнения.
 
 **Выполнение DML на проде:**
-- psql через `docker cp` файла + `psql -f` — **stdin-heredoc молча не применяет DML!**
+- psql через файл + `psql -f` — **stdin-heredoc молча не применяет DML!**
 - Оборачивать в `BEGIN/COMMIT`, после — верификационный SELECT обеих таблиц.
 
 **Комментарии в Jira по MDBSUP:** текст писать через скилл **`text-writer`** — кратко: результат + следующий шаг, без перечня действий. Детали (withdraw, SQL) остаются в чате/history.
@@ -147,8 +145,7 @@ VALUES ('<cluster_id>', '<fqdn>', now(),
 Источник tier/warnings для UI mdb-data и для локального mdb-health (см. скилл `mdb-local-tester`). Туннель `localhost:53482`, креды в таблице выше.
 
 ```bash
-docker exec -e PGPASSWORD='<пароль admin>' pg_backstage_plugin_mdb \
-  psql -h host.docker.internal -p 53482 -U admin -d health -c "<SQL>"
+PGPASSWORD='<пароль admin>' psql -h localhost -p 53482 -U admin -d health -c "<SQL>"
 ```
 
 Ключевые таблицы: `tier.tier_state`, `tier.tier_history` (после вставки — `setval` id_seq!), `warnings.cluster_warnings`; кластеры — `mirror.db_cluster` (фильтр `project_id=160` — mdbdev). Все таблицы mirror.*, tier.*, warnings.* лежат в этой же БД.
@@ -157,9 +154,9 @@ docker exec -e PGPASSWORD='<пароль admin>' pg_backstage_plugin_mdb \
 
 1. **Получение задачи** — пользователь говорит: «скопируй таблицу X с удалённого хоста» или «для теста эндпоинта /api/y нужны данные».
 2. **Анализ зависимостей** — по графу связей определить, какие родительские таблицы тоже нужно заполнить (FK-ограничения).
-3. **Генерация SQL для удалённой БД** — один запрос через `jsonb_build_object`. Если туннель доступен — выполнить сам (read-only); иначе пользователь выполнит через `mcc ssh` + `psql`.
+3. **Генерация SQL для удалённой БД** — один запрос через `jsonb_build_object`. Если туннель доступен — выполнить сам (read-only); туннель поднимается через `mcc tp-port-forward` (см. раздел «Подключения»).
 4. **Получение данных** — из прямого подключения или от пользователя.
-5. **Вставка в локальную БД** — INSERT через `docker exec`, порядок: сначала родительские таблицы, потом дочерние.
+5. **Вставка в локальную БД** — INSERT через локальный psql, порядок: сначала родительские таблицы, потом дочерние.
 6. **Верификация** — SELECT, чтобы подтвердить, что данные на месте.
 7. **Подготовка данных для конкретного теста** — при необходимости обновить статусы версий, убрать/добавить поля в cluster_params для триггера нужной ветки кода.
 

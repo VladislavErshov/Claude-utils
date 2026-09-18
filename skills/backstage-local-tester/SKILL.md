@@ -46,12 +46,9 @@ Backstage создаёт `backstage_plugin_mdb` при первом запуск
 3. Применить seed в обе БД одновременно
 4. **Перезапустить Backstage backend** (без этого Redis-кеш проектов и PMS-конфиг не обновятся)
 
-Сидирование sql-файлом:
+Сидирование sql-файлом (клиент — локальный psql, НЕ docker exec):
 ```bash
-docker cp /tmp/seed.sql postgres:/tmp/seed.sql && \
-  docker exec postgres psql -U dev -d backstage_plugin_mdb -f /tmp/seed.sql
-docker cp /tmp/seed.sql pg_backstage_plugin_mdb:/tmp/seed.sql && \
-  docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -f /tmp/seed.sql
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -f /tmp/seed.sql
 ```
 
 В seed-файл обязательно включить:
@@ -65,7 +62,7 @@ Backstage middleware `clusterIdAuthMiddleware` (router.ts:462) защищает 
 
 ```bash
 # 1. Зарегистрировать service в БД для нужного проекта
-docker exec postgres psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "INSERT INTO services_auth (name, project_id, access_type) VALUES ('local-tester', 160, 'w') \
    ON CONFLICT (name, project_id) DO UPDATE SET access_type='w';"
 # Важно: access_type='w', НЕ 'write' — AccessType.WRITE = "w" (plugins/common/src/authorization/dto.ts)
@@ -191,7 +188,7 @@ WHERE cluster_id='<cluster_id>'
 
 ```bash
 # 1. Backstage tasks — главный источник правды
-docker exec postgres psql -U dev -d backstage_plugin_mdb -c "
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c "
   SELECT t.id, t.type, t.status, substring(t.result::text,1,100)
   FROM tasks t JOIN operations o ON o.id=t.operation_id
   WHERE o.cluster_id='<cluster_id>' AND o.status<>'canceled'

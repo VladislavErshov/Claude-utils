@@ -84,8 +84,7 @@ WHERE cluster_id='9fc47c1b-011d-4aaa-b411-de5345a0204e' AND status='draft';
 Готовый JSON с продовым снапшотом: `/tmp/test-modify3.json` (если жив). Обновить:
 
 ```bash
-docker exec -e PGPASSWORD='HDX!cpw5yxf0ypd5tgd' pg_backstage_plugin_mdb \
-  psql -h host.docker.internal -p 53480 -U backstage -d backstage_plugin_mdb -At -c "
+PGPASSWORD='HDX!cpw5yxf0ypd5tgd' psql -h localhost -p 53480 -U backstage -d backstage_plugin_mdb -At -c "
 SELECT jsonb_build_object(
   'db_cluster', (SELECT json_agg(t) FROM (SELECT * FROM db_cluster WHERE id='9fc47c1b-011d-4aaa-b411-de5345a0204e') t),
   'db_cluster_version', (SELECT json_agg(t ORDER BY create_ts DESC) FROM (SELECT * FROM db_cluster_version WHERE cluster_id='9fc47c1b-011d-4aaa-b411-de5345a0204e' ORDER BY create_ts DESC LIMIT 5) t),
@@ -102,7 +101,7 @@ SELECT jsonb_build_object(
 ### Вставка локально
 
 Грабли: в проде у `one_cloud_meta` есть колонка `fake_id`, в локальной схеме её НЕТ — дропать при INSERT.
-Шаблон генерации SQL — python-скрипт из `history/2026-08-24-seed-test-modify3.md` (delete по cluster_id + INSERT ON CONFLICT DO NOTHING, порядок: namespaces → projects → hardware_presets → db_cluster → db_cluster_version → host_state → one_cloud_meta → operations → settings). Затем `docker cp` + `psql -f` (НЕ heredoc в stdin).
+Шаблон генерации SQL — python-скрипт из `history/2026-08-24-seed-test-modify3.md` (delete по cluster_id + INSERT ON CONFLICT DO NOTHING, порядок: namespaces → projects → hardware_presets → db_cluster → db_cluster_version → host_state → one_cloud_meta → operations → settings). Затем `psql -f` (НЕ heredoc в stdin).
 
 ## Прод-Temporal: откуда брать типовые ошибки — общая для всех операций
 

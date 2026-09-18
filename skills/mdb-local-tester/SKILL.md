@@ -47,7 +47,7 @@ PROXY_API_PREFIX=/proxy
 ### Запуск Backstage (локально)
 
 1. Инфраструктура: `docker compose -f backstage/stubs/docker-compose.yml up -d` (postgres:6432, redis:6379, clickhouse, sentinel:26379).
-   - **pg_boss**: `docker exec postgres psql -U dev -d postgres -c "CREATE DATABASE pg_boss;"` — иначе backend падает на старте.
+   - **pg_boss**: `psql -h localhost -p 6432 -U dev -d postgres -c "CREATE DATABASE pg_boss;"` — иначе backend падает на старте.
    - **Sentinel**: контейнер `stubs-sentinel-1` не слушает с хоста без `bind 0.0.0.0` + `protected-mode no` в `stubs/sentinel.conf` (уже поправлено в репо). Старый контейнер `redis_sentinel` из docker-compose mdb-data держит 26379 и это обычный redis, не sentinel — удалить (`docker rm -f redis_sentinel`), иначе «Project cache initialization failed Command timed out» (ioredis commandTimeout=1000). ⚠️ После остановки контейнеров поднимать sentinel только через `docker compose up -d` (пересоздание) — `docker start stubs-sentinel-1` стартует старый контейнер **без проброса порта 26379** → Backstage «All sentinels are unreachable» → UI «Internal Server Error» (ioredis сам восстанавливается после пересоздания sentinel).
 2. `app-config.mdb.local.yaml` — нужны `backend.mdb.abc.baseUrl` (http://localhost:8088 wiremock) и `backend.mdb.abc.ca` (любая строка, обязателен `getString`) — иначе `Missing required config value at 'backend.mdb.abc.ca'`. `backend.mdb.auth.enabled: false` уже стоит (локальная сессия `k.boblak` из ADMIN_LOGINS).
 3. Запуск: `yarn mdb-start-backend` в `backstage/` (лог `/tmp/backstage.log`), ждать «Project cache successfully initialized» + «Listening on :7007».
@@ -137,7 +137,7 @@ Fallback в one-cloud (`NewSqlCassandraHostInfoService`) работает тол
 
 Способ: `\copy (SELECT …) to '/dev/stdout' csv header` через туннель → отчистить хвостовой тэг `COPY N` (grep -v) → `docker cp` → `\copy … from csv header`. Грабли:
 - **Экспортировать по явному списку колонок локальной таблицы** — схемы прода и локали дрейфуют (6434 не знает `fake_id` в one_cloud_meta, другой порядок колонок в projects).
-- **Enum'ы прода шире** — добавлять значения перед импортом: `version_type` (+add_shard/add_hosts/delete_hosts), `db_type` (6434: +newsql/cassandra/temporal), `operation_type` (почти весь список прода). Каждый `ALTER TYPE … ADD VALUE IF NOT EXISTS` — отдельным `docker exec` (новая psql-сессия): значения, добавленные в той же сессии, COPY иногда не видит.
+- **Enum'ы прода шире** — добавлять значения перед импортом: `version_type` (+add_shard/add_hosts/delete_hosts), `db_type` (6434: +newsql/cassandra/temporal), `operation_type` (почти весь список прода). Каждый `ALTER TYPE … ADD VALUE IF NOT EXISTS` — отдельным вызовом psql (новая сессия): значения, добавленные в той же сессии, COPY иногда не видит.
 - `host_state.grafana_dashboard_link`/`onecloud_ui_link` и `operations.error_message` — `ALTER COLUMN … TYPE text` (varchar(255) мало для прод-значений).
 - Порядок вставки: projects/namespaces/hardware_presets → db_cluster → db_shards → db_cluster_version → host_state → one_cloud_meta → operations. После — `setval` для serial-pk (projects, hardware_presets, db_shards) и рестарт Backstage (кэш проектов в redis строится на старте).
 
@@ -384,23 +384,23 @@ Temporal UI: http://localhost:8233
 
 ## База данных
 
-Контейнер: `pg_backstage_plugin_mdb`, БД `backstage_plugin_mdb`, пользователь `dev`.
+Клиент — локальный psql: `psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb` (НЕ docker exec).
 
 ```bash
 # Список кластеров по типу
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "SELECT id, name, type FROM db_cluster WHERE type = 'kafka';"
 
 # Текущая версия кластера
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "SELECT id, status, hardware_preset_id, cluster_params->'kafkaParams'->'brokerConfig' AS bc FROM db_cluster_version WHERE cluster_id = '...' ORDER BY create_ts DESC LIMIT 3;"
 
 # Хосты
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "SELECT id, host, params->>'dc' AS dc FROM host_state WHERE cluster_id = '...' ORDER BY id;"
 
 # Операции
-docker exec pg_backstage_plugin_mdb psql -U dev -d backstage_plugin_mdb -c \
+psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -c \
   "SELECT id, status, type FROM operations WHERE cluster_id = '...';"
 ```
 
@@ -477,7 +477,7 @@ mTLS-сертификат из `~/.mccloud/` работает — modify-фло�
 
 ## Правила
 
-1. **PSQL через `-f`** — `docker exec ... <<'SQL'` (heredoc в stdin) тихо не применяет UPDATE. Копируй файл через `docker cp` и запускай `psql -f /tmp/file.sql`.
+1. **PSQL через `-f`** — heredoc в stdin (`psql ... <<'SQL'`) тихо не применяет UPDATE. Пиши SQL в файл и запускай `psql -h localhost -p 6432 -U dev -d backstage_plugin_mdb -f /tmp/file.sql`.
 2. **enum values** в БД всегда lowercase (`kafka`, `in_progress`, `done`, `draft`).
 3. **Логи**: mdb-data — `/tmp/mdb-data.log`, mdb-processing — `/tmp/mdb-processing.log`.
 4. **Health**: mdb-data на 8081 возвращает `DOWN` на агрегированный `/actuator/health`, но `liveness`/`readiness` — `UP`. Это нормально, можно работать.
